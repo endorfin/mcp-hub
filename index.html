@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Hub</title>
+<style>
+:root {
+  --bg: #f6f6f4; --panel: #ffffff; --ink: #1c1c1a; --muted: #6b6b66; --line: #e3e2de;
+  --accent: #1f8a4c; --on-accent: #ffffff; --ok: #1f8a4c; --warn: #b26a00; --bad: #c0362c; --chip: #efeeea;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2e2e2b;
+    --accent: #4cc27f; --on-accent: #0e1a12; --ok: #4cc27f; --warn: #e0a440; --bad: #ff7366; --chip: #262624;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, system-ui, sans-serif; }
+header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar { max-width: 1040px; margin: 0 auto; padding: 14px 20px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+.status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+.spacer { flex: 1; }
+nav { display: flex; gap: 2px; background: var(--chip); padding: 3px; border-radius: 8px; }
+nav button { border: 0; background: none; padding: 5px 12px; border-radius: 6px; color: var(--muted); font: inherit; cursor: pointer; }
+nav button.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+main { max-width: 1040px; margin: 0 auto; padding: 20px; }
+button.btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+button.btn:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 550; }
+button.primary:hover { filter: brightness(1.08); }
+button.danger { color: var(--bad); }
+button.ghost { border-color: transparent; background: none; color: var(--muted); padding: 4px 8px; }
+button.ghost:hover { color: var(--ink); background: var(--chip); }
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar input[type=search] { flex: 1; min-width: 180px; }
+.toolbar select { width: auto; }
+input, textarea, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; }
+input:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
+textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
+.list { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.row { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row.off .name, .row.off .cmd, .row.off .purpose { opacity: .45; }
+.purpose { font-size: 13px; margin: 1px 0 2px; color: var(--muted); }
+.row .name { font-size: 15.5px; letter-spacing: -.01em; }
+.actions { position: relative; }
+.dots { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; }
+.dots[aria-expanded="true"] { background: var(--chip); color: var(--ink); }
+.menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: grid; }
+.menu button { font: inherit; text-align: left; background: none; border: 0; color: var(--ink); padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.menu button:hover, .menu button:focus-visible { background: var(--chip); outline: none; }
+.menu button.danger { color: var(--bad); }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
+.purpose.auto { color: var(--muted); font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.name { font-weight: 600; }
+.cmd { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.chip { font-size: 11.5px; background: var(--chip); color: var(--muted); padding: 1px 7px; border-radius: 99px; font-family: var(--mono); cursor: pointer; border: 0; }
+.chip:hover { color: var(--ink); }
+.empty { padding: 48px 16px; text-align: center; color: var(--muted); }
+.switch { position: relative; width: 32px; height: 18px; flex: none; }
+.switch input { opacity: 0; position: absolute; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; background: var(--line); border-radius: 99px; transition: .15s; }
+.switch span::after { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: .15s; }
+.switch input:checked + span { background: var(--ok); }
+.switch input:checked + span::after { transform: translateX(14px); }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); padding: 0; width: min(640px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgb(0 0 0 / .35); }
+.dhead { padding: 16px 20px; border-bottom: 1px solid var(--line); font-weight: 600; }
+.dbody { padding: 16px 20px; display: grid; gap: 14px; max-height: 70vh; overflow: auto; }
+.dfoot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+label.f { display: grid; gap: 5px; font-size: 12.5px; color: var(--muted); }
+label.f > span b { color: var(--ink); font-weight: 600; }
+.hint { font-size: 12px; color: var(--muted); }
+.env { display: grid; gap: 6px; }
+.envrow { display: grid; grid-template-columns: 1fr 1.6fr auto; gap: 6px; }
+.envrow input { font-family: var(--mono); font-size: 12.5px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 14px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.check { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 13.5px; }
+.check input { width: auto; }
+pre.log { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; font: 12px/1.5 var(--mono); max-height: 65vh; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
+code { font-family: var(--mono); font-size: 12px; background: var(--chip); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+.error { color: var(--bad); font-size: 13px; }
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; transition: .2s; pointer-events: none; }
+#toast.show { opacity: 1; transform: translateX(-50%); }
+#toast.err { background: var(--bad); color: #fff; }
+.dirty { color: var(--warn); font-size: 12.5px; }
+[hidden] { display: none !important; }
+.call { border-top: 1px solid var(--line); }
+.call:first-child { border-top: 0; }
+.call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
+.call summary::-webkit-details-marker { display: none; }
+.call summary:hover { background: var(--chip); }
+.call .when { color: var(--muted); font-variant-numeric: tabular-nums; }
+.call .who { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.call .what { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.call .what b { font-weight: 600; }
+.call .ms { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; min-width: 56px; }
+.call .st { font-size: 12px; font-weight: 600; min-width: 44px; text-align: right; }
+.call .st.ok { color: var(--ok); } .call .st.bad { color: var(--bad); }
+.call .body { padding: 0 16px 14px; display: grid; gap: 8px; }
+.call .body pre { margin: 0; background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 40vh; overflow: auto; }
+.call .body .lbl { font-size: 11.5px; color: var(--muted); }
+@media (max-width: 760px) { .call summary { grid-template-columns: 70px 1fr auto; } .call .who, .call .ms { display: none; } }
+.hubcard { margin-top: 24px; }
+.hubhead { display: flex; gap: 14px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
+.hubsnips { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hubsnip-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; font-size: 13px; }
+.hubsnip-head .chip { margin-left: auto; }
+.hubsnips pre { margin: 0; background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all; }
+.chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); } .chip.wait { color: var(--warn); }
+@media (max-width: 760px) { .hubsnips { grid-template-columns: 1fr; } }
+.insp-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.insp-bar select { width: auto; min-width: 200px; }
+.insp-info { color: var(--muted); font-size: 13px; }
+.insp { display: grid; grid-template-columns: 280px 1fr; gap: 14px; align-items: start; }
+.insp-side { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.insp-side nav { margin: 8px; display: flex; flex-wrap: wrap; }
+.insp-side nav button { padding: 4px 8px; font-size: 12.5px; }
+.items { max-height: 62vh; overflow: auto; border-top: 1px solid var(--line); }
+.item { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); font: inherit; padding: 9px 12px; cursor: pointer; }
+.item:first-child { border-top: 0; }
+.item:hover { background: var(--chip); }
+.item.active { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.item b { display: block; font-weight: 600; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+.item small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: 12px; }
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 14px; min-width: 0; }
+.detail h2 { margin: 0; font: 600 15px var(--mono); word-break: break-all; }
+.desc { color: var(--muted); white-space: pre-wrap; margin: 0; font-size: 13px; }
+.fields { display: grid; gap: 12px; }
+.req { color: var(--bad); }
+.result { display: grid; gap: 8px; }
+.result-head { display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.result-head .bad { color: var(--bad); font-weight: 600; }
+.result-head .good { color: var(--ok); font-weight: 600; }
+.block { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.block > span { display: block; font-size: 11px; color: var(--muted); background: var(--chip); padding: 3px 10px; font-family: var(--mono); }
+.block pre { margin: 0; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow: auto; }
+.block img { max-width: 100%; display: block; }
+details.raw summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; background: var(--chip); padding: 10px 12px; border-radius: 8px; max-height: 50vh; overflow: auto; }
+.ilog { margin-top: 14px; }
+.ilog pre { max-height: 220px; }
+.ilog .n { color: var(--accent); } .ilog .e { color: var(--bad); }
+@media (max-width: 760px) { .insp { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .envrow { grid-template-columns: 1fr 1fr auto; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>MCP Hub</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
+    <div class="spacer"></div>
+    <nav id="tabs">
+      <button data-tab="servers" class="active">Server</button>
+      <button data-tab="calls">Protokoll</button>
+      <button data-tab="inspector">Inspector</button>
+      <button data-tab="json">JSON</button>
+      <button data-tab="settings">Einstellungen</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section data-panel="servers">
+    <div class="toolbar">
+      <input type="search" id="filter" placeholder="Filtern…">
+      <select id="sort" aria-label="Sortierung">
+        <option value="recent">Zuletzt verwendet</option>
+        <option value="name">Name</option>
+        <option value="config">Reihenfolge der Datei</option>
+      </select>
+      <button class="btn" id="importBtn">Importieren</button>
+      <button class="btn primary" id="addBtn">Server hinzufügen</button>
+    </div>
+    <div class="list" id="list"></div>
+    <p class="hint" style="margin-top:12px">Datei: <code id="cfgPath"></code></p>
+    <div class="card hubcard">
+      <div class="hubhead">
+        <div>
+          <div class="name">Hub-Endpunkt</div>
+          <div class="hint">Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).</div>
+        </div>
+        <code id="hubUrl"></code>
+      </div>
+      <div class="hubsnips">
+        <div>
+          <div class="hubsnip-head"><b>Claude Code</b><button class="chip" data-copy="hubCode">kopieren</button></div>
+          <pre id="hubCode"></pre>
+        </div>
+        <div>
+          <div class="hubsnip-head"><b>Claude Desktop</b> <span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop">kopieren</button></div>
+          <pre id="hubDesktop"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-panel="calls" hidden>
+    <div class="toolbar">
+      <select id="callServer" aria-label="Server"><option value="">Alle Server</option></select>
+      <select id="callClient" aria-label="Client"><option value="">Alle Clients</option></select>
+      <label class="check"><input type="checkbox" id="callErrors"> Nur Fehler</label>
+      <span class="hint" id="callCount" style="margin-left:auto"></span>
+    </div>
+    <div class="list" id="calls"></div>
+  </section>
+
+  <section data-panel="inspector" hidden>
+    <div class="insp-bar">
+      <select id="inspServer"></select>
+      <button class="btn primary" id="inspConnect">Verbinden</button>
+      <button class="btn" id="inspDisconnect" hidden>Trennen</button>
+      <span class="insp-info" id="inspInfo">Startet den Server direkt (stdio), unabhängig vom Proxy.</span>
+    </div>
+    <p class="error" id="inspError" style="white-space:pre-wrap"></p>
+    <div class="insp" id="inspMain" hidden>
+      <div class="insp-side">
+        <nav id="inspKinds"></nav>
+        <div class="items" id="inspItems"></div>
+      </div>
+      <div class="detail" id="inspDetail"><p class="desc">Links etwas auswählen.</p></div>
+    </div>
+    <details class="raw ilog" id="inspLogBox">
+      <summary>Server-Ausgabe (stderr &amp; Notifications)</summary>
+      <pre class="log" id="inspLog"></pre>
+    </details>
+  </section>
+
+  <section data-panel="json" hidden>
+    <div class="toolbar">
+      <span class="hint" style="flex:1">Komplette <code>mcpServers</code>-Definition bearbeiten.</span>
+      <button class="btn" id="jsonReset">Verwerfen</button>
+      <button class="btn primary" id="jsonSave">Speichern</button>
+    </div>
+    <textarea id="jsonText" rows="28" spellcheck="false"></textarea>
+    <p class="error" id="jsonError"></p>
+  </section>
+
+  <section data-panel="settings" hidden>
+    <form class="card" id="settingsForm">
+      <label class="f"><span><b>Konfigurationsdatei</b></span><input name="configPath"></label>
+      <label class="f"><span><b>mcp-proxy</b> – Pfad zum Programm, dient Claude Desktop als Brücke zum Hub</span><input name="proxyBinary"></label>
+      <label class="check"><input type="checkbox" name="passEnvironment"> Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</label>
+      <div><button class="btn primary">Speichern</button></div>
+    </form>
+  </section>
+
+</main>
+
+<dialog id="editor">
+  <form method="dialog" id="editForm">
+    <div class="dhead" id="editTitle">Server</div>
+    <div class="dbody">
+      <label class="f"><span><b>Name</b> – erscheint im Pfad <code>/servers/&lt;name&gt;/</code></span><input name="name" required pattern="[^/\s]+"></label>
+      <label class="f"><span><b>Wofür</b> – kurze Beschreibung, nur für dich</span><input name="description" placeholder="z. B. Dashboards, Loki- und Prometheus-Abfragen"></label>
+      <label class="f"><span><b>Art</b></span>
+        <select name="transport">
+          <option value="stdio">Lokaler Befehl (stdio)</option>
+          <option value="http">URL – Streamable HTTP</option>
+          <option value="sse">URL – SSE (älteres Protokoll)</option>
+        </select>
+      </label>
+      <div class="fields" id="stdioFields">
+        <label class="f"><span><b>Befehl</b></span><input name="command" placeholder="npx" style="font-family:var(--mono)"></label>
+        <label class="f"><span><b>Argumente</b> – eins pro Zeile</span><textarea name="args" rows="4" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/Users/me/Documents"></textarea></label>
+        <span class="hint">Tipp: eine komplette Befehlszeile ins Feld „Befehl“ einfügen – sie wird beim Speichern automatisch in Befehl und Argumente zerlegt.</span>
+        <div class="f">
+          <span style="font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)">Umgebungsvariablen</b></span>
+          <div class="env" id="envRows"></div>
+          <div><button type="button" class="btn" id="addEnv">+ Variable</button></div>
+        </div>
+      </div>
+      <div class="fields" id="urlFields" hidden>
+        <label class="f"><span><b>URL</b></span><input name="url" type="url" placeholder="https://example.com/mcp" style="font-family:var(--mono)"></label>
+        <div class="f">
+          <span style="font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)">Header</b> – z. B. Authorization: Bearer …</span>
+          <div class="env" id="headerRows"></div>
+          <div><button type="button" class="btn" id="addHeader">+ Header</button></div>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" name="enabled"> Aktiviert</label>
+      <p class="error" id="editError"></p>
+    </div>
+    <div class="dfoot">
+      <button type="button" class="btn" value="cancel" id="editCancel">Abbrechen</button>
+      <button class="btn primary" id="editSave">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="importer">
+  <form method="dialog" id="importForm">
+    <div class="dhead">Server importieren</div>
+    <div class="dbody">
+      <span class="hint">JSON im Format von Claude Desktop, Cursor &amp; Co. einfügen – entweder mit <code>mcpServers</code> oder direkt die Server-Objekte. Bestehende Einträge gleichen Namens werden überschrieben. Lokale Befehle (<code>command</code>) und URLs (<code>url</code>, optional mit <code>headers</code>) werden übernommen.</span>
+      <textarea id="importText" rows="14" spellcheck="false" placeholder='{ "mcpServers": { "fetch": { "command": "uvx", "args": ["mcp-server-fetch"] } } }'></textarea>
+      <p class="error" id="importError"></p>
+    </div>
+    <div class="dfoot">
+      <button type="button" class="btn" id="importCancel">Abbrechen</button>
+      <button class="btn primary">Importieren</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+let state = null;
+let hubStatus = {};
+let usage = {};
+
+function ago(ts) {
+  const s = Math.round(Date.now() / 1000 - ts);
+  if (s < 60) return "gerade eben";
+  const units = [[86400 * 30, "Monat", "Monaten"], [86400, "Tag", "Tagen"], [3600, "Stunde", "Stunden"], [60, "Minute", "Minuten"]];
+  for (const [size, one, many] of units) {
+    const n = Math.floor(s / size);
+    if (n >= 1) return `vor ${n} ${n === 1 ? one : many}`;
+  }
+}
+let editing = null;
+
+async function api(method, path, body) {
+  const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function toast(msg, err = false) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "show" + (err ? " err" : "");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (t.className = ""), 2400);
+}
+
+function splitCommand(line) {
+  const out = [];
+  let cur = "", quote = null, has = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (quote) {
+      if (c === quote) quote = null;
+      else if (c === "\\" && quote === '"' && i + 1 < line.length) cur += line[++i];
+      else cur += c;
+    } else if (c === "'" || c === '"') { quote = c; has = true; }
+    else if (c === "\\" && i + 1 < line.length) { cur += line[++i]; has = true; }
+    else if (/\s/.test(c)) { if (cur || has) out.push(cur); cur = ""; has = false; }
+    else { cur += c; has = true; }
+  }
+  if (cur || has) out.push(cur);
+  return out;
+}
+
+function shellQuote(s) {
+  return /^[\w@%+=:,./-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\\''") + "'";
+}
+
+function servers() { return state.config.mcpServers; }
+
+function render() {
+  renderHubStatus();
+  $("#cfgPath").textContent = state.configPath;
+  const hubUrl = `http://127.0.0.1:${location.port}/mcp`;
+  $("#hubUrl").textContent = hubUrl;
+  $("#hubCode").textContent = `claude mcp add --scope user --transport http mcp-hub ${hubUrl}`;
+  $("#hubDesktop").textContent = JSON.stringify({ mcpServers: { "mcp-hub": { command: state.settings.proxyBinary, args: ["--transport", "streamablehttp", hubUrl] } } }, null, 2);
+  renderList();
+  fillInspServers();
+}
+
+function renderHubStatus(reachable = true) {
+  const entries = Object.values(hubStatus);
+  const running = entries.filter(h => h.state === "running");
+  const failed = entries.filter(h => h.state === "error").length;
+  const starting = entries.length - running.length - failed;
+  const tools = running.reduce((sum, h) => sum + h.tools, 0);
+  const dot = !reachable || (entries.length && !running.length) ? "bad" : failed || starting ? "warn" : "ok";
+  $("#dot").className = `dot ${dot}`;
+  $("#statusText").textContent = !reachable ? "Hub nicht erreichbar"
+    : !entries.length ? "keine aktiven Server"
+    : `${running.length} Server · ${tools} Tools` + (failed ? ` · ${failed} mit Fehler` : "") + (starting ? ` · ${starting} startet` : "");
+}
+
+function renderList() {
+  const q = $("#filter").value.trim().toLowerCase();
+  const entries = Object.entries(servers()).filter(([n, s]) =>
+    !q || n.toLowerCase().includes(q) || [s.description, s.command, ...(s.args || [])].join(" ").toLowerCase().includes(q));
+  const sort = $("#sort").value;
+  const byName = ([a], [b]) => a.localeCompare(b, "de", { sensitivity: "base" });
+  if (sort === "name") entries.sort(byName);
+  if (sort === "recent") entries.sort((x, y) => (usage[y[0]]?.last || 0) - (usage[x[0]]?.last || 0) || byName(x, y));
+  const list = $("#list");
+  list.replaceChildren();
+  if (!entries.length) {
+    list.innerHTML = `<div class="empty">${q ? "Keine Treffer." : "Noch keine Server. Leg einen an oder importiere eine bestehende Konfiguration."}</div>`;
+    return;
+  }
+  for (const [name, s] of entries) {
+    const on = s.enabled !== false;
+    const row = document.createElement("div");
+    row.className = "row" + (on ? "" : " off");
+    row.innerHTML = `
+      <label class="switch" title="${on ? "Deaktivieren" : "Aktivieren"}"><input type="checkbox" ${on ? "checked" : ""}><span></span></label>
+      <div style="min-width:0">
+        <div class="name"></div>
+        <div class="purpose"></div>
+        <div class="cmd"></div>
+        <div class="meta"></div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost dots" aria-label="Optionen" aria-haspopup="menu" aria-expanded="false">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
+        </button>
+        <div class="menu" role="menu" hidden>
+          <button role="menuitem" data-act="inspect">Inspizieren</button>
+          <button role="menuitem" data-act="edit">Bearbeiten</button>
+          <button role="menuitem" data-act="dup">Duplizieren</button>
+          <hr>
+          <button role="menuitem" class="danger" data-act="del">Löschen</button>
+        </div>
+      </div>`;
+    $(".name", row).textContent = name;
+    const purpose = $(".purpose", row);
+    if (s.description) purpose.textContent = s.description;
+    else if (hubStatus[name]?.summary) {
+      purpose.textContent = hubStatus[name].summary;
+      purpose.classList.add("auto");
+      purpose.title = "Vom Server gemeldet – unter „Bearbeiten“ durch eigene Beschreibung ersetzen";
+    } else purpose.remove();
+    const kind = transportOf(s);
+    $(".cmd", row).textContent = kind === "stdio" ? [s.command, ...(s.args || [])].map(shellQuote).join(" ") : `${kind.toUpperCase()} · ${s.url}`;
+    const meta = $(".meta", row);
+    const h = hubStatus[name];
+    if (on && h) {
+      const text = h.state === "running" ? `Hub: ${h.tools} Tools` + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
+        : h.state === "error" ? "Hub: Fehler" : "Hub: startet…";
+      meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: h.error || "", style: "cursor:default" }));
+    }
+    const u = usage[name];
+    meta.append(el("span", {
+      className: "chip", style: "cursor:default",
+      textContent: u ? `${u.count}× genutzt · ${ago(u.last)}` : "noch nie genutzt",
+      title: u ? `Zuletzt: ${new Date(u.last * 1000).toLocaleString("de-DE")}` : "",
+    }));
+    const envCount = Object.keys(s.env || {}).length;
+    if (envCount) meta.append(Object.assign(document.createElement("span"), { className: "chip", textContent: `${envCount} env`, style: "cursor:default" }));
+    const headerCount = Object.keys(s.headers || {}).length;
+    if (headerCount) meta.append(el("span", { className: "chip", textContent: `${headerCount} Header`, style: "cursor:default" }));
+    $("input", row).onchange = e => saveServers({ ...servers(), [name]: { ...s, enabled: e.target.checked } });
+    $(".dots", row).onclick = e => { e.stopPropagation(); toggleMenu(row); };
+    $("[data-act=inspect]", row).onclick =() => { showTab("inspector"); $("#inspServer").value = name; inspConnect(); };
+    $("[data-act=edit]", row).onclick = () => openEditor(name);
+    $("[data-act=dup]", row).onclick = () => openEditor(name, true);
+    $("[data-act=del]", row).onclick = () => {
+      if (!confirm(`Server „${name}“ löschen?`)) return;
+      const next = { ...servers() };
+      delete next[name];
+      saveServers(next);
+    };
+    list.append(row);
+  }
+}
+
+function closeMenus(except) {
+  for (const m of document.querySelectorAll(".menu:not([hidden])")) {
+    if (m === except) continue;
+    m.hidden = true;
+    m.previousElementSibling.setAttribute("aria-expanded", "false");
+  }
+}
+
+function toggleMenu(row) {
+  const menu = $(".menu", row);
+  closeMenus(menu);
+  menu.hidden = !menu.hidden;
+  $(".dots", row).setAttribute("aria-expanded", String(!menu.hidden));
+  if (!menu.hidden) menu.firstElementChild.focus();
+}
+
+document.addEventListener("click", () => closeMenus());
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenus(); });
+
+async function saveServers(next) {
+  try {
+    state = await api("PUT", "/api/servers", { mcpServers: next });
+    syncJson();
+    render();
+    toast("Gespeichert");
+    return true;
+  } catch (e) {
+    toast(e.message, true);
+    return false;
+  }
+}
+
+function transportOf(entry) {
+  const type = (entry.type || "").toLowerCase();
+  if (type === "sse") return "sse";
+  if (["http", "streamable-http", "streamablehttp"].includes(type) || (entry.url && !entry.command)) return "http";
+  return "stdio";
+}
+
+function kvRow(container, k = "", v = "", keyLabel = "NAME") {
+  const row = document.createElement("div");
+  row.className = "envrow";
+  row.innerHTML = `<input class="k"><input placeholder="Wert" class="v"><button type="button" class="btn ghost">✕</button>`;
+  $(".k", row).placeholder = keyLabel;
+  $(".k", row).value = k;
+  $(".v", row).value = v;
+  $("button", row).onclick = () => row.remove();
+  container.append(row);
+}
+const envRow = (k, v) => kvRow($("#envRows"), k, v);
+const headerRow = (k, v) => kvRow($("#headerRows"), k, v, "Header");
+
+function readKv(container) {
+  const out = {};
+  for (const row of container.children) {
+    const k = $(".k", row).value.trim();
+    if (k) out[k] = $(".v", row).value;
+  }
+  return out;
+}
+
+function showTransportFields() {
+  const kind = $("#editForm").transport.value;
+  $("#stdioFields").hidden = kind !== "stdio";
+  $("#urlFields").hidden = kind === "stdio";
+  $("#editForm").command.required = kind === "stdio";
+  $("#editForm").url.required = kind !== "stdio";
+}
+$("#editForm").transport.onchange = showTransportFields;
+
+function openEditor(name, duplicate = false) {
+  const f = $("#editForm");
+  const s = name ? servers()[name] : { command: "", args: [], env: {}, enabled: true };
+  editing = duplicate ? null : name;
+  $("#editTitle").textContent = duplicate ? `„${name}“ duplizieren` : name ? `„${name}“ bearbeiten` : "Neuer Server";
+  f.name.value = duplicate ? `${name}-kopie` : name || "";
+  f.description.value = s.description || "";
+  f.transport.value = transportOf(s);
+  f.command.value = s.command || "";
+  f.args.value = (s.args || []).join("\n");
+  f.url.value = s.url || "";
+  f.enabled.checked = s.enabled !== false;
+  $("#envRows").replaceChildren();
+  Object.entries(s.env || {}).forEach(([k, v]) => envRow(k, v));
+  $("#headerRows").replaceChildren();
+  Object.entries(s.headers || {}).forEach(([k, v]) => headerRow(k, v));
+  showTransportFields();
+  $("#editError").textContent = "";
+  $("#editor").showModal();
+  f.name.focus();
+}
+
+$("#editForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target;
+  const name = f.name.value.trim();
+  if (name !== editing && servers()[name]) return ($("#editError").textContent = `Es gibt bereits einen Server „${name}“.`);
+  const prev = editing ? servers()[editing] : {};
+  const kind = f.transport.value;
+  const entry = { ...prev, enabled: f.enabled.checked };
+  for (const key of ["type", "url", "headers", "command", "args", "env"]) delete entry[key];
+  if (kind === "stdio") {
+    let command = f.command.value.trim();
+    let args = f.args.value.split("\n").map(a => a.trim()).filter(Boolean);
+    if (/\s/.test(command) && !args.length) [command, ...args] = splitCommand(command);
+    const env = readKv($("#envRows"));
+    Object.assign(entry, { command, args }, Object.keys(env).length ? { env } : {});
+  } else {
+    const headers = readKv($("#headerRows"));
+    Object.assign(entry, { type: kind, url: f.url.value.trim() }, Object.keys(headers).length ? { headers } : {});
+  }
+  const description = f.description.value.trim();
+  if (description) entry.description = description; else delete entry.description;
+  const next = {};
+  for (const [n, s] of Object.entries(servers())) next[n === editing ? name : n] = n === editing ? entry : s;
+  if (!editing) next[name] = entry;
+  if (await saveServers(next)) $("#editor").close();
+};
+$("#editCancel").onclick = () => $("#editor").close();
+$("#addEnv").onclick = () => envRow();
+$("#addHeader").onclick = () => headerRow();
+$("#addBtn").onclick = () => openEditor(null);
+
+$("#importBtn").onclick = () => { $("#importText").value = ""; $("#importError").textContent = ""; $("#importer").showModal(); };
+$("#importCancel").onclick = () => $("#importer").close();
+$("#importForm").onsubmit = async e => {
+  e.preventDefault();
+  let data;
+  try { data = JSON.parse($("#importText").value); } catch (err) { return ($("#importError").textContent = err.message); }
+  const src = data.mcpServers || data.servers || data;
+  const picked = {}, skipped = [];
+  for (const [n, s] of Object.entries(src || {})) {
+    if (!s || typeof s !== "object" || !(s.command || s.url)) { skipped.push(n); continue; }
+    const base = { ...(s.description ? { description: s.description } : {}), enabled: s.enabled !== false };
+    picked[n] = s.command
+      ? { ...base, command: s.command, args: s.args || [], ...(s.env ? { env: s.env } : {}) }
+      : { ...base, type: transportOf(s), url: s.url, ...(s.headers ? { headers: s.headers } : {}) };
+  }
+  if (!Object.keys(picked).length) return ($("#importError").textContent = "Keine Server gefunden.");
+  if (await saveServers({ ...servers(), ...picked })) {
+    $("#importer").close();
+    toast(`${Object.keys(picked).length} importiert` + (skipped.length ? `, übersprungen: ${skipped.join(", ")}` : ""));
+  }
+};
+
+function syncJson() {
+  $("#jsonText").value = JSON.stringify(servers(), null, 2);
+  $("#jsonError").textContent = "";
+}
+$("#jsonReset").onclick = syncJson;
+$("#jsonSave").onclick = async () => {
+  try { await saveServers(JSON.parse($("#jsonText").value)); }
+  catch (e) { $("#jsonError").textContent = e.message; }
+};
+
+function fillSettings() {
+  const f = $("#settingsForm");
+  for (const [k, v] of Object.entries(state.settings)) {
+    if (!f[k]) continue;
+    if (f[k].type === "checkbox") f[k].checked = v; else f[k].value = v;
+  }
+}
+$("#settingsForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target;
+  const body = {};
+  for (const k of Object.keys(state.settings)) if (f[k]) body[k] = f[k].type === "checkbox" ? f[k].checked : f[k].value;
+  try {
+    state = await api("PUT", "/api/settings", body);
+    fillSettings(); syncJson(); render();
+    toast("Einstellungen gespeichert");
+  } catch (err) { toast(err.message, true); }
+};
+
+
+let tab = "servers";
+function showTab(name) {
+  tab = name;
+  for (const x of $("#tabs").children) x.classList.toggle("active", x.dataset.tab === name);
+  for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== name;
+  if (name === "inspector") fillInspServers();
+  if (name === "calls") refreshCalls();
+}
+$("#tabs").onclick = e => {
+  const b = e.target.closest("button");
+  if (b) showTab(b.dataset.tab);
+};
+$("#filter").oninput = renderList;
+try { $("#sort").value = localStorage.getItem("sort") || "recent"; } catch {}
+$("#sort").onchange = () => {
+  try { localStorage.setItem("sort", $("#sort").value); } catch {}
+  renderList();
+};
+
+const insp = { name: null, catalog: null, kind: "tools", selected: null, logSince: 0, logTimer: null };
+const KINDS = [["tools", "Tools"], ["resources", "Resources"], ["resourceTemplates", "Templates"], ["prompts", "Prompts"]];
+
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  node.append(...children.filter(c => c != null));
+  return node;
+}
+
+function fillInspServers() {
+  const sel = $("#inspServer"), current = sel.value || insp.name;
+  sel.replaceChildren(...Object.keys(servers()).map(n => el("option", { value: n, textContent: n })));
+  if (current && servers()[current]) sel.value = current;
+}
+
+async function inspConnect() {
+  const name = $("#inspServer").value;
+  if (!name) return;
+  if (insp.name) await inspDisconnect();
+  $("#inspError").textContent = "";
+  $("#inspInfo").textContent = `Starte ${name}…`;
+  $("#inspConnect").disabled = true;
+  $("#inspLog").textContent = "";
+  insp.logSince = 0;
+  try {
+    insp.catalog = await api("POST", "/api/inspect/connect", { name });
+    insp.name = name;
+    insp.selected = null;
+    insp.kind = KINDS.find(([k]) => insp.catalog[k].length)?.[0] || "tools";
+    const info = insp.catalog.initialize;
+    $("#inspInfo").textContent = `${info.serverInfo?.name || name} ${info.serverInfo?.version || ""} · Protokoll ${info.protocolVersion}`;
+    $("#inspMain").hidden = false;
+    $("#inspConnect").hidden = true;
+    $("#inspDisconnect").hidden = false;
+    renderInspSide();
+    renderInspDetail();
+    clearInterval(insp.logTimer);
+    insp.logTimer = setInterval(pollInspLog, 1500);
+  } catch (e) {
+    $("#inspError").textContent = e.message;
+    $("#inspInfo").textContent = "";
+  } finally {
+    $("#inspConnect").disabled = false;
+    pollInspLog();
+  }
+}
+
+async function inspDisconnect() {
+  clearInterval(insp.logTimer);
+  const name = insp.name;
+  insp.name = null;
+  $("#inspMain").hidden = true;
+  $("#inspConnect").hidden = false;
+  $("#inspDisconnect").hidden = true;
+  $("#inspInfo").textContent = "Getrennt.";
+  if (name) await api("POST", "/api/inspect/disconnect", { name }).catch(() => {});
+}
+
+$("#inspConnect").onclick = inspConnect;
+$("#inspDisconnect").onclick = inspDisconnect;
+$("#inspServer").onchange = () => { if (insp.name) inspConnect(); };
+addEventListener("pagehide", () => {
+  if (insp.name) navigator.sendBeacon("/api/inspect/disconnect", JSON.stringify({ name: insp.name }));
+});
+
+async function pollInspLog() {
+  const name = insp.name || $("#inspServer").value;
+  if (!name) return;
+  const data = await api("GET", `/api/inspect/log?name=${encodeURIComponent(name)}&since=${insp.logSince}`).catch(() => null);
+  if (!data) return;
+  const pre = $("#inspLog");
+  for (const entry of data.entries) {
+    insp.logSince = Math.max(insp.logSince, entry.t);
+    const text = typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data);
+    const cls = entry.kind === "notification" || entry.kind === "server-request" ? "n" : entry.kind === "exit" ? "e" : "";
+    pre.append(el("span", { className: cls, textContent: `[${entry.kind}] ${text}\n` }));
+  }
+  if (data.entries.length) pre.scrollTop = pre.scrollHeight;
+  if (insp.name && !data.connected) {
+    $("#inspError").textContent = "Der Server-Prozess wurde beendet.";
+    inspDisconnect();
+  }
+}
+
+function renderInspSide() {
+  const nav = $("#inspKinds");
+  nav.replaceChildren(...KINDS.filter(([k]) => k !== "resourceTemplates" || insp.catalog[k].length).map(([k, label]) => {
+    const b = el("button", { textContent: `${label} ${insp.catalog[k].length}`, className: k === insp.kind ? "active" : "" });
+    b.onclick = () => { insp.kind = k; insp.selected = null; renderInspSide(); renderInspDetail(); };
+    return b;
+  }));
+  const items = insp.catalog[insp.kind];
+  const box = $("#inspItems");
+  if (!items.length) return box.replaceChildren(el("div", { className: "empty", textContent: "Nichts vorhanden." }));
+  box.replaceChildren(...items.map((item, i) => {
+    const b = el("button", { className: "item" + (i === insp.selected ? " active" : "") },
+      el("b", { textContent: item.name || item.uri || item.uriTemplate }),
+      el("small", { textContent: item.title || item.description || item.uri || "" }));
+    b.onclick = () => { insp.selected = i; renderInspSide(); renderInspDetail(); };
+    return b;
+  }));
+}
+
+function fieldFor(name, schema = {}, required = false) {
+  const type = Array.isArray(schema.type) ? schema.type.find(t => t !== "null") : schema.type;
+  const label = el("label", { className: "f" });
+  const head = el("span", {}, el("b", { textContent: name }), required ? el("span", { className: "req", textContent: " *" }) : null,
+    type ? ` · ${type}` : "", schema.description ? ` – ${schema.description}` : "");
+  let input;
+  if (schema.enum) {
+    input = el("select", {}, ...(required ? [] : [el("option", { value: "", textContent: "—" })]),
+      ...schema.enum.map(v => el("option", { value: JSON.stringify(v), textContent: String(v) })));
+    input.dataset.kind = "enum";
+  } else if (type === "boolean") {
+    input = el("select", {}, el("option", { value: "", textContent: "—" }), el("option", { value: "true", textContent: "true" }), el("option", { value: "false", textContent: "false" }));
+    input.dataset.kind = "enum";
+  } else if (type === "number" || type === "integer") {
+    input = el("input", { type: "number", step: type === "integer" ? "1" : "any" });
+    input.dataset.kind = "number";
+  } else if (type === "object" || type === "array" || !type) {
+    input = el("textarea", { rows: 3, placeholder: type === "array" ? "[ ]" : type === "object" ? "{ }" : "JSON oder Text" });
+    input.dataset.kind = "json";
+  } else {
+    input = el("input", { type: "text", placeholder: schema.format || "" });
+    input.dataset.kind = "text";
+  }
+  if (schema.default !== undefined) setFieldValue(input, schema.default);
+  input.name = name;
+  input.dataset.required = required ? "1" : "";
+  label.append(head, input);
+  return label;
+}
+
+function setFieldValue(input, value) {
+  if (value === undefined) return (input.value = "");
+  if (input.dataset.kind === "enum") input.value = JSON.stringify(value);
+  else if (input.dataset.kind === "json") input.value = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  else input.value = value;
+}
+
+function readFields(container) {
+  const out = {};
+  for (const input of container.querySelectorAll("[name]")) {
+    const raw = input.value;
+    if (raw === "") {
+      if (input.dataset.required) throw new Error(`${input.name} ist ein Pflichtfeld`);
+      continue;
+    }
+    if (input.dataset.kind === "enum") out[input.name] = JSON.parse(raw);
+    else if (input.dataset.kind === "number") out[input.name] = Number(raw);
+    else if (input.dataset.kind === "json") {
+      try { out[input.name] = JSON.parse(raw); } catch { out[input.name] = raw; }
+    } else out[input.name] = raw;
+  }
+  return out;
+}
+
+function argsEditor(schema) {
+  const props = schema?.properties || {};
+  const required = new Set(schema?.required || []);
+  const fields = el("div", { className: "fields" }, ...Object.entries(props).map(([k, s]) => fieldFor(k, s, required.has(k))));
+  const json = el("textarea", { rows: 10, spellcheck: false, hidden: true });
+  const toggle = el("button", { type: "button", className: "btn ghost", textContent: "Als JSON bearbeiten" });
+  let jsonMode = false;
+  toggle.onclick = () => {
+    try {
+      if (!jsonMode) json.value = JSON.stringify(readFields(fields), null, 2);
+      else {
+        const data = JSON.parse(json.value || "{}");
+        for (const input of fields.querySelectorAll("[name]")) setFieldValue(input, data[input.name]);
+      }
+    } catch (e) { return toast(e.message, true); }
+    jsonMode = !jsonMode;
+    fields.hidden = jsonMode;
+    json.hidden = !jsonMode;
+    toggle.textContent = jsonMode ? "Als Formular bearbeiten" : "Als JSON bearbeiten";
+  };
+  const node = el("div", { className: "fields" }, Object.keys(props).length ? fields : el("p", { className: "desc", textContent: "Keine Parameter." }), json,
+    el("div", {}, toggle));
+  node.read = () => (jsonMode ? JSON.parse(json.value || "{}") : readFields(fields));
+  return node;
+}
+
+function promptArgsSchema(prompt) {
+  return {
+    properties: Object.fromEntries((prompt.arguments || []).map(a => [a.name, { type: "string", description: a.description }])),
+    required: (prompt.arguments || []).filter(a => a.required).map(a => a.name),
+  };
+}
+
+function templateVars(uriTemplate) {
+  return [...uriTemplate.matchAll(/\{[+#./;?&]?([^}]+)\}/g)].flatMap(m => m[1].split(",").map(v => v.replace(/\*$|:\d+$/, "")));
+}
+
+function expandTemplate(uriTemplate, values) {
+  return uriTemplate.replace(/\{([+#./;?&]?)([^}]+)\}/g, (_, op, list) => {
+    const names = list.split(",").map(v => v.replace(/\*$|:\d+$/, "")).filter(n => values[n] !== undefined);
+    const enc = v => (op === "+" || op === "#" ? encodeURI(String(v)) : encodeURIComponent(String(v)));
+    if (!names.length) return "";
+    if (op === "?" || op === "&") return op + names.map(n => `${n}=${enc(values[n])}`).join("&");
+    const sep = { "/": "/", ".": ".", ";": ";", "#": "," }[op] || ",";
+    const prefix = { "/": "/", ".": ".", ";": ";", "#": "#" }[op] || "";
+    return prefix + names.map(n => (op === ";" ? `${n}=${enc(values[n])}` : enc(values[n]))).join(sep);
+  });
+}
+
+function renderInspDetail() {
+  const d = $("#inspDetail");
+  const item = insp.catalog[insp.kind][insp.selected];
+  if (!item) return d.replaceChildren(el("p", { className: "desc", textContent: "Links etwas auswählen." }));
+  const title = item.name || item.uri || item.uriTemplate;
+  const parts = [el("h2", { textContent: title })];
+  if (item.title && item.title !== title) parts.push(el("div", { textContent: item.title }));
+  if (item.description) parts.push(el("p", { className: "desc", textContent: item.description }));
+  const result = el("div", { className: "result" });
+  let editor, buttonLabel, run;
+
+  if (insp.kind === "tools") {
+    editor = argsEditor(item.inputSchema);
+    buttonLabel = "Ausführen";
+    run = () => ["tools/call", { name: item.name, arguments: editor.read() }];
+    if (item.annotations) parts.push(el("div", { className: "meta" }, ...Object.entries(item.annotations)
+      .filter(([, v]) => v !== false && typeof v !== "string").map(([k]) => el("span", { className: "chip", style: "cursor:default", textContent: k }))));
+  } else if (insp.kind === "resources") {
+    parts.push(el("div", {}, el("code", { textContent: item.uri }), item.mimeType ? el("span", { className: "hint", textContent: ` · ${item.mimeType}` }) : null));
+    buttonLabel = "Lesen";
+    run = () => ["resources/read", { uri: item.uri }];
+  } else if (insp.kind === "resourceTemplates") {
+    const vars = templateVars(item.uriTemplate);
+    editor = argsEditor({ properties: Object.fromEntries(vars.map(v => [v, { type: "string" }])), required: vars });
+    parts.push(el("div", {}, el("code", { textContent: item.uriTemplate })));
+    buttonLabel = "Lesen";
+    run = () => ["resources/read", { uri: expandTemplate(item.uriTemplate, editor.read()) }];
+  } else {
+    editor = argsEditor(promptArgsSchema(item));
+    buttonLabel = "Abrufen";
+    run = () => ["prompts/get", { name: item.name, arguments: editor.read() }];
+  }
+
+  const button = el("button", { className: "btn primary", textContent: buttonLabel });
+  button.onclick = async () => {
+    let method, params;
+    try { [method, params] = run(); } catch (e) { return toast(e.message, true); }
+    button.disabled = true;
+    result.replaceChildren(el("div", { className: "result-head", textContent: "Läuft…" }));
+    const started = performance.now();
+    try {
+      const data = await api("POST", "/api/inspect/call", { name: insp.name, method, params });
+      renderResult(result, data.result, Math.round(performance.now() - started), { method, params });
+    } catch (e) {
+      result.replaceChildren(el("div", { className: "result-head" }, el("span", { className: "bad", textContent: "Fehler" })),
+        el("div", { className: "block" }, el("pre", { textContent: e.message })));
+    } finally { button.disabled = false; }
+  };
+  if (editor) parts.push(editor);
+  parts.push(el("div", {}, button), result);
+  if (item.inputSchema || item.outputSchema) parts.push(el("details", { className: "raw" }, el("summary", { textContent: "Schema" }),
+    el("pre", { textContent: JSON.stringify({ inputSchema: item.inputSchema, outputSchema: item.outputSchema }, null, 2) })));
+  d.replaceChildren(...parts);
+}
+
+function contentBlock(c) {
+  const label = c.type + (c.mimeType ? ` · ${c.mimeType}` : "") + (c.uri ? ` · ${c.uri}` : "");
+  let body;
+  if (c.type === "text") body = el("pre", { textContent: prettyMaybe(c.text) });
+  else if (c.type === "image") body = el("img", { src: `data:${c.mimeType};base64,${c.data}` });
+  else if (c.type === "audio") body = el("audio", { controls: true, src: `data:${c.mimeType};base64,${c.data}` });
+  else if (c.type === "resource") return contentBlock({ ...c.resource, type: c.resource.text !== undefined ? "text" : "blob" });
+  else if (c.type === "blob" && c.mimeType?.startsWith("image/")) body = el("img", { src: `data:${c.mimeType};base64,${c.blob}` });
+  else if (c.type === "blob") body = el("pre", { textContent: `${Math.round((c.blob?.length || 0) * 0.75)} Bytes Binärdaten` });
+  else body = el("pre", { textContent: JSON.stringify(c, null, 2) });
+  return el("div", { className: "block" }, el("span", { textContent: label }), body);
+}
+
+function prettyMaybe(text) {
+  try { const v = JSON.parse(text); if (typeof v === "object" && v) return JSON.stringify(v, null, 2); } catch {}
+  return text;
+}
+
+function renderResult(box, res, ms, request) {
+  const isError = res?.isError;
+  const head = el("div", { className: "result-head" }, el("span", { className: isError ? "bad" : "good", textContent: isError ? "Tool meldet Fehler" : "OK" }), `${ms} ms`);
+  const blocks = [];
+  if (res?.content) blocks.push(...res.content.map(contentBlock));
+  if (res?.contents) blocks.push(...res.contents.map(c => contentBlock({ ...c, type: c.text !== undefined ? "text" : "blob" })));
+  if (res?.messages) blocks.push(...res.messages.map(m => {
+    const b = contentBlock(m.content);
+    b.firstChild.textContent = `${m.role} · ${b.firstChild.textContent}`;
+    return b;
+  }));
+  if (res?.structuredContent) blocks.push(el("div", { className: "block" }, el("span", { textContent: "structuredContent" }), el("pre", { textContent: JSON.stringify(res.structuredContent, null, 2) })));
+  box.replaceChildren(head, ...blocks,
+    el("details", { className: "raw" }, el("summary", { textContent: "Rohdaten (Request & Response)" }),
+      el("pre", { textContent: JSON.stringify({ request, response: res }, null, 2) })));
+}
+
+
+const CLIENT_NAMES = { "claude-code": "Claude Code", "mcp": "mcp-proxy (Claude Desktop)", "mcp-hub-inspector": "Inspector" };
+const clientName = c => CLIENT_NAMES[c] || c;
+let calls = [];
+
+function fillSelect(sel, values, allLabel, label = v => v) {
+  const current = sel.value;
+  sel.replaceChildren(el("option", { value: "", textContent: allLabel }), ...values.map(v => el("option", { value: v, textContent: label(v) })));
+  sel.value = values.includes(current) ? current : "";
+}
+
+async function refreshCalls() {
+  const fresh = await api("GET", "/api/calls?limit=500").catch(() => null);
+  if (!fresh) return;
+  const changed = JSON.stringify(fresh.slice(0, 1)) !== JSON.stringify(calls.slice(0, 1)) || fresh.length !== calls.length;
+  calls = fresh;
+  if (changed || !$("#calls").children.length) renderCalls();
+}
+
+function renderCalls() {
+  fillSelect($("#callServer"), [...new Set(calls.map(c => c.server))].sort(), "Alle Server");
+  fillSelect($("#callClient"), [...new Set(calls.map(c => c.client))].sort(), "Alle Clients", clientName);
+  const server = $("#callServer").value, client = $("#callClient").value, errors = $("#callErrors").checked;
+  const shown = calls.filter(c => (!server || c.server === server) && (!client || c.client === client) && (!errors || !c.ok));
+  $("#callCount").textContent = `${shown.length} von ${calls.length} Aufrufen`;
+  const open = new Set([...document.querySelectorAll(".call[open]")].map(d => d.dataset.key));
+  const box = $("#calls");
+  if (!shown.length) return box.replaceChildren(el("div", { className: "empty", textContent: calls.length ? "Keine Treffer." : "Noch keine Aufrufe über den Hub." }));
+  box.replaceChildren(...shown.map(c => {
+    const key = `${c.t}-${c.target}`;
+    const d = new Date(c.t * 1000);
+    const today = d.toDateString() === new Date().toDateString();
+    const details = el("details", { className: "call", open: open.has(key) },
+      el("summary", {},
+        el("span", { className: "when", textContent: (today ? "" : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " ") + d.toLocaleTimeString("de-DE"), title: d.toLocaleString("de-DE") }),
+        el("span", { className: "who", textContent: clientName(c.client), title: c.client }),
+        el("span", { className: "what" }, el("b", { textContent: c.server }), ` · ${c.kind === "tool" ? "" : c.kind + " "}${c.target}`),
+        el("span", { className: "ms", textContent: c.ms >= 1000 ? `${(c.ms / 1000).toFixed(1)} s` : `${c.ms} ms` }),
+        el("span", { className: "st " + (c.ok ? "ok" : "bad"), textContent: c.ok ? "OK" : "Fehler" })),
+      el("div", { className: "body" },
+        c.args && c.args !== "{}" ? el("div", {}, el("div", { className: "lbl", textContent: "Argumente" }), el("pre", { textContent: prettyMaybe(c.args) })) : null,
+        el("div", {}, el("div", { className: "lbl", textContent: c.ok ? "Antwort (Anfang)" : "Fehler" }), el("pre", { textContent: prettyMaybe(c.result) || "(leer)" }))));
+    details.dataset.key = key;
+    return details;
+  }));
+}
+for (const id of ["#callServer", "#callClient", "#callErrors"]) $(id).onchange = renderCalls;
+
+for (const b of document.querySelectorAll("[data-copy]")) {
+  b.onclick = () => navigator.clipboard.writeText($("#" + b.dataset.copy).textContent).then(() => toast("Kopiert"));
+}
+
+async function poll() {
+  try {
+    const [freshHub, freshUsage] = await Promise.all([api("GET", "/api/hub"), api("GET", "/api/usage")]);
+    const minute = Math.floor(Date.now() / 60000);
+    if (JSON.stringify([freshHub, freshUsage]) !== JSON.stringify([hubStatus, usage]) || minute !== poll.minute) {
+      hubStatus = freshHub;
+      usage = freshUsage;
+      poll.minute = minute;
+      if (state && !document.querySelector(".menu:not([hidden])")) renderList();
+    }
+    renderHubStatus();
+    if (tab === "calls") refreshCalls();
+    const fresh = await api("GET", "/api/state");
+    const modal = $("#editor").open || $("#importer").open;
+    if (!modal && JSON.stringify(fresh.config) !== JSON.stringify(state?.config)) {
+      const jsonDirty = state && $("#jsonText").value !== JSON.stringify(servers(), null, 2);
+      state = fresh;
+      if (!jsonDirty) syncJson();
+      render();
+    }
+  } catch {
+    renderHubStatus(false);
+  }
+}
+
+(async () => {
+  [state, hubStatus, usage] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/hub"), api("GET", "/api/usage")]);
+  syncJson(); fillSettings(); render();
+  setInterval(poll, 2000);
+})();
+</script>
+</body>
+</html>
