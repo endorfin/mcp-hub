@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MCP Hub</title>
-<script>try { const theme = localStorage.getItem("theme"); if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme; } catch {}</script>
+<script>try { const theme = localStorage.getItem("theme"), palette = localStorage.getItem("palette"); if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme; if (palette && palette !== "default") document.documentElement.dataset.palette = palette; } catch {}</script>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -223,6 +223,64 @@
               <option value="dark" data-i18n="s.themeDark">Dunkel</option>
             </select>
           </label>
+          <fieldset class="f palettes"><legend data-i18n="s.palette"><b>Farbschema</b></legend>
+            <div class="palette-grid">
+              <label class="palette-opt" data-palette="default"><input type="radio" name="palette" value="default" form="settingsForm">
+                <span class="pv">
+                  <span class="pv-name" data-i18n="s.paletteDefault">Standard</span>
+                  <span class="pv-tabs" aria-hidden="true"><span class="on">Server</span><span>Clients</span></span>
+                  <span class="pv-field" aria-hidden="true"><span>Tools</span> 257</span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-switch"></span>grafana<span class="pv-dots"><i class="ok"></i><i class="warn"></i><i class="bad"></i></span></span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-btn" data-i18n="s.save">Speichern</span><span class="pv-muted">v0.9.1</span></span>
+                </span>
+              </label>
+              <label class="palette-opt" data-palette="slate"><input type="radio" name="palette" value="slate" form="settingsForm">
+                <span class="pv">
+                  <span class="pv-name" data-i18n="s.paletteSlate">Schiefer</span>
+                  <span class="pv-tabs" aria-hidden="true"><span class="on">Server</span><span>Clients</span></span>
+                  <span class="pv-field" aria-hidden="true"><span>Tools</span> 257</span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-switch"></span>grafana<span class="pv-dots"><i class="ok"></i><i class="warn"></i><i class="bad"></i></span></span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-btn" data-i18n="s.save">Speichern</span><span class="pv-muted">v0.9.1</span></span>
+                </span>
+              </label>
+              <label class="palette-opt" data-palette="graphite"><input type="radio" name="palette" value="graphite" form="settingsForm">
+                <span class="pv">
+                  <span class="pv-name" data-i18n="s.paletteGraphite">Graphit</span>
+                  <span class="pv-tabs" aria-hidden="true"><span class="on">Server</span><span>Clients</span></span>
+                  <span class="pv-field" aria-hidden="true"><span>Tools</span> 257</span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-switch"></span>grafana<span class="pv-dots"><i class="ok"></i><i class="warn"></i><i class="bad"></i></span></span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-btn" data-i18n="s.save">Speichern</span><span class="pv-muted">v0.9.1</span></span>
+                </span>
+              </label>
+              <label class="palette-opt" data-palette="lavender"><input type="radio" name="palette" value="lavender" form="settingsForm">
+                <span class="pv">
+                  <span class="pv-name" data-i18n="s.paletteLavender">Lavendel</span>
+                  <span class="pv-tabs" aria-hidden="true"><span class="on">Server</span><span>Clients</span></span>
+                  <span class="pv-field" aria-hidden="true"><span>Tools</span> 257</span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-switch"></span>grafana<span class="pv-dots"><i class="ok"></i><i class="warn"></i><i class="bad"></i></span></span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-btn" data-i18n="s.save">Speichern</span><span class="pv-muted">v0.9.1</span></span>
+                </span>
+              </label>
+              <label class="palette-opt" data-palette="coffee"><input type="radio" name="palette" value="coffee" form="settingsForm">
+                <span class="pv">
+                  <span class="pv-name" data-i18n="s.paletteCoffee">Kaffee</span>
+                  <span class="pv-tabs" aria-hidden="true"><span class="on">Server</span><span>Clients</span></span>
+                  <span class="pv-field" aria-hidden="true"><span>Tools</span> 257</span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-switch"></span>grafana<span class="pv-dots"><i class="ok"></i><i class="warn"></i><i class="bad"></i></span></span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-btn" data-i18n="s.save">Speichern</span><span class="pv-muted">v0.9.1</span></span>
+                </span>
+              </label>
+              <label class="palette-opt" data-palette="teal"><input type="radio" name="palette" value="teal" form="settingsForm">
+                <span class="pv">
+                  <span class="pv-name" data-i18n="s.paletteTeal">Petrol</span>
+                  <span class="pv-tabs" aria-hidden="true"><span class="on">Server</span><span>Clients</span></span>
+                  <span class="pv-field" aria-hidden="true"><span>Tools</span> 257</span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-switch"></span>grafana<span class="pv-dots"><i class="ok"></i><i class="warn"></i><i class="bad"></i></span></span>
+                  <span class="pv-row" aria-hidden="true"><span class="pv-btn" data-i18n="s.save">Speichern</span><span class="pv-muted">v0.9.1</span></span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
           <div><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button></div>
         </div>
       </div>
@@ -1392,7 +1450,7 @@ $("#settingsForm").onsubmit = async e => {
   for (const k of Object.keys(state.settings)) if (f[k]) body[k] = f[k].type === "checkbox" ? f[k].checked : f[k].value;
   try {
     state = await api("PUT", "/api/settings", body);
-    applyTheme(state.settings.theme);
+    applyTheme(state.settings.theme, state.settings.palette);
     if (rememberLanguage(state.settings.language)) return;
     fillSettings(); render(); refreshUpdate();
     toast(t("settingsSaved"));
@@ -1989,10 +2047,13 @@ async function poll() {
   }
 }
 
-function applyTheme(setting = "auto") {
-  if (setting === "light" || setting === "dark") document.documentElement.dataset.theme = setting;
-  else delete document.documentElement.dataset.theme;
-  try { localStorage.setItem("theme", setting); } catch {}
+function applyTheme(setting = "auto", palette = "default") {
+  const root = document.documentElement;
+  if (setting === "light" || setting === "dark") root.dataset.theme = setting;
+  else delete root.dataset.theme;
+  if (palette === "default") delete root.dataset.palette;
+  else root.dataset.palette = palette;
+  try { localStorage.setItem("theme", setting); localStorage.setItem("palette", palette); } catch {}
 }
 
 function rememberLanguage(setting = "auto") {
@@ -2098,7 +2159,7 @@ $("#updateApply").onclick = async () => {
     renderHubStatus(false);
     return setTimeout(boot, 2000);
   }
-  applyTheme(state.settings.theme);
+  applyTheme(state.settings.theme, state.settings.palette);
   if (rememberLanguage(state.settings.language)) return;
   fillSettings(); render();
   setInterval(poll, 2000);

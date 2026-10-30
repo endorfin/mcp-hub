@@ -20,6 +20,7 @@ DEFAULT_SETTINGS = {
     "passEnvironment": True,
     "language": "auto",
     "theme": "auto",
+    "palette": "default",
     "checkUpdates": True,
 }
 def read_json(path, default):
