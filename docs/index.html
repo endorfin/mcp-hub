@@ -1,0 +1,1243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Hub</title>
+<meta name="description" content="Set up your MCP servers once, use them in every client. A local hub that bundles all your MCP servers behind one endpoint for Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot.">
+<meta property="og:title" content="MCP Hub">
+<meta property="og:description" content="Set up your MCP servers once, use them in every client.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://endorfin.github.io/mcp-hub/">
+<meta property="og:image" content="https://endorfin.github.io/mcp-hub/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f8a4c'/%3E%3Cpath d='M8 10h6M8 16h6M8 22h6M18 16h6' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M14 10c3 0 2 6 4 6M14 22c3 0 2-6 4-6' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..125,300..800&display=swap">
+<style>
+:root { --mono: ui-monospace, "SF Mono", Menlo, monospace; }
+:root, [data-palette="default"] {
+  --bg: #f6f6f4; --panel: #ffffff; --field: #f6f6f4; --series: #85847d; --series-error: #c0362c; --ink: #1c1c1a; --muted: #6b6b66; --line: #e3e2de;
+  --accent: #1f8a4c; --on-accent: #ffffff; --ok: #1f8a4c; --active: #1f8a4c; --warn: #b26a00; --bad: #c0362c; --chip: #efeeea;
+}
+[data-palette="slate"] {
+  --bg: #f6f7f9; --panel: #ffffff; --field: #f6f7f9; --series: #9ca3af; --series-error: #dc2626; --ink: #1a1d21; --muted: #6b7280; --line: #e5e7eb;
+  --accent: #2563eb; --on-accent: #ffffff; --ok: #16a34a; --active: #2563eb; --warn: #b45309; --bad: #dc2626; --chip: #eef0f3;
+}
+[data-palette="graphite"] {
+  --bg: #f5f5f5; --panel: #ffffff; --field: #f5f5f5; --series: #8a8a8a; --series-error: #c0362c; --ink: #171717; --muted: #686868; --line: #e2e2e2;
+  --accent: #262626; --on-accent: #ffffff; --ok: #1f8a4c; --active: #386aa3; --warn: #b26a00; --bad: #c0362c; --chip: #ededed;
+}
+[data-palette="lavender"] {
+  --bg: #f7f6fa; --panel: #ffffff; --field: #f7f6fa; --series: #8c879c; --series-error: #c0362c; --ink: #1d1b24; --muted: #6c6879; --line: #e5e2ec;
+  --accent: #6d4fd1; --on-accent: #ffffff; --ok: #1f8a4c; --active: #6d4fd1; --warn: #b26a00; --bad: #c0362c; --chip: #efecf5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]), :root:not([data-theme="light"]) [data-palette="default"] {
+    --bg: #141413; --panel: #1d1d1b; --field: #151514; --series: #96958e; --series-error: #d9493f; --ink: #ecebe6; --muted: #9a998f; --line: #2e2e2b;
+    --accent: #4cc27f; --on-accent: #0e1a12; --ok: #4cc27f; --active: #4cc27f; --warn: #e0a440; --bad: #ff7366; --chip: #262624;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"], :root[data-theme="dark"] [data-palette="default"] {
+  --bg: #141413; --panel: #1d1d1b; --field: #151514; --series: #96958e; --series-error: #d9493f; --ink: #ecebe6; --muted: #9a998f; --line: #2e2e2b;
+  --accent: #4cc27f; --on-accent: #0e1a12; --ok: #4cc27f; --active: #4cc27f; --warn: #e0a440; --bad: #ff7366; --chip: #262624;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-palette="slate"], :root:not([data-theme="light"]) [data-palette="slate"] {
+    --bg: #0f1115; --panel: #171a21; --field: #111318; --series: #8b93a1; --series-error: #f87171; --ink: #e5e7eb; --muted: #8b93a1; --line: #262b35;
+    --accent: #60a5fa; --on-accent: #0b1220; --ok: #22c55e; --active: #60a5fa; --warn: #fbbf24; --bad: #f87171; --chip: #20242d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"][data-palette="slate"], :root[data-theme="dark"] [data-palette="slate"] {
+  --bg: #0f1115; --panel: #171a21; --field: #111318; --series: #8b93a1; --series-error: #f87171; --ink: #e5e7eb; --muted: #8b93a1; --line: #262b35;
+  --accent: #60a5fa; --on-accent: #0b1220; --ok: #22c55e; --active: #60a5fa; --warn: #fbbf24; --bad: #f87171; --chip: #20242d;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-palette="graphite"], :root:not([data-theme="light"]) [data-palette="graphite"] {
+    --bg: #121212; --panel: #1b1b1b; --field: #141414; --series: #929292; --series-error: #d9493f; --ink: #ededed; --muted: #9a9a9a; --line: #2d2d2d;
+    --accent: #e8e8e8; --on-accent: #141414; --ok: #4cc27f; --active: #7aa7d9; --warn: #e0a440; --bad: #ff7366; --chip: #262626;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"][data-palette="graphite"], :root[data-theme="dark"] [data-palette="graphite"] {
+  --bg: #121212; --panel: #1b1b1b; --field: #141414; --series: #929292; --series-error: #d9493f; --ink: #ededed; --muted: #9a9a9a; --line: #2d2d2d;
+  --accent: #e8e8e8; --on-accent: #141414; --ok: #4cc27f; --active: #7aa7d9; --warn: #e0a440; --bad: #ff7366; --chip: #262626;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-palette="lavender"], :root:not([data-theme="light"]) [data-palette="lavender"] {
+    --bg: #131218; --panel: #1c1a23; --field: #15141a; --series: #9893a8; --series-error: #d9493f; --ink: #ebe9f1; --muted: #9c97ab; --line: #2e2b37;
+    --accent: #a891ff; --on-accent: #17122b; --ok: #4cc27f; --active: #a891ff; --warn: #e0a440; --bad: #ff7366; --chip: #27242f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"][data-palette="lavender"], :root[data-theme="dark"] [data-palette="lavender"] {
+  --bg: #131218; --panel: #1c1a23; --field: #15141a; --series: #9893a8; --series-error: #d9493f; --ink: #ebe9f1; --muted: #9c97ab; --line: #2e2b37;
+  --accent: #a891ff; --on-accent: #17122b; --ok: #4cc27f; --active: #a891ff; --warn: #e0a440; --bad: #ff7366; --chip: #27242f;
+  color-scheme: dark;
+}
+[data-palette="coffee"] {
+  --bg: #f5efe6; --panel: #fffaf3; --field: #f5efe6; --series: #a8917c; --series-error: #c0362c; --ink: #2c1d14; --muted: #7a6656; --line: #e6dbcc;
+  --accent: #8a5a3b; --on-accent: #ffffff; --ok: #1f8a4c; --active: #8a5a3b; --warn: #b26a00; --bad: #c0362c; --chip: #efe5d7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-palette="coffee"], :root:not([data-theme="light"]) [data-palette="coffee"] {
+    --bg: #1a120d; --panel: #241913; --field: #1d140f; --series: #a8917c; --series-error: #d9493f; --ink: #f0e6d8; --muted: #a8968a; --line: #3a2a20;
+    --accent: #d4a373; --on-accent: #2a1a10; --ok: #4cc27f; --active: #d4a373; --warn: #e0a440; --bad: #ff7366; --chip: #2f221a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"][data-palette="coffee"], :root[data-theme="dark"] [data-palette="coffee"] {
+  --bg: #1a120d; --panel: #241913; --field: #1d140f; --series: #a8917c; --series-error: #d9493f; --ink: #f0e6d8; --muted: #a8968a; --line: #3a2a20;
+  --accent: #d4a373; --on-accent: #2a1a10; --ok: #4cc27f; --active: #d4a373; --warn: #e0a440; --bad: #ff7366; --chip: #2f221a;
+  color-scheme: dark;
+}
+[data-palette="teal"] {
+  --bg: #f3f7f7; --panel: #ffffff; --field: #f3f7f7; --series: #86999a; --series-error: #c0362c; --ink: #142022; --muted: #5f7173; --line: #dde6e6;
+  --accent: #0f766e; --on-accent: #ffffff; --ok: #1f8a4c; --active: #0b7468; --warn: #b26a00; --bad: #c0362c; --chip: #e8efef;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-palette="teal"], :root:not([data-theme="light"]) [data-palette="teal"] {
+    --bg: #0e1515; --panel: #151f1f; --field: #101818; --series: #8ea3a3; --series-error: #ff7366; --ink: #e3eeee; --muted: #93a7a7; --line: #253333;
+    --accent: #2dd4bf; --on-accent: #062320; --ok: #4cc27f; --active: #40d9c2; --warn: #e0a440; --bad: #ff7366; --chip: #1c2828;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"][data-palette="teal"], :root[data-theme="dark"] [data-palette="teal"] {
+  --bg: #0e1515; --panel: #151f1f; --field: #101818; --series: #8ea3a3; --series-error: #ff7366; --ink: #e3eeee; --muted: #93a7a7; --line: #253333;
+  --accent: #2dd4bf; --on-accent: #062320; --ok: #4cc27f; --active: #40d9c2; --warn: #e0a440; --bad: #ff7366; --chip: #1c2828;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); }
+:root {
+  --sans: "Mona Sans", -apple-system, system-ui, sans-serif;
+  --glow: color-mix(in srgb, var(--accent) 34%, transparent);
+  --glow-warm: color-mix(in srgb, var(--ink) 9%, transparent);
+  --lift: 0 10px 28px -10px color-mix(in srgb, var(--accent) 65%, transparent);
+  --raised: 0 1px 2px rgb(0 0 0 / .08), 0 1px 1px rgb(0 0 0 / .04);
+  --floating: 0 10px 28px rgb(0 0 0 / .14), 0 2px 6px rgb(0 0 0 / .08);
+  --ease: cubic-bezier(.16, 1, .3, 1);
+}
+html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adjust: 100%; }
+body { font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; background: radial-gradient(64rem 40rem at 8% -8%, var(--glow), transparent 70%) no-repeat, radial-gradient(52rem 36rem at 100% 2%, var(--glow-warm), transparent 70%) no-repeat, var(--bg); transition: background-color .3s var(--ease), color .3s var(--ease); }
+::selection { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+a { color: inherit; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 3px; }
+a:hover { text-decoration-color: currentColor; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; border-radius: 6px; }
+code, .mono { font-family: var(--mono); font-variant-ligatures: none; }
+p code, li code, dd code { font-size: .86em; background: var(--chip); padding: 1px 5px; border-radius: 5px; white-space: nowrap; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+img { max-width: 100%; display: block; }
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.top .wrap { display: flex; align-items: center; gap: 24px; height: 68px; }
+.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
+.brand b { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+.brand span { color: var(--muted); font-size: 13px; }
+.top nav { display: flex; gap: 26px; margin-left: 20px; }
+.top nav a { color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 500; transition: color .2s; }
+.top nav a:hover { color: var(--accent); }
+.gh { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 99px; color: var(--ink); transition: color .2s, background-color .2s; }
+.gh:hover { color: var(--accent); background: color-mix(in srgb, var(--chip) 80%, transparent); }
+.top .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.lang { display: flex; align-items: center; gap: 2px; }
+.lang button { border: 0; background: none; padding: 4px 6px; font-size: 14px; color: var(--muted); cursor: pointer; transition: color .2s; }
+.lang button + button::before { content: "/"; color: color-mix(in srgb, var(--muted) 60%, transparent); margin: 0 8px 0 -6px; }
+.lang button:hover { color: var(--accent); }
+.lang button[aria-pressed="true"] { color: var(--ink); }
+
+.seg { display: inline-flex; background: color-mix(in srgb, var(--chip) 80%, transparent); border-radius: 99px; padding: 4px; gap: 2px; }
+.seg button { border: 0; background: none; color: var(--muted); font-size: 13px; padding: 3px 12px; border-radius: 99px; cursor: pointer; min-height: 28px; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--raised); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 22px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 550; text-decoration: none; cursor: pointer; transition: border-color .15s, background-color .15s, box-shadow .25s var(--ease), transform .25s var(--ease); }
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: var(--lift); }
+.btn.primary:hover { transform: translateY(-1px); box-shadow: 0 14px 32px -10px color-mix(in srgb, var(--accent) 75%, transparent); }
+.btn.small { height: 34px; padding: 0 15px; font-size: 13.5px; }
+.btn svg { flex: none; }
+
+.chip { display: inline-flex; align-items: center; gap: 5px; font: 11.5px/1.6 var(--mono); background: var(--chip); color: var(--muted); border-radius: 99px; padding: 1px 8px; white-space: nowrap; transition: background-color .4s var(--ease), color .4s var(--ease); }
+.chip.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.chip.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, transparent); }
+.chip.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.chip.hit { background: color-mix(in srgb, var(--active) 18%, var(--chip)); transition-duration: .05s; }
+
+.switch { flex: none; width: 32px; height: 18px; border-radius: 99px; border: 0; padding: 0; background: color-mix(in srgb, var(--muted) 45%, var(--chip)); position: relative; cursor: pointer; transition: background-color .2s var(--ease); }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25); transition: transform .22s var(--ease); }
+.switch[aria-checked="true"] { background: var(--active); }
+.switch[aria-checked="true"]::after { transform: translateX(14px); }
+
+.code { position: relative; display: flex; align-items: stretch; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+.code pre { margin: 0; padding: 12px 16px; overflow-x: auto; font: 12.5px/1.6 var(--mono); flex: 1; min-width: 0; white-space: pre; }
+.code .copy { flex: none; align-self: flex-start; margin: 6px; width: 34px; height: 34px; border: 0; border-radius: 99px; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.code .copy:hover { background: var(--chip); color: var(--ink); }
+.code .copy.done { color: var(--ok); }
+.card .code, .demo .code { background: var(--field); }
+
+.card { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, var(--panel)), var(--panel) 120px); border: 1px solid var(--line); border-radius: 18px; }
+
+.hero { padding: 88px 0 24px; }
+.hero .text { max-width: 58rem; margin: 0 auto; text-align: center; }
+.hero h1 { font-size: clamp(2.5rem, 1.1rem + 3.6vw, 4.6rem); line-height: 1.02; letter-spacing: -.035em; font-weight: 600; font-stretch: 105%; }
+.hero h1 em { font-style: normal; color: var(--accent); display: block; }
+.hero .lead { margin: 24px auto 0; font-size: 18px; line-height: 1.55; color: var(--muted); max-width: 38em; }
+.hero .install { margin: 32px auto 0; max-width: 47rem; text-align: left; }
+.hero .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
+.hero .meta { margin-top: 18px; color: var(--muted); font-size: 13px; }
+
+.board { position: relative; margin-top: 72px; display: grid; grid-template-columns: minmax(150px, .8fr) minmax(270px, 1fr) minmax(260px, 1.1fr); gap: 0 76px; align-items: center; }
+.board > svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 0; }
+.board > svg path { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--line)); stroke-width: 1.4; transition: stroke .3s, opacity .3s; }
+.board > svg path.off { stroke-dasharray: 3 4; opacity: .45; }
+.board > svg circle { fill: var(--accent); filter: drop-shadow(0 0 5px var(--accent)); }
+.board .col { position: relative; z-index: 1; }
+.board .label { font-size: 12.5px; color: color-mix(in srgb, var(--muted) 55%, var(--ink)); margin: 0 0 8px 2px; }
+.clients ul, .servers ul { list-style: none; margin: 0; padding: 0; }
+.clients li { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; font-size: 13.5px; border-top: 1px solid var(--line); transition: color .3s; }
+.clients li:first-child { border-top: 0; }
+.clients li i { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none; }
+.clients li.hit { color: var(--active); transition-duration: .05s; }
+
+.hub { padding: 16px; display: grid; gap: 14px; }
+.hub header { display: flex; align-items: center; gap: 8px; }
+.hub header b { font-weight: 650; letter-spacing: -.01em; }
+.hub header .status { margin-left: auto; font-size: 12px; color: var(--muted); }
+.hub .endpoint { font: 12px/1.5 var(--mono); background: var(--field); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hub .endpoint em { font-style: normal; color: var(--active); }
+.hub .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.kpi { background: radial-gradient(18rem 8rem at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), var(--field); border-radius: 14px; padding: 13px 15px; }
+.kpi .k { font-size: 12px; color: var(--muted); }
+.kpi .v { font-size: 32px; font-weight: 450; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.25; margin-top: 2px; white-space: nowrap; }
+.kpi .n { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.lb { position: relative; }
+.lb-trigger { display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel); cursor: pointer; text-align: left; font-size: 13.5px; }
+.lb-trigger:hover { border-color: var(--muted); }
+.lb-trigger .name { flex: 1; }
+.lb-trigger svg { color: var(--muted); }
+.mod { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex: none; }
+.pop { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0; margin: 0; padding: 5px; list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--floating); transform-origin: top; animation: pop .16s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.pop li { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 11px; font-size: 13.5px; cursor: pointer; }
+.pop li span { flex: 1; }
+.pop li small { color: var(--muted); font: 11.5px var(--mono); }
+.pop li:hover, .pop li:focus { background: var(--chip); outline: none; }
+.pop li svg { visibility: hidden; }
+.pop li[aria-selected="true"] svg { visibility: visible; }
+
+.servers li { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-top: 1px solid var(--line); min-height: 52px; }
+.servers li:first-child { border-top: 0; }
+.servers .nm { font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
+.servers .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.servers li.off .nm { color: var(--muted); }
+
+.log { grid-column: 1 / -1; margin-top: 22px; position: relative; z-index: 1; }
+.log header { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.log header span { color: var(--muted); font-size: 12px; }
+.log ol { list-style: none; margin: 0; padding: 4px 0; height: calc(4 * 30px + 8px); overflow: hidden; }
+.log li { display: grid; grid-template-columns: 64px 118px minmax(0, 1fr) 64px; gap: 12px; align-items: center; height: 30px; padding: 0 14px; font: 12px/1 var(--mono); animation: logIn .5s var(--ease); }
+.log li > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log li .t, .log li .c { color: var(--muted); }
+.log li .d { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.log li.err .d { color: var(--bad); }
+@keyframes logIn { from { opacity: 0; transform: translateY(-8px); background: color-mix(in srgb, var(--active) 10%, transparent); } }
+.board-note { grid-column: 1 / -1; margin-top: 10px; font-size: 12.5px; color: color-mix(in srgb, var(--muted) 55%, var(--ink)); }
+
+section.block { padding: 120px 0 0; }
+.intro { max-width: 46rem; }
+.intro h2 { font-size: clamp(2rem, 1.2rem + 2.3vw, 3.2rem); letter-spacing: -.032em; line-height: 1.05; font-weight: 600; font-stretch: 105%; }
+.intro p { margin-top: 16px; font-size: 16.5px; color: var(--muted); }
+
+.feature { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; padding: 52px 0; border-top: 1px solid var(--line); align-items: start; }
+.intro + .feature { margin-top: 48px; }
+.feature h3 { font-size: 25px; letter-spacing: -.025em; line-height: 1.2; font-weight: 600; }
+.feature .text p { margin-top: 12px; color: var(--muted); max-width: 34em; }
+.feature .text p + p { margin-top: 10px; }
+.demo { min-width: 0; }
+
+.tabs { display: flex; gap: 2px; width: fit-content; max-width: 100%; background: color-mix(in srgb, var(--chip) 80%, transparent); border-radius: 99px; padding: 4px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+.tabs button { flex: none; border: 0; background: none; padding: 6px 14px; border-radius: 99px; color: var(--muted); font-size: 13.5px; cursor: pointer; transition: background-color .2s, color .2s; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); background: var(--panel); box-shadow: var(--raised); }
+.tabs button:focus-visible { outline-offset: -2px; }
+.demo .card { padding: 22px 24px; }
+
+.import { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; }
+.import .preview { background: var(--field); border-radius: 14px; padding: 12px 14px; font-size: 13px; display: grid; gap: 10px; align-content: start; }
+.import .preview .k { color: var(--muted); font-size: 12px; }
+.import .preview ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.import .preview li { display: flex; align-items: center; gap: 8px; }
+.import .preview li b { font-weight: 600; }
+.import .preview li .chip { margin-left: auto; }
+.import .preview .dropped { color: var(--muted); font-size: 12px; }
+.import .preview .dropped code { color: var(--warn); }
+.import .go { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
+.ok-text { color: var(--ok); }
+
+.field-label { font-size: 13px; margin-bottom: 6px; }
+.field-label b { font-weight: 600; }
+.field-label span { color: var(--muted); }
+.secret { display: flex; border: 1px solid var(--line); border-radius: 14px; background: var(--field); overflow: hidden; }
+.secret output { flex: 1; min-width: 0; padding: 8px 10px; font: 12.5px/20px var(--mono); overflow-x: auto; white-space: nowrap; }
+.secret output.ref { color: var(--active); }
+.secret button { flex: none; width: 40px; border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.secret button:hover { color: var(--ink); }
+.secret button[aria-pressed="true"] { color: var(--active); }
+.hint { margin-top: 8px; font-size: 12.5px; color: var(--muted); min-height: 1.5em; }
+.sep { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
+.oauth { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.oauth .nm { font-weight: 600; }
+.oauth .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.refs { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.refs code { color: var(--ink); }
+
+.bars { display: grid; gap: 16px; }
+.bar .lbl { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 6px; }
+.bar .lbl span:last-child { font-variant-numeric: tabular-nums; color: var(--muted); }
+.bar .track { height: 14px; border-radius: 99px; background: var(--field); overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 99px; background: var(--series); transform-origin: left; transition: transform 1.1s var(--ease); }
+.bar.compact .fill { background: var(--accent); min-width: 14px; }
+.bars.idle .fill { transform: scaleX(0); }
+.three { margin-top: 18px; display: grid; gap: 0; }
+.three div { display: grid; grid-template-columns: 120px 1fr; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.three code { font-size: 12.5px; }
+.three span { color: var(--muted); }
+
+.endpoints { display: grid; gap: 8px; }
+.endpoints .ep { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.endpoints .ep .who { width: 118px; color: var(--muted); }
+
+.swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sw { border: 1px solid var(--line); background: var(--bg); border-radius: 16px; padding: 10px; cursor: pointer; text-align: left; color: var(--ink); transition: border-color .15s, transform .2s var(--ease); }
+.sw:hover { transform: translateY(-1px); }
+.sw[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.sw .mini { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px; display: grid; gap: 5px; }
+.sw .mini i { display: block; height: 5px; border-radius: 3px; background: var(--chip); }
+.sw .mini i:nth-child(2) { width: 70%; }
+.sw .mini .r { display: flex; align-items: center; gap: 5px; }
+.sw .mini .r i { flex: 1; }
+.sw .mini .tg { flex: none; width: 16px; height: 9px; border-radius: 9px; background: var(--active); }
+.sw .mini .bt { flex: none; width: 22px; height: 9px; border-radius: 3px; background: var(--accent); }
+.sw .nm { display: block; font-size: 12.5px; margin: 7px 2px 0; }
+.appearance { margin-top: 14px; display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
+
+.mock { margin-top: 40px; border: 1px solid var(--line); border-radius: 22px; background: var(--bg); overflow: hidden; font-size: 14px; user-select: none; box-shadow: 0 50px 100px -50px color-mix(in srgb, var(--accent) 55%, transparent); }
+.mock .m-head { display: flex; align-items: center; gap: 14px; padding: 18px 28px 0; }
+.mock .m-head b { white-space: nowrap; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+.mock .m-head .ver { color: var(--muted); font-size: 13px; }
+.mock .m-status { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.mock .m-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex: none; }
+.mock .m-group { display: flex; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); height: 34px; flex: none; }
+.mock .m-group > span { display: flex; align-items: center; gap: 10px; padding: 0 12px; font-size: 13.5px; color: var(--ink); }
+.mock .m-group > span + span { border-left: 1px solid var(--line); }
+.mock .m-group svg { color: var(--muted); }
+.mock .m-head .m-group { margin-left: auto; }
+.mock .m-tabs { display: flex; gap: 22px; padding: 14px 28px 0; border-bottom: 1px solid var(--line); }
+.mock .m-tabs span { padding-bottom: 10px; color: var(--muted); font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.mock .m-tabs span:first-child { color: var(--ink); border-bottom-color: var(--ink); }
+.mock .m-body { padding: 18px 28px 28px; }
+.mock .m-tools { display: flex; gap: 10px; }
+.mock .m-filter { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--muted); display: flex; align-items: center; padding: 0 12px; font-size: 13.5px; }
+.mock .m-plus { width: 34px; height: 34px; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; flex: none; }
+.mock .m-tags { display: flex; gap: 6px; margin: 12px 0 14px; overflow: hidden; }
+.mock .m-tags span { flex: none; border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; font-size: 12.5px; color: var(--muted); }
+.mock .m-tags em { font-style: normal; margin-left: 4px; opacity: .7; }
+.mock .m-list { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.mock .m-row { display: flex; align-items: center; gap: 16px; padding: 13px 18px; border-top: 1px solid var(--line); }
+.mock .m-row:first-child { border-top: 0; }
+.mock .m-row .switch { display: block; cursor: default; }
+.mock .m-info { flex: 1; min-width: 0; }
+.mock .m-name { display: flex; align-items: center; gap: 6px; }
+.mock .m-name b { font-size: 15px; font-weight: 600; letter-spacing: -.01em; margin-right: 2px; }
+.mock .m-name span { font-size: 11.5px; color: var(--muted); background: var(--chip); border-radius: 99px; padding: 1px 8px; }
+.mock .m-desc { color: var(--ink); font-size: 13.5px; margin-top: 2px; }
+.mock .m-cmd { font: 12px/1.6 var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mock .m-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.mock .m-more { color: var(--muted); flex: none; }
+@media (max-width: 720px) {
+  .mock { border-radius: 16px; font-size: 13px; }
+  .mock .m-head, .mock .m-tabs, .mock .m-body { padding-inline: 14px; }
+  .mock .m-head .ver, .mock .m-head .m-group, .mock .m-tools .m-group { display: none; }
+  .mock .m-row { padding: 12px; gap: 12px; }
+  .mock .m-tabs { gap: 16px; overflow: hidden; }
+}
+
+.facts { margin: 48px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px 32px; }
+.facts div { border-top: 1px solid var(--line); padding-top: 14px; }
+.facts dt { font-weight: 600; font-size: 14.5px; }
+.facts dd { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+.steps { list-style: none; margin: 48px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 56px; counter-reset: step; }
+.steps li { counter-increment: step; position: relative; padding-left: 46px; min-width: 0; }
+.steps li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 32px; height: 32px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); display: grid; place-items: center; font: 600 13px var(--mono); }
+.steps h3 { font-size: 19px; font-weight: 600; letter-spacing: -.015em; padding-top: 2px; }
+.steps p { margin-top: 6px; color: var(--muted); }
+.steps .code, .steps .tabs { margin-top: 12px; }
+.steps .tabs { margin-bottom: 0; }
+.steps .tabs + .code { margin-top: 10px; }
+
+.close { margin: 120px 0 64px; }
+.close .wrap { display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap; width: calc(100% - 48px); max-width: 1192px; padding: 64px 56px; border-radius: 28px; border: 1px solid var(--line); background: radial-gradient(40rem 22rem at 0% 0%, var(--glow), transparent 70%), radial-gradient(34rem 22rem at 100% 100%, var(--glow-warm), transparent 70%), var(--panel); }
+.close h2 { font-size: clamp(1.8rem, 1.1rem + 2vw, 2.9rem); letter-spacing: -.032em; line-height: 1.08; font-weight: 600; font-stretch: 105%; max-width: 16em; }
+.close .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+footer { border-top: 1px solid var(--line); padding: 22px 0 40px; color: var(--muted); font-size: 13px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; }
+footer nav { display: flex; gap: 18px; flex-wrap: wrap; margin-left: auto; }
+footer a { text-decoration: none; }
+footer a:hover { color: var(--ink); }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 1140px) {
+  .board { gap: 0 48px; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .feature { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 40px 0; }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .top nav { display: none; }
+}
+@media (max-width: 720px) {
+  .wrap { padding: 0 16px; }
+  .hero { padding-top: 48px; }
+  .close .wrap { width: calc(100% - 32px); padding: 36px 22px; border-radius: 22px; }
+  .board { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .board > svg { display: none; }
+  .clients ul { display: flex; flex-wrap: wrap; gap: 6px; }
+  .clients.card { background: none; border: 0; }
+  .clients li { border: 0; height: auto; padding: 2px 8px; background: var(--chip); border-radius: 99px; font-size: 12.5px; }
+  .log { margin-top: 8px; }
+  .log li { grid-template-columns: 0 0 minmax(0, 1fr) 56px; gap: 0 8px; }
+  .log li .t, .log li .c { visibility: hidden; }
+  .import { grid-template-columns: minmax(0, 1fr); }
+  .swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .endpoints .ep .who { width: 100%; }
+  .three div { grid-template-columns: 1fr; gap: 2px; }
+  section.block { padding-top: 64px; }
+  .top .wrap { gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><b>MCP Hub</b><span>v1.0.0</span></a>
+    <nav aria-label="Sections">
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#start" data-i18n="nav.start">Get started</a>
+    </nav>
+    <div class="right">
+      <div class="lang" role="group" aria-label="Language" id="lang">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="de" aria-pressed="false">DE</button>
+      </div>
+      <a class="gh" href="https://github.com/endorfin/mcp-hub" aria-label="GitHub" title="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="text">
+        <h1 data-i18n="hero.title">Set up your MCP servers once. <em>Use them in every client.</em></h1>
+        <p class="lead" data-i18n="hero.lead">A local hub that manages all your MCP servers in one place, tests them, and serves them bundled behind a single endpoint to Claude Code, Claude Desktop, Codex, Copilot, Cursor and VS Code.</p>
+        <div class="install code">
+          <pre>git clone https://github.com/endorfin/mcp-hub.git &amp;&amp; cd mcp-hub &amp;&amp; python3 app.py</pre>
+          <button class="copy" type="button" data-i18n-aria="copy" aria-label="Copy"></button>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="#start" data-i18n="hero.cta">Get started</a>
+          <a class="btn" href="https://github.com/endorfin/mcp-hub/releases/latest" data-i18n="hero.release">Download v1.0.0</a>
+        </div>
+        <p class="meta" data-i18n="hero.meta">Python 3.11+ · no dependencies · macOS, Linux, Windows · MIT license</p>
+      </div>
+
+      <div class="board" id="board" role="group" data-i18n-aria="board.aria" aria-label="Interactive demo">
+        <svg aria-hidden="true" id="wires"></svg>
+        <div class="col clients">
+          <p class="label" data-i18n="board.clients">Clients</p>
+          <div class="card clients"><ul id="clientList"></ul></div>
+        </div>
+        <div class="col">
+          <p class="label">&nbsp;</p>
+          <div class="card hub" id="hub">
+            <header><b>MCP Hub</b><span class="status" id="hubStatus"></span></header>
+            <div class="endpoint" id="endpoint"></div>
+            <div class="lb" id="profile">
+              <button class="lb-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" id="profileBtn">
+                <span class="mod" id="profileMod" hidden></span>
+                <span class="name" id="profileName"></span>
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>
+              </button>
+              <ul class="pop" role="listbox" id="profileList" hidden></ul>
+            </div>
+            <div class="row"><span data-i18n="board.compact" id="compactLabel">Compact mode</span><button class="switch" type="button" role="switch" aria-checked="false" id="compact" aria-labelledby="compactLabel"></button></div>
+            <div class="kpi">
+              <div class="k" data-i18n="board.defs">Tool definitions per request</div>
+              <div class="v" id="tokens">0</div>
+              <div class="n" id="tokensNote"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <p class="label" data-i18n="board.servers">Servers</p>
+          <div class="card servers"><ul id="serverList"></ul></div>
+        </div>
+        <div class="card log">
+          <header><b data-i18n="board.log">Call log</b><span data-i18n="board.logNote">through the hub, with client and duration</span></header>
+          <ol id="log" aria-hidden="true"></ol>
+        </div>
+        <p class="board-note" data-i18n="board.note">Live demo with example data: switch servers, pick a profile, turn on compact mode.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="features">
+    <div class="wrap">
+      <div class="intro">
+        <h2 data-i18n="why.title">One hub instead of six config files</h2>
+        <p data-i18n="why.text">Every MCP client keeps its own list of servers. Add a server and you edit four config files; rotate a token and you hunt it down in all of them, usually in plain text. MCP Hub turns that around: servers live in one place, secrets stay in the keychain, and every client gets a single entry pointing at the hub.</p>
+      </div>
+
+      <article class="feature">
+        <div class="text">
+          <h3 data-i18n="connect.title">Connect every client with one click</h3>
+          <p data-i18n="connect.text">Settings → Clients finds Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot CLI on your machine and adds the hub to each, writing a backup of the file first. By hand, every client needs exactly one entry.</p>
+        </div>
+        <div class="demo">
+          <div class="tabs" role="tablist" data-tabs="connect"></div>
+          <div class="code"><pre id="connectCode"></pre><button class="copy" type="button" data-i18n-aria="copy" aria-label="Copy"></button></div>
+          <p class="hint" id="connectHint"></p>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="text">
+          <h3 data-i18n="import.title">Bring your existing servers along</h3>
+          <p data-i18n="import.text">Paste what you already have: JSON from Claude, Cursor or VS Code, TOML from Codex, or <code>mcp add</code> commands. The hub detects the format, shows a preview, and can remove the servers from the old client in the same step.</p>
+        </div>
+        <div class="demo">
+          <div class="tabs" role="tablist" data-tabs="import"></div>
+          <div class="import">
+            <div class="code"><pre id="importCode"></pre></div>
+            <div class="preview" id="importPreview" aria-live="polite"></div>
+            <div class="go"><button class="btn primary small" type="button" id="importBtn" data-i18n="import.btn">Import</button><span id="importStatus"></span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="text">
+          <h3 data-i18n="secrets.title">No tokens in plain text</h3>
+          <p data-i18n="secrets.text">The lock next to a value moves it into the macOS keychain, the Secret Service on Linux or the Windows Credential Manager; the file keeps only a reference. 1Password and environment variables work too.</p>
+          <p data-i18n="secrets.oauth">Remote servers with OAuth only need their URL: discovery, client registration and PKCE follow the MCP specification, and tokens refresh on their own.</p>
+        </div>
+        <div class="demo">
+          <div class="card">
+            <div class="field-label"><b>GRAFANA_SERVICE_ACCOUNT_TOKEN</b> <span data-i18n="secrets.env">– env of grafana</span></div>
+            <div class="secret">
+              <output id="secretValue">glsa_7XqV3bN0pLmT29dKe8sYw4cZ_1f9a0b2c</output>
+              <button type="button" id="lock" aria-pressed="false" data-i18n-aria="secrets.lock" aria-label="Move to keychain"></button>
+            </div>
+            <p class="hint" id="secretHint" aria-live="polite"></p>
+            <ul class="refs">
+              <li><code>${op://Private/Grafana/token}</code> <span data-i18n="secrets.op">1Password CLI</span></li>
+              <li><code>Bearer ${env:GITHUB_TOKEN}</code> <span data-i18n="secrets.envref">environment of the hub</span></li>
+            </ul>
+            <hr class="sep">
+            <div class="oauth">
+              <span class="nm">sentry</span>
+              <span class="chips" id="oauthChips" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="text">
+          <h3 data-i18n="compact.title">Compact mode: 300 tokens instead of 60,000</h3>
+          <p data-i18n="compact.text">Clients load every tool definition into their context on every request. At <code>/mcp/compact</code> they get three tools instead and find the rest by searching, locally, without an index or a model. Each client picks its mode by its URL.</p>
+        </div>
+        <div class="demo">
+          <div class="card">
+            <div class="bars idle" id="bars">
+              <div class="bar"><div class="lbl"><span data-i18n="compact.all">All tools on /mcp</span><span data-i18n="compact.allV">≈ 60,000 tokens</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+              <div class="bar compact"><div class="lbl"><span data-i18n="compact.small">Compact on /mcp/compact</span><span data-i18n="compact.smallV">≈ 300 tokens</span></div><div class="track"><div class="fill" style="width:.5%"></div></div></div>
+            </div>
+            <p class="hint" data-i18n="compact.note">Tool definitions per request with 200 tools, as in the README.</p>
+            <div class="three">
+              <div><code>search_tools</code><span data-i18n="compact.search">finds tools by what you want to do</span></div>
+              <div><code>describe_tool</code><span data-i18n="compact.describe">full description and input schema of one tool</span></div>
+              <div><code>call_tool</code><span data-i18n="compact.call">calls a tool by name with its arguments</span></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="text">
+          <h3 data-i18n="profiles.title">Profiles, each with its own endpoint</h3>
+          <p data-i18n="profiles.text">A profile remembers which servers and tools are on. Switch in one click and connected clients get the new tool list live. Every profile also has its own URL, so Copilot can work with “Frontend” only while Claude Code gets everything.</p>
+        </div>
+        <div class="demo">
+          <div class="card endpoints">
+            <div class="ep"><span class="who">Claude Code</span><code class="chip">127.0.0.1:4747/mcp</code></div>
+            <div class="ep"><span class="who">Copilot CLI</span><code class="chip">127.0.0.1:4747/p/Frontend/mcp</code></div>
+            <div class="ep"><span class="who">Codex</span><code class="chip">127.0.0.1:4747/p/Ops/mcp/compact</code></div>
+            <p class="hint" data-i18n="profiles.note">Servers that are off in the hub start on demand for a profile endpoint and stop again after 10 idle minutes.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="text">
+          <h3 data-i18n="schemes.title">Six color schemes, light and dark</h3>
+          <p data-i18n="schemes.text">Default, Slate, Graphite, Lavender, Coffee and Teal, each in light and dark, with the interface in English or German. Try them right here: this page uses the same schemes as the app.</p>
+        </div>
+        <div class="demo">
+          <div class="swatches" id="swatches" role="group" aria-label="Color scheme"></div>
+          <div class="appearance"><span data-i18n="schemes.appearance">Appearance</span>
+            <div class="seg" role="group" id="theme" data-i18n-aria="schemes.appearance" aria-label="Appearance">
+              <button type="button" data-theme-set="system" aria-pressed="true" data-i18n="schemes.system">System</button>
+              <button type="button" data-theme-set="light" aria-pressed="false" data-i18n="schemes.light">Light</button>
+              <button type="button" data-theme-set="dark" aria-pressed="false" data-i18n="schemes.dark">Dark</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="block" id="interface">
+    <div class="wrap">
+      <div class="intro">
+        <h2 data-i18n="ui.title">Management, test bench and log in one window</h2>
+        <p data-i18n="ui.text">Servers with tags, status and usage; an inspector to call any tool by hand; a call log that shows which client called what, how long it took and what came back.</p>
+      </div>
+      <div class="mock" id="mock" role="img" data-i18n-aria="mock.aria" aria-label="MCP Hub server list with tags, tool counts, usage and an OAuth sign-in prompt"></div>
+      <dl class="facts">
+        <div><dt data-i18n="f.restart">Restarts on its own</dt><dd data-i18n="f.restartD">Crashed servers come back after 2, 4, 8, 16 and 32 seconds; clients hear about it through <code>list_changed</code>.</dd></div>
+        <div><dt data-i18n="f.live">Live updates</dt><dd data-i18n="f.liveD">Changes reach Claude Code, VS Code and Claude Desktop, through the bundled bridge, without reconnecting.</dd></div>
+        <div><dt data-i18n="f.inspector">Inspector</dt><dd data-i18n="f.inspectorD">Connect to a server directly and call tools, resources and prompts with form or JSON input.</dd></div>
+        <div><dt data-i18n="f.stats">Statistics</dt><dd data-i18n="f.statsD">Calls, error rate, median and p95 per server, and the slowest tools, over the last 5,000 calls.</dd></div>
+        <div><dt data-i18n="f.local">Local only</dt><dd data-i18n="f.localD">Listens on 127.0.0.1 and rejects foreign origins and DNS rebinding.</dd></div>
+        <div><dt data-i18n="f.update">Updates with one click</dt><dd data-i18n="f.updateD">A chip in the header shows a new release; the hub updates and restarts itself.</dd></div>
+        <div><dt data-i18n="f.autostart">Starts at login</dt><dd data-i18n="f.autostartD">LaunchAgent on macOS, systemd user service on Linux, scheduled task on Windows.</dd></div>
+        <div><dt data-i18n="f.light">No baggage</dt><dd data-i18n="f.lightD">Python standard library, one process, no build step. Tested in CI on all three platforms.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="block" id="start">
+    <div class="wrap">
+      <div class="intro">
+        <h2 data-i18n="start.title">Running in two minutes</h2>
+        <p data-i18n="start.text">Python 3.11 or newer is all it needs. Nothing to build, nothing to install with pip.</p>
+      </div>
+      <ol class="steps">
+        <li>
+          <h3 data-i18n="s1.title">Install and run</h3>
+          <p data-i18n="s1.text">Clone the repository or download the latest release, then open the interface at <code>http://127.0.0.1:4747</code>.</p>
+          <div class="code"><pre>git clone https://github.com/endorfin/mcp-hub.git
+cd mcp-hub &amp;&amp; python3 app.py</pre><button class="copy" type="button" data-i18n-aria="copy" aria-label="Copy"></button></div>
+        </li>
+        <li>
+          <h3 data-i18n="s2.title">Add servers</h3>
+          <p data-i18n="s2.text">Click + → “Import…” and pick an installed client to take over its servers, or paste an existing configuration. “Add server…” creates one by hand.</p>
+        </li>
+        <li>
+          <h3 data-i18n="s3.title">Connect your clients</h3>
+          <p data-i18n="s3.text">Settings → Clients → “Connect clients”, or add the one entry by hand:</p>
+          <div class="code"><pre>claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp</pre><button class="copy" type="button" data-i18n-aria="copy" aria-label="Copy"></button></div>
+        </li>
+        <li>
+          <h3 data-i18n="s4.title">Start at login</h3>
+          <p data-i18n="s4.text">Stop the hub from step 1 and register it, so your clients find it after a reboot.</p>
+          <div class="tabs" role="tablist" data-tabs="autostart"></div>
+          <div class="code"><pre id="autostartCode"></pre><button class="copy" type="button" data-i18n-aria="copy" aria-label="Copy"></button></div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="close">
+    <div class="wrap">
+      <h2 data-i18n="close.title">One entry per client. Everything else lives in the hub.</h2>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/endorfin/mcp-hub" data-i18n="close.gh">View on GitHub</a>
+        <a class="btn" href="https://github.com/endorfin/mcp-hub#readme" data-i18n="close.docs">Read the docs</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span data-i18n="footer.license">MCP Hub is open source under the MIT license.</span>
+    <nav>
+      <a href="https://github.com/endorfin/mcp-hub">GitHub</a>
+      <a href="https://github.com/endorfin/mcp-hub/releases" data-i18n="footer.releases">Releases</a>
+      <a href="https://github.com/endorfin/mcp-hub/issues/new/choose" data-i18n="footer.issue">Report an issue</a>
+      <a href="https://github.com/endorfin/mcp-hub/blob/main/SECURITY.md" data-i18n="footer.security">Security</a>
+    </nav>
+  </div>
+</footer>
+<p class="sr" aria-live="polite" id="announce"></p>
+
+<script>
+const I18N = {
+  en: {
+    "nav.features": "Features", "nav.start": "Get started",
+    "hero.title": "Set up your MCP servers once. <em>Use them in every client.</em>",
+    "hero.lead": "A local hub that manages all your MCP servers in one place, tests them, and serves them bundled behind a single endpoint to Claude Code, Claude Desktop, Codex, Copilot, Cursor and VS Code.",
+    "hero.cta": "Get started", "hero.release": "Download v1.0.0",
+    "hero.meta": "Python 3.11+ · no dependencies · macOS, Linux, Windows · MIT license",
+    "board.aria": "Interactive demo", "board.clients": "Clients", "board.servers": "Servers", "board.compact": "Compact mode",
+    "board.defs": "Tool definitions per request", "board.log": "Call log", "board.logNote": "through the hub, with client and duration",
+    "board.note": "Live demo with example data: switch servers, pick a profile, turn on compact mode.",
+    "board.tools": n => `Hub: ${n} tools`, "board.disabled": "1 tool disabled", "board.off": "off",
+    "board.status": (s, t) => `${s} servers · ${t} tools`,
+    "board.note.full": n => `${n} tools, each with its full schema`,
+    "board.note.compact": n => `3 tools: search, describe, call · ${n} reachable`,
+    "board.tokens": n => `≈ ${n} tokens`, "board.modified": "Unsaved changes",
+    "p.none": "No profile", "p.Frontend": "Frontend", "p.Ops": "Ops", "board.profile": "Profile",
+    "why.title": "One hub instead of six config files",
+    "why.text": "Every MCP client keeps its own list of servers. Add a server and you edit four config files; rotate a token and you hunt it down in all of them, usually in plain text. MCP Hub turns that around: servers live in one place, secrets stay in the keychain, and every client gets a single entry pointing at the hub.",
+    "connect.title": "Connect every client with one click",
+    "connect.text": "Settings → Clients finds Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot CLI on your machine and adds the hub to each, writing a backup of the file first. By hand, every client needs exactly one entry.",
+    "connect.hint.claude": "Run once in a terminal.", "connect.hint.codex": "Or as [mcp_servers.mcp-hub] in ~/.codex/config.toml.",
+    "connect.hint.copilot": "~/.copilot/mcp-config.json, the same entry works for VS Code.",
+    "connect.hint.desktop": "Claude Desktop only starts local commands, so the bundled bridge.py forwards to the hub, notifications included.",
+    "import.title": "Bring your existing servers along",
+    "import.text": "Paste what you already have: JSON from Claude, Cursor or VS Code, TOML from Codex, or <code>mcp add</code> commands. The hub detects the format, shows a preview, and can remove the servers from the old client in the same step.",
+    "import.btn": "Import", "import.detected": "Detected", "import.servers": "Servers", "import.dropped": "Not carried over:",
+    "import.done": n => `${n} servers imported, nothing else changed.`, "import.again": "Import",
+    "secrets.title": "No tokens in plain text",
+    "secrets.text": "The lock next to a value moves it into the macOS keychain, the Secret Service on Linux or the Windows Credential Manager; the file keeps only a reference. 1Password and environment variables work too.",
+    "secrets.oauth": "Remote servers with OAuth only need their URL: discovery, client registration and PKCE follow the MCP specification, and tokens refresh on their own.",
+    "secrets.env": "– env of grafana", "secrets.lock": "Move to keychain", "secrets.unlock": "Show plain value again",
+    "secrets.plain": "Plain text in servers.json. Click the lock.",
+    "secrets.locked": "Stored in the keychain. servers.json keeps only the reference.",
+    "secrets.op": "1Password CLI", "secrets.envref": "environment of the hub",
+    "oauth.need": "Sign-in required", "oauth.signin": "Sign in", "oauth.wait": "Waiting for the provider…", "oauth.ok": "OAuth", "oauth.tip": "Token in the keychain, refreshed automatically", "oauth.out": "Sign out",
+    "compact.title": "Compact mode: 300 tokens instead of 60,000",
+    "compact.text": "Clients load every tool definition into their context on every request. At <code>/mcp/compact</code> they get three tools instead and find the rest by searching, locally, without an index or a model. Each client picks its mode by its URL.",
+    "compact.all": "All tools on /mcp", "compact.allV": "≈ 60,000 tokens", "compact.small": "Compact on /mcp/compact", "compact.smallV": "≈ 300 tokens",
+    "compact.note": "Tool definitions per request with 200 tools.",
+    "compact.search": "finds tools by what you want to do", "compact.describe": "full description and input schema of one tool", "compact.call": "calls a tool by name with its arguments",
+    "profiles.title": "Profiles, each with its own endpoint",
+    "profiles.text": "A profile remembers which servers and tools are on. Switch in one click and connected clients get the new tool list live. Every profile also has its own URL, so Copilot can work with “Frontend” only while Claude Code gets everything.",
+    "profiles.note": "Servers that are off in the hub start on demand for a profile endpoint and stop again after 10 idle minutes.",
+    "schemes.title": "Six color schemes, light and dark",
+    "schemes.text": "Default, Slate, Graphite, Lavender, Coffee and Teal, each in light and dark, with the interface in English or German. Try them right here: this page uses the same schemes as the app.",
+    "schemes.appearance": "Appearance", "schemes.system": "System", "schemes.light": "Light", "schemes.dark": "Dark",
+    "ui.title": "Management, test bench and log in one window",
+    "mock.aria": "MCP Hub server list with tags, tool counts, usage and an OAuth sign-in prompt",
+    "mock.status": "7 servers · 46 tools · 1 awaiting sign-in · 3 clients",
+    "mock.tabs": ["Servers", "Log", "Clients", "Inspector", "Settings"],
+    "mock.filter": "Filter…", "mock.sort": "Recently used", "mock.signin": "Sign-in required – sign in",
+    "mock.used": (n, a) => `used ${n}× · ${a}`,
+    "mock.ago": ["3 minutes ago", "1 hour ago", "5 hours ago", "yesterday", "2 days ago", "4 days ago"],
+    "ui.text": "Servers with tags, status and usage; an inspector to call any tool by hand; a call log that shows which client called what, how long it took and what came back.",
+    "f.restart": "Restarts on its own", "f.restartD": "Crashed servers come back after 2, 4, 8, 16 and 32 seconds; clients hear about it through <code>list_changed</code>.",
+    "f.live": "Live updates", "f.liveD": "Changes reach Claude Code, VS Code and Claude Desktop, through the bundled bridge, without reconnecting.",
+    "f.inspector": "Inspector", "f.inspectorD": "Connect to a server directly and call tools, resources and prompts with form or JSON input.",
+    "f.stats": "Statistics", "f.statsD": "Calls, error rate, median and p95 per server, and the slowest tools, over the last 5,000 calls.",
+    "f.local": "Local only", "f.localD": "Listens on 127.0.0.1 and rejects foreign origins and DNS rebinding.",
+    "f.update": "Updates with one click", "f.updateD": "A chip in the header shows a new release; the hub updates and restarts itself.",
+    "f.autostart": "Starts at login", "f.autostartD": "LaunchAgent on macOS, systemd user service on Linux, scheduled task on Windows.",
+    "f.light": "No baggage", "f.lightD": "Python standard library, one process, no build step. Tested in CI on all three platforms.",
+    "start.title": "Running in two minutes", "start.text": "Python 3.11 or newer is all it needs. Nothing to build, nothing to install with pip.",
+    "s1.title": "Install and run", "s1.text": "Clone the repository or download the latest release, then open the interface at <code>http://127.0.0.1:4747</code>.",
+    "s2.title": "Add servers", "s2.text": "Click + → “Import…” and pick an installed client to take over its servers, or paste an existing configuration. “Add server…” creates one by hand.",
+    "s3.title": "Connect your clients", "s3.text": "Settings → Clients → “Connect clients”, or add the one entry by hand:",
+    "s4.title": "Start at login", "s4.text": "Stop the hub from step 1 and register it, so your clients find it after a reboot.",
+    "close.title": "One entry per client. Everything else lives in the hub.", "close.gh": "View on GitHub", "close.docs": "Read the docs",
+    "footer.license": "MCP Hub is open source under the MIT license.", "footer.releases": "Releases", "footer.issue": "Report an issue", "footer.security": "Security",
+    "copy": "Copy", "copied": "Copied to the clipboard"
+  },
+  de: {
+    "nav.features": "Funktionen", "nav.start": "Loslegen",
+    "hero.title": "MCP-Server einmal einrichten. <em>In jedem Client nutzen.</em>",
+    "hero.lead": "Ein lokaler Hub, der alle deine MCP-Server an einer Stelle verwaltet, testet und gebündelt hinter einem einzigen Endpunkt an Claude Code, Claude Desktop, Codex, Copilot, Cursor und VS Code ausliefert.",
+    "hero.cta": "Loslegen", "hero.release": "v1.0.0 herunterladen",
+    "hero.meta": "Python 3.11+ · keine Abhängigkeiten · macOS, Linux, Windows · MIT-Lizenz",
+    "board.aria": "Interaktive Demo", "board.clients": "Clients", "board.servers": "Server", "board.compact": "Kompaktmodus",
+    "board.defs": "Tool-Definitionen pro Anfrage", "board.log": "Aufrufprotokoll", "board.logNote": "über den Hub, mit Client und Dauer",
+    "board.note": "Live-Demo mit Beispieldaten: Server schalten, Profil wählen, Kompaktmodus einschalten.",
+    "board.tools": n => `Hub: ${n} Tools`, "board.disabled": "1 Tool deaktiviert", "board.off": "aus",
+    "board.status": (s, t) => `${s} Server · ${t} Tools`,
+    "board.note.full": n => `${n} Tools, jedes mit vollem Schema`,
+    "board.note.compact": n => `3 Tools: suchen, beschreiben, aufrufen · ${n} erreichbar`,
+    "board.tokens": n => `≈ ${n} Tokens`, "board.modified": "Ungespeicherte Änderungen",
+    "p.none": "Kein Profil", "p.Frontend": "Frontend", "p.Ops": "Ops", "board.profile": "Profil",
+    "why.title": "Ein Hub statt sechs Konfigurationsdateien",
+    "why.text": "Jeder MCP-Client führt seine eigene Serverliste. Ein neuer Server heißt vier Konfigurationen anfassen; ein neues Token heißt es überall suchen, meist im Klartext. MCP Hub dreht das um: Server liegen an einer Stelle, Geheimnisse im Schlüsselbund, und jeder Client bekommt einen einzigen Eintrag, der auf den Hub zeigt.",
+    "connect.title": "Jeden Client mit einem Klick verbinden",
+    "connect.text": "Einstellungen → Clients findet Claude Code, Claude Desktop, Codex, Cursor, VS Code und Copilot CLI auf deinem Rechner und trägt den Hub jeweils ein, vorher mit Sicherungskopie der Datei. Von Hand braucht jeder Client genau einen Eintrag.",
+    "connect.hint.claude": "Einmal im Terminal ausführen.", "connect.hint.codex": "Oder als [mcp_servers.mcp-hub] in ~/.codex/config.toml.",
+    "connect.hint.copilot": "~/.copilot/mcp-config.json, derselbe Eintrag funktioniert für VS Code.",
+    "connect.hint.desktop": "Claude Desktop startet nur lokale Befehle, deshalb leitet die mitgelieferte bridge.py an den Hub weiter, Benachrichtigungen eingeschlossen.",
+    "import.title": "Vorhandene Server mitnehmen",
+    "import.text": "Füge ein, was du schon hast: JSON aus Claude, Cursor oder VS Code, TOML aus Codex oder <code>mcp add</code>-Befehle. Der Hub erkennt das Format, zeigt eine Vorschau und kann die Server im selben Schritt aus dem alten Client entfernen.",
+    "import.btn": "Importieren", "import.detected": "Erkannt", "import.servers": "Server", "import.dropped": "Nicht übernommen:",
+    "import.done": n => `${n} Server importiert, sonst nichts geändert.`, "import.again": "Importieren",
+    "secrets.title": "Keine Tokens im Klartext",
+    "secrets.text": "Das Schloss neben einem Wert legt ihn im macOS-Schlüsselbund, im Secret Service unter Linux oder in der Windows-Anmeldeinformationsverwaltung ab; in der Datei bleibt nur ein Verweis. 1Password und Umgebungsvariablen gehen auch.",
+    "secrets.oauth": "Remote-Server mit OAuth brauchen nur ihre URL: Discovery, Client-Registrierung und PKCE folgen der MCP-Spezifikation, Tokens erneuern sich selbst.",
+    "secrets.env": "– env von grafana", "secrets.lock": "In den Schlüsselbund verschieben", "secrets.unlock": "Klartext wieder anzeigen",
+    "secrets.plain": "Klartext in servers.json. Klick auf das Schloss.",
+    "secrets.locked": "Im Schlüsselbund gespeichert. servers.json enthält nur noch den Verweis.",
+    "secrets.op": "1Password CLI", "secrets.envref": "Umgebung des Hubs",
+    "oauth.need": "Anmeldung nötig", "oauth.signin": "Anmelden", "oauth.wait": "Warte auf den Anbieter…", "oauth.ok": "OAuth", "oauth.tip": "Token im Schlüsselbund, wird automatisch erneuert", "oauth.out": "Abmelden",
+    "compact.title": "Kompaktmodus: 300 statt 60.000 Tokens",
+    "compact.text": "Clients laden bei jeder Anfrage alle Tool-Definitionen in ihren Kontext. Unter <code>/mcp/compact</code> bekommen sie stattdessen drei Tools und finden den Rest per Suche, lokal, ohne Index und ohne Modell. Jeder Client wählt seinen Modus über seine URL.",
+    "compact.all": "Alle Tools über /mcp", "compact.allV": "≈ 60.000 Tokens", "compact.small": "Kompakt über /mcp/compact", "compact.smallV": "≈ 300 Tokens",
+    "compact.note": "Tool-Definitionen pro Anfrage bei 200 Tools.",
+    "compact.search": "findet Tools anhand dessen, was du vorhast", "compact.describe": "vollständige Beschreibung und Eingabeschema eines Tools", "compact.call": "ruft ein Tool mit seinen Argumenten auf",
+    "profiles.title": "Profile, jedes mit eigenem Endpunkt",
+    "profiles.text": "Ein Profil merkt sich, welche Server und Tools an sind. Ein Klick wechselt, und verbundene Clients bekommen die neue Toolliste live. Jedes Profil hat außerdem eine eigene URL: Copilot arbeitet nur mit „Frontend“, Claude Code bekommt alles.",
+    "profiles.note": "Server, die im Hub aus sind, starten für einen Profil-Endpunkt bei Bedarf und stoppen nach 10 Minuten ohne Nutzung wieder.",
+    "schemes.title": "Sechs Farbschemata, hell und dunkel",
+    "schemes.text": "Default, Slate, Graphite, Lavender, Coffee und Teal, jeweils hell und dunkel, die Oberfläche auf Deutsch oder Englisch. Probier sie gleich hier aus: Diese Seite nutzt dieselben Schemata wie die App.",
+    "schemes.appearance": "Darstellung", "schemes.system": "System", "schemes.light": "Hell", "schemes.dark": "Dunkel",
+    "ui.title": "Verwaltung, Prüfstand und Protokoll in einem Fenster",
+    "mock.aria": "MCP-Hub-Serverliste mit Tags, Tool-Anzahl, Nutzung und einer OAuth-Anmeldung",
+    "mock.status": "7 Server · 46 Tools · 1 wartet auf Anmeldung · 3 Clients",
+    "mock.tabs": ["Server", "Protokoll", "Clients", "Inspector", "Einstellungen"],
+    "mock.filter": "Filtern…", "mock.sort": "Zuletzt verwendet", "mock.signin": "Anmeldung nötig – anmelden",
+    "mock.used": (n, a) => `${n}× genutzt · ${a}`,
+    "mock.ago": ["vor 3 Minuten", "vor 1 Stunde", "vor 5 Stunden", "gestern", "vor 2 Tagen", "vor 4 Tagen"],
+    "ui.text": "Server mit Tags, Status und Nutzung; ein Inspector, um jedes Tool von Hand aufzurufen; ein Aufrufprotokoll, das zeigt, welcher Client was aufgerufen hat, wie lange es dauerte und was zurückkam.",
+    "f.restart": "Startet sich selbst neu", "f.restartD": "Abgestürzte Server kommen nach 2, 4, 8, 16 und 32 Sekunden wieder; Clients erfahren es über <code>list_changed</code>.",
+    "f.live": "Live-Aktualisierung", "f.liveD": "Änderungen erreichen Claude Code, VS Code und Claude Desktop, über die mitgelieferte Bridge, ohne neu zu verbinden.",
+    "f.inspector": "Inspector", "f.inspectorD": "Direkt mit einem Server verbinden und Tools, Ressourcen und Prompts per Formular oder JSON aufrufen.",
+    "f.stats": "Statistik", "f.statsD": "Aufrufe, Fehlerquote, Median und p95 pro Server und die langsamsten Tools, über die letzten 5.000 Aufrufe.",
+    "f.local": "Nur lokal", "f.localD": "Lauscht nur auf 127.0.0.1 und weist fremde Origins und DNS-Rebinding ab.",
+    "f.update": "Updates per Klick", "f.updateD": "Ein Chip in der Kopfzeile zeigt ein neues Release; der Hub aktualisiert sich und startet neu.",
+    "f.autostart": "Startet beim Login", "f.autostartD": "LaunchAgent unter macOS, systemd-User-Service unter Linux, geplante Aufgabe unter Windows.",
+    "f.light": "Kein Ballast", "f.lightD": "Python-Standardbibliothek, ein Prozess, kein Build. In der CI auf allen drei Plattformen getestet.",
+    "start.title": "In zwei Minuten startklar", "start.text": "Mehr als Python 3.11 oder neuer braucht es nicht. Nichts zu bauen, nichts per pip zu installieren.",
+    "s1.title": "Installieren und starten", "s1.text": "Repository klonen oder das aktuelle Release laden, dann die Oberfläche unter <code>http://127.0.0.1:4747</code> öffnen.",
+    "s2.title": "Server hinzufügen", "s2.text": "Auf + → „Importieren…“ klicken und einen installierten Client wählen, um seine Server zu übernehmen, oder eine vorhandene Konfiguration einfügen. „Server hinzufügen…“ legt einen von Hand an.",
+    "s3.title": "Clients verbinden", "s3.text": "Einstellungen → Clients → „Clients verbinden“, oder den einen Eintrag von Hand anlegen:",
+    "s4.title": "Beim Login starten", "s4.text": "Den Hub aus Schritt 1 beenden und registrieren, damit deine Clients ihn nach einem Neustart finden.",
+    "close.title": "Ein Eintrag pro Client. Alles andere lebt im Hub.", "close.gh": "Auf GitHub ansehen", "close.docs": "Dokumentation lesen",
+    "footer.license": "MCP Hub ist Open Source unter der MIT-Lizenz.", "footer.releases": "Releases", "footer.issue": "Problem melden", "footer.security": "Sicherheit",
+    "copy": "Kopieren", "copied": "In die Zwischenablage kopiert"
+  }
+};
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+};
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let lang = "en";
+const t = (key, ...a) => { const v = I18N[lang][key] ?? I18N.en[key]; return typeof v === "function" ? v(...a) : v; };
+const num = n => new Intl.NumberFormat(lang === "de" ? "de-DE" : "en-US").format(n);
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+const ICON = {
+  copy: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5v-.5A1.5 1.5 0 0 0 9 1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>',
+  lock: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>',
+  unlock: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"/></svg>'
+};
+
+const CLIENTS = [
+  { id: "claude-code", name: "Claude Code" },
+  { id: "claude-desktop", name: "Claude Desktop" },
+  { id: "codex", name: "Codex" },
+  { id: "cursor", name: "Cursor" },
+  { id: "vscode", name: "VS Code" },
+  { id: "copilot-cli", name: "Copilot CLI" }
+];
+const SERVERS = [
+  { id: "filesystem", tools: 8, ms: [3, 25], calls: ["read_file", "list_directory", "search_files", "edit_file"] },
+  { id: "playwright", tools: 7, ms: [300, 1600], calls: ["browser_navigate", "browser_click", "browser_take_screenshot", "browser_snapshot"] },
+  { id: "sentry", tools: 12, ms: [180, 900], calls: ["search_issues", "get_issue_details", "find_releases"], oauth: true },
+  { id: "grafana", tools: 10, ms: [90, 650], calls: ["query_loki_logs", "query_prometheus", "search_dashboards", "list_alert_rules"] },
+  { id: "postgres", tools: 3, ms: [12, 90], calls: ["query", "list_tables", "describe_table"], disabled: 1 },
+  { id: "memory", tools: 6, ms: [4, 30], calls: ["search_nodes", "read_graph", "add_observations"] }
+];
+const PROFILES = {
+  none: SERVERS.map(s => s.id),
+  Frontend: ["filesystem", "playwright", "memory"],
+  Ops: ["sentry", "grafana", "postgres"]
+};
+const TOKENS_PER_TOOL = 300;
+const state = { profile: "Frontend", compact: false, on: new Set(PROFILES.Frontend) };
+
+function renderClients() {
+  $("#clientList").innerHTML = CLIENTS.map(c => `<li data-id="${c.id}"><i></i>${c.name}</li>`).join("");
+}
+
+function renderServers() {
+  $("#serverList").innerHTML = SERVERS.map(s => {
+    const on = state.on.has(s.id);
+    const chips = on
+      ? `<span class="chip ok" data-hit>${t("board.tools", s.tools)}</span>${s.disabled ? `<span class="chip warn">${t("board.disabled")}</span>` : ""}${s.oauth ? '<span class="chip">OAuth</span>' : ""}`
+      : `<span class="chip">${t("board.off")}</span>`;
+    return `<li data-id="${s.id}" class="${on ? "" : "off"}"><button class="switch" type="button" role="switch" aria-checked="${on}" aria-label="${s.id}"></button><div><div class="nm">${s.id}</div><div class="chips">${chips}</div></div></li>`;
+  }).join("");
+}
+
+function isModified() {
+  const def = new Set(PROFILES[state.profile]);
+  return SERVERS.some(s => def.has(s.id) !== state.on.has(s.id));
+}
+
+let shownTokens = 0, tokenAnim = 0;
+function renderHub() {
+  const active = SERVERS.filter(s => state.on.has(s.id));
+  const tools = active.reduce((n, s) => n + s.tools, 0);
+  $("#hubStatus").textContent = t("board.status", active.length, tools);
+  $("#endpoint").innerHTML = `http://127.0.0.1:4747/mcp${state.compact ? "<em>/compact</em>" : ""}`;
+  $("#profileName").textContent = t("p." + state.profile);
+  const mod = isModified();
+  $("#profileMod").hidden = !mod;
+  $("#profileMod").title = t("board.modified");
+  $("#profileBtn").setAttribute("aria-label", `${t("board.profile")}: ${t("p." + state.profile)}${mod ? ", " + t("board.modified") : ""}`);
+  $("#compact").setAttribute("aria-checked", state.compact);
+  $("#tokensNote").textContent = state.compact ? t("board.note.compact", tools) : t("board.note.full", tools);
+  const target = state.compact ? TOKENS_PER_TOOL : tools * TOKENS_PER_TOOL;
+  cancelAnimationFrame(tokenAnim);
+  const from = shownTokens, start = performance.now(), dur = reduced ? 0 : 650;
+  const step = now => {
+    const p = dur ? Math.min(1, (now - start) / dur) : 1;
+    shownTokens = Math.round(from + (target - from) * (1 - Math.pow(1 - p, 4)));
+    $("#tokens").textContent = t("board.tokens", num(Math.round(shownTokens / 100) * 100 || 0));
+    if (p < 1) tokenAnim = requestAnimationFrame(step);
+  };
+  tokenAnim = requestAnimationFrame(step);
+}
+
+function renderProfileList() {
+  $("#profileList").innerHTML = Object.keys(PROFILES).map(p => {
+    const tools = SERVERS.filter(s => PROFILES[p].includes(s.id)).reduce((n, s) => n + s.tools, 0);
+    return `<li role="option" tabindex="-1" data-value="${p}" aria-selected="${p === state.profile}"><span>${t("p." + p)}</span><small>${tools}</small>${ICON.check}</li>`;
+  }).join("");
+}
+
+function renderBoard() { renderServers(); renderHub(); renderProfileList(); requestAnimationFrame(drawWires); }
+
+const wires = { clients: {}, servers: {} };
+function drawWires() {
+  const svg = $("#wires");
+  if (getComputedStyle(svg).display === "none") return;
+  const b = $("#board").getBoundingClientRect(), h = $("#hub").getBoundingClientRect();
+  const hy = h.top - b.top + h.height / 2;
+  const curve = (x1, y1, x2, y2) => { const dx = (x2 - x1) * .55; return `M${x1} ${y1}C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}`; };
+  let out = "";
+  $$("#clientList li").forEach((li, i, all) => {
+    const r = li.getBoundingClientRect();
+    const ty = hy - 24 + (48 * i) / Math.max(1, all.length - 1);
+    out += `<path data-c="${li.dataset.id}" d="${curve(r.right - b.left, r.top - b.top + r.height / 2, h.left - b.left, ty)}"/>`;
+  });
+  $$("#serverList li").forEach((li, i, all) => {
+    const r = li.getBoundingClientRect();
+    const ty = hy - 30 + (60 * i) / Math.max(1, all.length - 1);
+    out += `<path data-s="${li.dataset.id}" class="${state.on.has(li.dataset.id) ? "" : "off"}" d="${curve(h.right - b.left, ty, r.left - b.left, r.top - b.top + r.height / 2)}"/>`;
+  });
+  svg.innerHTML = out;
+  $$("path", svg).forEach(p => { if (p.dataset.c) wires.clients[p.dataset.c] = p; else wires.servers[p.dataset.s] = p; });
+}
+
+function travel(path, dur) {
+  return new Promise(res => {
+    if (!path || reduced || getComputedStyle($("#wires")).display === "none") return res();
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("r", 3.5);
+    $("#wires").appendChild(dot);
+    const len = path.getTotalLength(), start = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - start) / dur);
+      const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      const pt = path.getPointAtLength(e * len);
+      dot.setAttribute("cx", pt.x); dot.setAttribute("cy", pt.y);
+      if (p < 1) requestAnimationFrame(step); else { dot.remove(); res(); }
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+const flash = el => { if (!el) return; el.classList.add("hit"); setTimeout(() => el.classList.remove("hit"), 420); };
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+async function simulateCall() {
+  const active = SERVERS.filter(s => state.on.has(s.id));
+  if (!active.length) return;
+  const client = pick(CLIENTS), server = pick(active), tool = pick(server.calls);
+  flash($(`#clientList li[data-id="${client.id}"]`));
+  await travel(wires.clients[client.id], 650);
+  flash($("#hub .endpoint"));
+  if (!state.on.has(server.id)) return;
+  await travel(wires.servers[server.id], 520);
+  flash($(`#serverList li[data-id="${server.id}"] [data-hit]`));
+  const ms = Math.round(rand(...server.ms));
+  const err = Math.random() < .07;
+  const now = new Date();
+  const li = document.createElement("li");
+  if (err) li.className = "err";
+  li.innerHTML = `<span class="t">${now.toTimeString().slice(0, 8)}</span><span class="c">${client.id}</span><span>${server.id}__${tool}</span><span class="d">${err ? "error" : ms >= 1000 ? (ms / 1000).toFixed(1) + " s" : ms + " ms"}</span>`;
+  const log = $("#log");
+  log.prepend(li);
+  while (log.children.length > 5) log.lastElementChild.remove();
+}
+
+let running = false, visible = true;
+async function loop() {
+  if (running) return;
+  running = true;
+  while (visible && !document.hidden) {
+    await simulateCall();
+    await new Promise(r => setTimeout(r, reduced ? 3500 : rand(900, 1900)));
+  }
+  running = false;
+}
+
+function setupBoard() {
+  renderClients();
+  renderBoard();
+  for (let i = 0; i < 4; i++) {
+    const s = SERVERS.find(x => x.id === ["filesystem", "playwright", "memory", "filesystem"][i]);
+    const c = CLIENTS[[0, 4, 2, 5][i]];
+    const d = new Date(Date.now() - (i + 1) * 4200);
+    $("#log").insertAdjacentHTML("beforeend", `<li><span class="t">${d.toTimeString().slice(0, 8)}</span><span class="c">${c.id}</span><span>${s.id}__${s.calls[i % s.calls.length]}</span><span class="d">${Math.round(rand(...s.ms))} ms</span></li>`);
+  }
+  $("#serverList").addEventListener("click", e => {
+    const sw = e.target.closest(".switch");
+    if (!sw) return;
+    const id = sw.closest("li").dataset.id;
+    state.on.has(id) ? state.on.delete(id) : state.on.add(id);
+    renderBoard();
+    $(`#serverList li[data-id="${id}"] .switch`).focus();
+  });
+  $("#compact").addEventListener("click", () => { state.compact = !state.compact; renderHub(); });
+
+  const btn = $("#profileBtn"), list = $("#profileList");
+  const open = () => { list.hidden = false; btn.setAttribute("aria-expanded", "true"); ($('[aria-selected="true"]', list) || list.firstElementChild).focus(); };
+  const close = (focus = true) => { if (list.hidden) return; list.hidden = true; btn.setAttribute("aria-expanded", "false"); if (focus) btn.focus(); };
+  const choose = v => {
+    state.profile = v;
+    state.on = new Set(PROFILES[v]);
+    close();
+    renderBoard();
+  };
+  btn.addEventListener("click", () => list.hidden ? open() : close());
+  btn.addEventListener("keydown", e => { if (["ArrowDown", "ArrowUp"].includes(e.key)) { e.preventDefault(); open(); } });
+  list.addEventListener("click", e => { const li = e.target.closest("li"); if (li) choose(li.dataset.value); });
+  list.addEventListener("keydown", e => {
+    const items = $$("li", list), i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (i >= 0) choose(items[i].dataset.value); }
+    else if (e.key === "Escape") { e.preventDefault(); close(); }
+    else if (e.key === "Tab") close(false);
+  });
+  document.addEventListener("click", e => { if (!$("#profile").contains(e.target)) close(false); });
+
+  new ResizeObserver(() => drawWires()).observe($("#board"));
+  new IntersectionObserver(([en]) => { visible = en.isIntersecting; if (visible) loop(); }).observe($("#board"));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) loop(); });
+}
+
+function setupTabs(name, items, onSelect) {
+  const bar = $(`[data-tabs="${name}"]`);
+  let current = 0;
+  const render = () => {
+    bar.innerHTML = items.map((it, i) => `<button type="button" role="tab" aria-selected="${i === current}" tabindex="${i === current ? 0 : -1}">${typeof it.label === "function" ? it.label() : it.label}</button>`).join("");
+    onSelect(items[current]);
+  };
+  bar.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; current = $$("button", bar).indexOf(b); render(); $$("button", bar)[current].focus(); });
+  bar.addEventListener("keydown", e => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    current = (current + (e.key === "ArrowRight" ? 1 : -1) + items.length) % items.length;
+    render(); $$("button", bar)[current].focus();
+  });
+  render();
+  return render;
+}
+
+const tabRenders = [];
+function setupConnect() {
+  const items = [
+    { label: "Claude Code", hint: "connect.hint.claude", code: "claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp" },
+    { label: "Codex", hint: "connect.hint.codex", code: "codex mcp add mcp-hub --url http://127.0.0.1:4747/mcp" },
+    { label: "Copilot / VS Code", hint: "connect.hint.copilot", code: '{ "mcpServers": { "mcp-hub": { "type": "http", "url": "http://127.0.0.1:4747/mcp", "tools": ["*"] } } }' },
+    { label: "Claude Desktop", hint: "connect.hint.desktop", code: '{ "mcpServers": { "mcp-hub": {\n  "command": "/opt/homebrew/bin/python3",\n  "args": ["/path/to/mcp-hub/bridge.py", "http://127.0.0.1:4747/mcp"]\n} } }' }
+  ];
+  tabRenders.push(setupTabs("connect", items, it => { $("#connectCode").textContent = it.code; $("#connectHint").textContent = t(it.hint); }));
+}
+
+let importDone = false;
+function setupImport() {
+  const items = [
+    { label: "Claude / Cursor JSON", format: "JSON · mcpServers", code: '{ "mcpServers": {\n  "grafana": {\n    "command": "uvx",\n    "args": ["mcp-grafana"]\n  },\n  "sentry": {\n    "type": "http",\n    "url": "https://mcp.sentry.dev/mcp"\n  }\n} }', servers: [["grafana", "stdio"], ["sentry", "http"]] },
+    { label: "Codex TOML", format: "Codex TOML", code: '[mcp_servers.playwright]\ncommand = "npx"\nargs = ["@playwright/mcp@latest"]\nstartup_timeout_sec = 30\n\n[mcp_servers.memory]\ncommand = "npx"\nargs = ["-y", "@modelcontextprotocol/server-memory"]', servers: [["playwright", "stdio"], ["memory", "stdio"]], dropped: "startup_timeout_sec" },
+    { label: "mcp add", format: "mcp add", code: "claude mcp add --transport http sentry https://mcp.sentry.dev/mcp\nclaude mcp add postgres -- npx -y @modelcontextprotocol/server-postgres postgresql://localhost/app", servers: [["sentry", "http"], ["postgres", "stdio"]] }
+  ];
+  let cur = items[0];
+  const render = () => {
+    $("#importCode").textContent = cur.code;
+    $("#importPreview").innerHTML = `<div><div class="k">${t("import.detected")}</div><b>${cur.format}</b></div>
+      <div><div class="k">${t("import.servers")}</div><ul>${cur.servers.map(([n, ty]) => `<li>${importDone ? `<span class="ok-text">${ICON.check}</span>` : ""}<b>${n}</b><span class="chip">${ty}</span></li>`).join("")}</ul></div>
+      ${cur.dropped ? `<div class="dropped">${t("import.dropped")} <code>${cur.dropped}</code></div>` : ""}`;
+    $("#importStatus").textContent = importDone ? t("import.done", cur.servers.length) : "";
+    $("#importBtn").disabled = importDone;
+  };
+  tabRenders.push(setupTabs("import", items, it => { cur = it; importDone = false; render(); }));
+  $("#importBtn").addEventListener("click", () => { importDone = true; render(); });
+  tabRenders.push(render);
+}
+
+let locked = false, oauth = "need";
+function renderSecrets() {
+  const out = $("#secretValue"), btn = $("#lock");
+  out.textContent = locked ? "${keychain:grafana/GRAFANA_SERVICE_ACCOUNT_TOKEN}" : "glsa_7XqV3bN0pLmT29dKe8sYw4cZ_1f9a0b2c";
+  out.classList.toggle("ref", locked);
+  btn.innerHTML = locked ? ICON.lock : ICON.unlock;
+  btn.setAttribute("aria-pressed", locked);
+  btn.setAttribute("aria-label", t(locked ? "secrets.unlock" : "secrets.lock"));
+  btn.title = btn.getAttribute("aria-label");
+  $("#secretHint").innerHTML = locked ? `<span class="ok-text">${t("secrets.locked")}</span>` : t("secrets.plain");
+  const chips = $("#oauthChips");
+  if (oauth === "need") chips.innerHTML = `<span class="chip warn">${t("oauth.need")}</span><button class="btn small" type="button" data-oauth="go">${t("oauth.signin")}</button>`;
+  else if (oauth === "wait") chips.innerHTML = `<span class="chip">${t("oauth.wait")}</span>`;
+  else chips.innerHTML = `<span class="chip ok">${t("board.tools", 12)}</span><span class="chip" title="${t("oauth.tip")}">${t("oauth.ok")}</span><button class="btn small" type="button" data-oauth="out">${t("oauth.out")}</button>`;
+}
+function setupSecrets() {
+  $("#lock").addEventListener("click", () => { locked = !locked; renderSecrets(); });
+  $("#oauthChips").addEventListener("click", e => {
+    const b = e.target.closest("[data-oauth]");
+    if (!b) return;
+    if (b.dataset.oauth === "go") {
+      oauth = "wait"; renderSecrets();
+      setTimeout(() => { oauth = "ok"; renderSecrets(); $('[data-oauth="out"]')?.focus(); }, reduced ? 200 : 1300);
+    } else { oauth = "need"; renderSecrets(); $('[data-oauth="go"]')?.focus(); }
+  });
+  new IntersectionObserver(([en], ob) => { if (en.isIntersecting) { $("#bars").classList.remove("idle"); ob.disconnect(); } }, { threshold: .5 }).observe($("#bars"));
+}
+
+const PALETTES = ["default", "slate", "graphite", "lavender", "coffee", "teal"];
+function applyAppearance() {
+  const pal = store.get("palette") || "lavender", theme = store.get("theme") || "system";
+  const root = document.documentElement;
+  root.dataset.palette = pal;
+  if (theme === "system") root.removeAttribute("data-theme"); else root.dataset.theme = theme;
+  $$("#swatches .sw").forEach(b => b.setAttribute("aria-pressed", b.dataset.palette === pal));
+  $$("#theme button").forEach(b => b.setAttribute("aria-pressed", b.dataset.themeSet === theme));
+}
+function setupAppearance() {
+  $("#swatches").innerHTML = PALETTES.map(p => `<button type="button" class="sw" data-palette="${p}" aria-pressed="false"><span class="mini"><i></i><i></i><span class="r"><span class="tg"></span><i></i><span class="bt"></span></span></span><span class="nm">${p[0].toUpperCase() + p.slice(1)}</span></button>`).join("");
+  $("#swatches").addEventListener("click", e => { const b = e.target.closest(".sw"); if (b) { store.set("palette", b.dataset.palette); applyAppearance(); } });
+  $("#theme").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { store.set("theme", b.dataset.themeSet); applyAppearance(); } });
+  applyAppearance();
+}
+
+function setupAutostart() {
+  tabRenders.push(setupTabs("autostart", [
+    { label: "macOS / Linux", code: "./autostart.sh install" },
+    { label: "Windows", code: ".\\autostart.ps1 install" }
+  ], it => { $("#autostartCode").textContent = it.code; }));
+}
+
+function setupCopy() {
+  $$(".code .copy").forEach(b => { b.innerHTML = ICON.copy; });
+  document.addEventListener("click", async e => {
+    const b = e.target.closest(".copy");
+    if (!b) return;
+    const text = $("pre", b.parentElement).textContent;
+    try { await navigator.clipboard.writeText(text); } catch { return; }
+    b.innerHTML = ICON.check; b.classList.add("done");
+    $("#announce").textContent = t("copied");
+    setTimeout(() => { b.innerHTML = ICON.copy; b.classList.remove("done"); }, 1600);
+  });
+}
+
+const MOCK = [
+  { n: "filesystem", tags: ["files"], d: "Read and write files in ~/Projects", c: "npx -y @modelcontextprotocol/server-filesystem '~/Projects'", tools: 8, used: [128, 0] },
+  { n: "playwright", tags: ["frontend", "testing"], d: "Browser automation: navigate, click, screenshot", c: "npx @playwright/mcp@latest", tools: 7, used: [41, 1] },
+  { n: "sentry", tags: ["monitoring"], d: "Issues, stack traces and releases", c: "HTTP · https://mcp.sentry.dev/mcp", tools: 12, used: [17, 2], extra: ["OAuth"] },
+  { n: "grafana", tags: ["monitoring"], d: "Dashboards, Prometheus and Loki queries, alerts", c: "uvx mcp-grafana", tools: 10, used: [23, 3], extra: ["1 env"] },
+  { n: "postgres", tags: ["database"], d: "Query the local app database", c: "npx -y @modelcontextprotocol/server-postgres postgresql://localhost/app", tools: 3, used: [12, 4], disabled: 1 },
+  { n: "memory", tags: ["knowledge"], d: "Knowledge graph that persists across sessions", c: "npx -y @modelcontextprotocol/server-memory", tools: 6, used: [5, 5] },
+  { n: "linear", tags: ["devops"], d: "Issues, projects and cycles", c: "HTTP · https://mcp.linear.app/mcp", signin: true }
+];
+function renderMock() {
+  const ago = t("mock.ago");
+  const tags = {};
+  MOCK.forEach(s => s.tags.forEach(x => tags[x] = (tags[x] || 0) + 1));
+  const more = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>';
+  const chev = '<svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>';
+  $("#mock").innerHTML = `
+    <div class="m-head"><b>MCP Hub</b><span class="ver">v1.0.0</span><span class="m-status"><i></i>${t("mock.status")}</span>
+      <span class="m-group"><span>${t("p.none")} ${chev}</span><span>${more}</span></span></div>
+    <div class="m-tabs">${t("mock.tabs").map(x => `<span>${x}</span>`).join("")}</div>
+    <div class="m-body">
+      <div class="m-tools"><span class="m-filter">${t("mock.filter")}</span>
+        <span class="m-group"><span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v10M1.5 10.5 4 13l2.5-2.5M9 4h6M9 8h4M9 12h2"/></svg></span><span>${t("mock.sort")} ${chev}</span></span>
+        <span class="m-plus"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg></span></div>
+      <div class="m-tags">${Object.keys(tags).sort().map(x => `<span>${x}<em>${tags[x]}</em></span>`).join("")}</div>
+      <div class="m-list">${MOCK.map(s => `
+        <div class="m-row"><span class="switch" aria-checked="true"></span>
+          <div class="m-info">
+            <div class="m-name"><b>${s.n}</b>${s.tags.map(x => `<span>${x}</span>`).join("")}</div>
+            <div class="m-desc">${s.d}</div>
+            <div class="m-cmd">${esc(s.c)}</div>
+            <div class="m-chips">${s.signin
+              ? `<span class="chip warn">${t("mock.signin")}</span>`
+              : `<span class="chip ok">${t("board.tools", s.tools)}</span>${s.disabled ? `<span class="chip warn">${t("board.disabled")}</span>` : ""}<span class="chip">${t("mock.used", s.used[0], ago[s.used[1]])}</span>${(s.extra || []).map(x => `<span class="chip">${x}</span>`).join("")}`}</div>
+          </div><span class="m-more">${more}</span></div>`).join("")}</div>
+    </div>`;
+}
+
+function applyLang(l) {
+  lang = I18N[l] ? l : "en";
+  document.documentElement.lang = lang;
+  $$("[data-i18n]").forEach(el => { const v = I18N[lang][el.dataset.i18n]; if (typeof v === "string") el.innerHTML = v; });
+  $$("[data-i18n-aria]").forEach(el => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
+  $$("#lang button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === lang));
+  renderBoard();
+  renderSecrets();
+  renderMock();
+  tabRenders.forEach(r => r());
+}
+
+setupAppearance();
+setupBoard();
+setupConnect();
+setupImport();
+setupSecrets();
+setupAutostart();
+setupCopy();
+$("#lang").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { store.set("lang", b.dataset.lang); applyLang(b.dataset.lang); } });
+applyLang(store.get("lang") || ((navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en"));
+</script>
+</body>
+</html>
