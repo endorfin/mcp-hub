@@ -156,6 +156,20 @@ At `/mcp`, the hub bundles all enabled servers into one MCP endpoint (Streamable
 - **Security:** write requests (`POST`, `PUT`) with a foreign `Origin` header are rejected, for the MCP endpoint and the GUI API alike (protection against DNS rebinding and CSRF).
 - **Messages:** error messages from the hub and its API are in English, since agents read them too. The GUI translates the common ones when German is selected.
 
+### Compact mode
+
+Every client loads the definitions of all tools into its context, for every request. With a dozen servers that quickly adds up to tens of thousands of tokens and makes it harder for the model to pick the right tool. At `/mcp/compact` (and `/p/<profile>/mcp/compact`), the hub offers just three tools instead:
+
+| Tool | Purpose |
+| --- | --- |
+| `search_tools` | Finds tools by what you want to do (`query`, optionally `server` and `limit`); returns names with a one-line description |
+| `describe_tool` | Full description and input schema of one tool |
+| `call_tool` | Calls a tool by name with its `arguments` |
+
+The search is a weighted keyword search over tool names, titles, descriptions, parameter names and the server descriptions, with prefix matching and without filler words; it runs locally, without an index or a model. The `initialize` instructions list the servers with their descriptions, so the model knows what is available. Disabled tools, profiles and the call log work as on the normal endpoint, and calls show up in the log with the real tool name.
+
+In the GUI, the “Compact mode” switch in the hub card changes all connect snippets to the compact URL and shows the estimated tool definition size for both modes. Each client decides by its URL, so you can connect one client compactly and another with every tool.
+
 ### Connecting clients
 
 Claude Code:
@@ -230,7 +244,7 @@ Design rules and components of the interface are documented in [DESIGN.md](DESIG
 
 - **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts `mcpServers` JSON from other configurations.
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
-- **Clients:** every session since the last hub start with client name and version, profile endpoint, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
+- **Clients:** every session since the last hub start with client name and version, profile endpoint, compact mode, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
 - **Settings:** path to the server file, language, `passEnvironment`, the update check, and below that the complete `mcpServers` definition as JSON for direct editing.
 
@@ -277,6 +291,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `GET` | `/api/hub` | Status per server (state, error, number of tools/prompts/resources, OAuth status) |
 | `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state |
 | `GET` | `/api/live` | Clients with an open notification stream |
+| `GET` | `/api/compact` | Size of the tool definitions as JSON characters, `fullChars` and `compactChars` |
 | `GET` | `/api/clients` | Sessions since the hub start: name, version, profile, `since`, `lastSeen`, `requests`, `calls`, `streams` |
 | `GET` | `/api/update` | Installed and latest version, release notes, install method; checks GitHub in the background when the last check is older than 12 hours |
 | `POST` | `/api/update/check` | Check GitHub now |
@@ -297,6 +312,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `POST` | `/mcp` | The hub’s MCP endpoint |
 | `GET` | `/mcp` | SSE stream for notifications (`Accept: text/event-stream`) |
 | `POST` | `/p/<profile>/mcp` | MCP endpoint with a fixed profile (`GET` for the stream as well) |
+| `POST` | `/mcp/compact`, `/p/<profile>/mcp/compact` | The same endpoints in compact mode (`search_tools`, `describe_tool`, `call_tool`) |
 
 ## Tests
 
@@ -304,7 +320,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
+`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
 
 ## Troubleshooting
 

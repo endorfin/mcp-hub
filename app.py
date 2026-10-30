@@ -163,7 +163,7 @@ def update_profiles(action, name, new_name=None):
 
 
 hub = hub_module.Hub(load_config, load_settings, STATE_DIR, load_profiles)
-MCP_PATH = re.compile(r"^/(?:p/([^/]+)/)?mcp$")
+MCP_PATH = re.compile(r"^/(?:p/([^/]+)/)?mcp(?:/(compact))?$")
 
 
 updater = updater_module.Updater(ROOT, STATE_DIR, inspector.VERSION)
@@ -232,6 +232,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(hub.live_clients())
         if self.path == "/api/clients":
             return self.send(hub.clients.snapshot())
+        if self.path == "/api/compact":
+            full = json.dumps(hub.handle("tools/list", {})["tools"], ensure_ascii=False)
+            small = json.dumps(hub.handle("tools/list", {}, mode="compact")["tools"], ensure_ascii=False)
+            return self.send({"fullChars": len(full), "compactChars": len(small)})
         if self.path == "/api/update":
             enabled = load_settings()["checkUpdates"]
             if enabled and updater.stale():
@@ -297,7 +301,7 @@ class Handler(BaseHTTPRequestHandler):
         if not local_origin(self.headers.get("Origin")):
             return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
         if match := MCP_PATH.match(self.path):
-            return self.mcp(unquote(match.group(1)) if match.group(1) else None)
+            return self.mcp(unquote(match.group(1)) if match.group(1) else None, match.group(2))
         if self.path == "/api/update/check":
             return self.send({**updater.check(), "enabled": load_settings()["checkUpdates"]})
         if self.path == "/api/update/apply":
@@ -394,7 +398,7 @@ class Handler(BaseHTTPRequestHandler):
             hub.unsubscribe(listener)
             hub.clients.stream(session_id, -1)
 
-    def mcp(self, profile=None):
+    def mcp(self, profile=None, mode=None):
         try:
             message = self.body()
         except json.JSONDecodeError:
@@ -414,7 +418,7 @@ class Handler(BaseHTTPRequestHandler):
                              HTTPStatus.NOT_FOUND)
         if message["method"] == "initialize":
             client_info = (message.get("params") or {}).get("clientInfo")
-            headers["Mcp-Session-Id"] = hub.clients.register(client_info, user_agent, profile)
+            headers["Mcp-Session-Id"] = hub.clients.register(client_info, user_agent, profile, mode)
             client = hub.clients.lookup(headers["Mcp-Session-Id"], user_agent)
         else:
             session_id = self.headers.get("Mcp-Session-Id")
@@ -423,7 +427,7 @@ class Handler(BaseHTTPRequestHandler):
         if profile:
             client = f"{client} · {profile}"
         try:
-            reply["result"] = hub.handle(message["method"], message.get("params"), client, profile)
+            reply["result"] = hub.handle(message["method"], message.get("params"), client, profile, mode)
         except hub_module.JsonRpcError as e:
             reply["error"] = {"code": e.code, "message": str(e)}
         except Exception as e:

@@ -270,6 +270,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 @media (max-width: 760px) { .call summary { grid-template-columns: 70px 1fr auto; } .call .who, .call .ms { display: none; } }
 .hubcard { margin-top: 24px; }
 .hubhead { display: flex; gap: 14px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
+.compact-row { display: grid; gap: 4px; margin-top: 14px; }
 .snip-tabs { margin: 10px 0 14px; box-shadow: inset 0 -1px var(--line); }
 .hubsnips pre + .hubsnip-head { margin-top: 14px; }
 .hubsnip-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; font-size: 13px; }
@@ -377,6 +378,10 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
           <div class="hint" data-i18n="s.hubHint">Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).</div>
         </div>
         <code id="hubUrl"></code>
+      </div>
+      <div class="compact-row">
+        <label class="check"><input type="checkbox" id="hubCompact"> <span data-i18n="s.compactMode">Kompakt-Modus</span></label>
+        <span class="hint" id="compactHint"></span>
       </div>
       <nav class="line-tabs snip-tabs" id="hubTabs">
         <button data-snip="code" class="active">Claude Code</button>
@@ -629,6 +634,7 @@ const I18N = {
   "s.manageProfiles": ["Profile verwalten…", "Manage profiles…"],
   "s.tabServers": ["Server", "Servers"],
   "s.tabLog": ["Protokoll", "Log"],
+  "s.compactMode": ["Kompakt-Modus", "Compact mode"],
   "s.checkUpdates": ["Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)", "Check GitHub for new versions (when the interface opens, at most every 12 hours)"],
   "s.updateCheck": ["Jetzt prüfen", "Check now"],
   "s.updateOnGithub": ["Release auf GitHub ansehen", "View release on GitHub"],
@@ -871,6 +877,11 @@ const I18N = {
   updateNewer: ["{v} verfügbar", "{v} available"],
   updateChecked: ["geprüft {when}", "checked {when}"],
   updateNever: ["Noch nicht geprüft", "Not checked yet"],
+  compactOff: ["Clients bekommen jede Tool-Definition einzeln.", "Clients receive every tool definition."],
+  compactOn: ["Clients bekommen nur search_tools, describe_tool und call_tool und suchen sich passende Tools selbst.", "Clients only receive search_tools, describe_tool and call_tool and look up matching tools themselves."],
+  compactOffSize: ["Clients laden alle Tool-Definitionen, rund {full} Tokens pro Anfrage. Im Kompakt-Modus wären es rund {small}.", "Clients load every tool definition, about {full} tokens per request. Compact mode would need about {small}."],
+  compactOnSize: ["Clients bekommen nur search_tools, describe_tool und call_tool: rund {small} statt {full} Tokens pro Anfrage.", "Clients only receive search_tools, describe_tool and call_tool: about {small} instead of {full} tokens per request."],
+  clientCompact: ["kompakt", "compact"],
   noClients: ["Seit dem Hub-Start hat sich noch kein Client verbunden.", "No client has connected since the hub started."],
   clientLive: ["Live-Stream", "live stream"],
   clientIdle: ["inaktiv", "idle"],
@@ -1324,8 +1335,9 @@ function render() {
   renderProfiles();
   $("#cfgPath").textContent = state.configPath;
   if (state.version) $("#version").textContent = `v${state.version}`;
-  const hubUrl = `http://127.0.0.1:${location.port}/mcp`;
+  const hubUrl = `http://127.0.0.1:${location.port}/mcp${$("#hubCompact").checked ? "/compact" : ""}`;
   $("#hubUrl").textContent = hubUrl;
+  renderCompactHint();
   $("#hubCode").textContent = `claude mcp add --scope user --transport http mcp-hub ${hubUrl}`;
   $("#hubCodex").textContent = `codex mcp add mcp-hub --url ${hubUrl}`;
   $("#hubCodexToml").textContent = `[mcp_servers.mcp-hub]\nurl = "${hubUrl}"`;
@@ -2299,6 +2311,7 @@ function renderClients() {
         el("div", {}, el("span", { className: "name", textContent: clientName(c.name) }), c.version ? el("span", { className: "cmd", textContent: `  ${c.version}` }) : null),
         el("div", { className: "meta" },
           c.profile ? el("span", { className: "chip", textContent: c.profile }) : null,
+          c.mode === "compact" ? el("span", { className: "chip", textContent: t("clientCompact") }) : null,
           c.streams ? el("span", { className: "chip ok", textContent: t("clientLive") }) : null,
           idle ? el("span", { className: "chip", textContent: t("clientIdle") }) : null,
           el("span", { className: "chip", textContent: t("clientSince", { when: ago(c.since) }), title: new Date(c.since * 1000).toLocaleString(LOCALE) }),
@@ -2307,6 +2320,27 @@ function renderClients() {
       log);
   }));
 }
+
+let compactSize = null;
+const tokens = chars => new Intl.NumberFormat(LOCALE).format(Math.max(100, Math.round(chars / 4 / 100) * 100));
+
+function renderCompactHint() {
+  const on = $("#hubCompact").checked;
+  const size = compactSize ? { full: tokens(compactSize.fullChars), small: tokens(compactSize.compactChars) } : null;
+  $("#compactHint").textContent = !size ? t(on ? "compactOn" : "compactOff")
+    : t(on ? "compactOnSize" : "compactOffSize", size);
+}
+
+async function refreshCompactSize() {
+  compactSize = await api("GET", "/api/compact").catch(() => compactSize);
+  renderCompactHint();
+}
+
+try { $("#hubCompact").checked = localStorage.getItem("hubCompact") === "1"; } catch {}
+$("#hubCompact").onchange = () => {
+  try { localStorage.setItem("hubCompact", $("#hubCompact").checked ? "1" : "0"); } catch {}
+  render();
+};
 
 function showSnip(name) {
   if (!$(`[data-snip-panel="${name}"]`)) name = "code";
@@ -2424,6 +2458,8 @@ $("#updateApply").onclick = async () => {
   setInterval(poll, 2000);
   refreshUpdate();
   setInterval(refreshUpdate, 30 * 60000);
+  refreshCompactSize();
+  setInterval(refreshCompactSize, 5 * 60000);
 })();
 </script>
 </body>

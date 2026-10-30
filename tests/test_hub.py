@@ -271,6 +271,27 @@ class HubTest(unittest.TestCase):
         status, body = self.request("POST", "/api/update/apply", {})
         self.assertEqual((status, body["error"]), (409, "No newer version available"))
 
+    def test_compact_endpoint_searches_describes_and_calls(self):
+        path = "/mcp/compact"
+        self.assertEqual(self.tool_names(path), ["call_tool", "describe_tool", "search_tools"])
+        init = self.rpc("initialize", {"protocolVersion": "2025-06-18"}, path=path)["result"]
+        self.assertIn("call search_tools", init["instructions"])
+        self.assertIn("- alpha", init["instructions"])
+
+        def meta(name, arguments):
+            return self.rpc("tools/call", {"name": name, "arguments": arguments}, path=path)["result"]
+
+        found = meta("search_tools", {"query": "working directory"})["content"][0]["text"].splitlines()
+        self.assertEqual({line.split(":")[0] for line in found[:2]}, {"alpha__where", "beta__where"})
+        self.assertEqual(meta("search_tools", {"query": "", "server": "beta"})["content"][0]["text"].count("beta__"), 4)
+        self.assertIn('"inputSchema"', meta("describe_tool", {"name": "alpha__echo"})["content"][0]["text"])
+        self.assertTrue(meta("describe_tool", {"name": "alpha__nope"})["isError"])
+        self.assertEqual(meta("call_tool", {"name": "alpha__echo", "arguments": {"text": "kompakt"}})["content"][0]["text"], "kompakt")
+        self.assertEqual(self.get("/api/calls?limit=1")[0]["target"], "echo")
+        self.assertTrue(meta("call_tool", {"name": "alpha__nope"})["isError"])
+        sizes = self.get("/api/compact")
+        self.assertLess(sizes["compactChars"], sizes["fullChars"] * 2)
+
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
 

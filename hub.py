@@ -8,6 +8,7 @@ from collections import deque
 import time
 from pathlib import Path
 
+import compact
 import oauth
 from inspector import PROTOCOL_VERSION, VERSION, AuthRequired, RpcError, open_session
 
@@ -28,6 +29,12 @@ def labelled(upstream, item):
     if (item.get("annotations") or {}).get("title"):
         result["annotations"] = {**item["annotations"], "title": title}
     return result
+
+
+def summary(upstream):
+    tools = upstream.catalog["tools"]
+    return upstream.server_info.get("description") or upstream.instructions.strip().split("\n")[0][:300] \
+        or ", ".join(t["name"] for t in tools[:6]) + (" …" if len(tools) > 6 else "")
 
 
 class JsonRpcError(Exception):
@@ -233,7 +240,7 @@ class Clients:
         except (FileNotFoundError, json.JSONDecodeError):
             self.sessions = {}
 
-    def register(self, client_info, user_agent, profile=None):
+    def register(self, client_info, user_agent, profile=None, mode=None):
         session_id = uuid.uuid4().hex
         now = time.time()
         with self.lock:
@@ -242,7 +249,7 @@ class Clients:
                 "version": (client_info or {}).get("version"),
                 "since": now,
             }
-            self.active[session_id] = {"profile": profile, "lastSeen": now, "requests": 1, "calls": 0, "streams": 0}
+            self.active[session_id] = {"profile": profile, "mode": mode, "lastSeen": now, "requests": 1, "calls": 0, "streams": 0}
             while len(self.sessions) > self.keep:
                 self.sessions.pop(next(iter(self.sessions)))
             self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -398,8 +405,7 @@ class Hub:
             name: {
                 "state": u.state,
                 "error": u.error,
-                "summary": u.server_info.get("description") or u.instructions.strip().split("\n")[0][:300]
-                or ", ".join(t["name"] for t in u.catalog["tools"][:6]) + (" …" if len(u.catalog["tools"]) > 6 else ""),
+                "summary": summary(u),
                 **{k: len(v) for k, v in u.catalog.items()},
                 "tools": len(u.tools()),
                 "toolsTotal": len(u.catalog["tools"]),
@@ -439,24 +445,34 @@ class Hub:
                 return upstream, prefixed[len(upstream.prefix) + len(SEPARATOR):]
         raise JsonRpcError(-32602, f"Unknown: {prefixed}")
 
-    def handle(self, method, params, client="unbekannt", profile=None):
+    def handle(self, method, params, client="unbekannt", profile=None, mode=None):
         params = params or {}
         if method == "initialize":
             if profile and profile not in self.load_profiles()["profiles"]:
                 raise JsonRpcError(-32602, f"Unknown profile: {profile}")
             requested = params.get("protocolVersion")
-            return {
+            result = {
                 "protocolVersion": requested if requested in SUPPORTED_VERSIONS else PROTOCOL_VERSION,
                 "capabilities": {"tools": {"listChanged": True}, "resources": {"listChanged": True},
                                  "prompts": {"listChanged": True}, "logging": {}},
                 "serverInfo": {"name": "mcp-hub", "version": VERSION},
                 "instructions": "Bundles several MCP servers. Tool and prompt names carry the server name as a prefix (server__tool).",
             }
+            if mode == "compact":
+                view = self._view(self.sync(), profile)
+                result["instructions"] = compact.instructions(
+                    {u.name: (u.entry.get("description") or summary(u)).split("\n")[0][:200] for u in view},
+                    sum(len(u.tools(disabled)) for u, disabled in view.items()))
+            return result
         if method in ("ping", "logging/setLevel"):
             return {}
 
         view = self._view(self.sync(), profile)
         running = list(view)
+        if method == "tools/list" and mode == "compact":
+            return {"tools": compact.meta_tools(sorted(u.name for u in running))}
+        if method == "tools/call" and mode == "compact" and params.get("name") in (compact.SEARCH, compact.DESCRIBE, compact.CALL):
+            return self._compact_call(view, params, client, profile)
         if method == "tools/list":
             return {"tools": [labelled(u, t) for u, disabled in view.items() for t in u.tools(disabled)]}
         if method == "prompts/list":
@@ -484,6 +500,25 @@ class Hub:
                         return self._forward(upstream, "resources/read", params, uri, client)
             raise JsonRpcError(-32002, f"Resource not found: {uri}")
         raise JsonRpcError(-32601, f"Method not supported: {method}")
+
+    def _compact_call(self, view, params, client, profile):
+        name, args = params["name"], params.get("arguments") or {}
+        tools = [labelled(u, t) for u, disabled in view.items() for t in u.tools(disabled)]
+        if name == compact.SEARCH:
+            server = next((u.prefix for u in view if u.name == args.get("server")), args.get("server"))
+            about = {u.prefix: f"{u.entry.get('description') or ''} {summary(u)}" for u in view}
+            found = compact.search(tools, args.get("query", ""), server, args.get("limit"), about)
+            return compact.text(compact.format_results(found))
+        if name == compact.DESCRIBE:
+            tool = next((t for t in tools if t["name"] == args.get("name")), None)
+            if not tool:
+                return compact.text(f"Unknown tool: {args.get('name')}. Use {compact.SEARCH} to find it.", error=True)
+            return compact.text(compact.describe(tool))
+        try:
+            return self.handle("tools/call", {"name": args.get("name", ""), "arguments": args.get("arguments") or {}},
+                               client, profile)
+        except JsonRpcError as e:
+            return compact.text(f"{e} – use {compact.SEARCH} to find the right tool name.", error=True)
 
     def _forward(self, upstream, method, params, target, client):
         self.usage.record(upstream.name)
