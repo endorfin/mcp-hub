@@ -8,14 +8,12 @@
 :root {
   --bg: #f6f6f4; --panel: #ffffff; --field: #f6f6f4; --ink: #1c1c1a; --muted: #6b6b66; --line: #e3e2de;
   --accent: #1f8a4c; --on-accent: #ffffff; --ok: #1f8a4c; --warn: #b26a00; --bad: #c0362c; --chip: #efeeea;
-  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%236b6b66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #141413; --panel: #1d1d1b; --field: #151514; --ink: #ecebe6; --muted: #9a998f; --line: #2e2e2b;
     --accent: #4cc27f; --on-accent: #0e1a12; --ok: #4cc27f; --warn: #e0a440; --bad: #ff7366; --chip: #262624;
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%239a998f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   }
 }
 * { box-sizing: border-box; }
@@ -35,15 +33,28 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .picker-label.none { color: var(--muted); }
 .picker-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex: none; }
 .picker svg { color: var(--muted); flex: none; }
-.picker-pop { position: absolute; left: 0; top: calc(100% + 4px); z-index: 6; width: 260px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: grid; gap: 4px; }
-.picker-pop input { padding: 6px 9px; font-size: 13px; }
-.picker-options { display: grid; max-height: 260px; overflow: auto; }
+.lb { position: relative; display: flex; min-width: 0; }
+.toolbar .lb { min-width: 180px; }
+.lb-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; text-align: left; cursor: pointer; }
+.lb-trigger:hover { border-color: var(--muted); }
+.lb-trigger:focus-visible, .lb-trigger[aria-expanded="true"] { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
+.lb-trigger svg { color: var(--muted); flex: none; }
+.lb-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-label.none { color: var(--muted); }
+.lb.bare .lb-trigger { min-width: 200px; border: 0; border-left: 1px solid var(--line); border-radius: 0 6px 6px 0; background: transparent; outline: none; }
+.lb.bare .lb-trigger:hover, .lb.bare .lb-trigger[aria-expanded="true"], .lb.bare .lb-trigger:focus-visible { background: var(--chip); }
+.lb-pop { position: absolute; left: 0; top: calc(100% + 4px); z-index: 6; width: max(100%, 240px); background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: grid; gap: 4px; }
+.lb-pop.right { left: auto; right: 0; }
+.lb-filter { padding: 6px 9px; font-size: 13px; }
+.lb-options { display: grid; max-height: 260px; overflow: auto; }
+.lb-options:focus { outline: none; }
+.lb-empty { padding: 6px 8px; color: var(--muted); font-size: 13px; }
 .opt { display: grid; grid-template-columns: 1fr 16px; gap: 10px; align-items: center; text-align: left; font: inherit; background: none; border: 0; color: var(--ink); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
 .opt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .opt.hi { background: var(--chip); }
 .opt.none span { color: var(--muted); }
 .opt svg { color: var(--accent); }
-.picker-empty { padding: 6px 8px; color: var(--muted); font-size: 13px; }
+
 .profile .group-btn { display: grid; place-items: center; flex: none; width: 34px; padding: 0; border: 0; border-left: 1px solid var(--line); border-radius: 0 6px 6px 0; background: none; color: var(--muted); }
 .profile .group-btn:hover, .profile .group-btn[aria-expanded="true"] { color: var(--ink); background: var(--chip); }
 .profile .picker:focus-visible, .profile .group-btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: -2px; }
@@ -60,7 +71,6 @@ button.ghost { border-color: transparent; background: none; color: var(--muted);
 button.ghost:hover { color: var(--ink); background: var(--chip); }
 .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .toolbar input[type=search] { flex: 1; min-width: 180px; }
-.toolbar select { width: auto; }
 .fgroup { display: flex; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
 .fgroup:hover { border-color: var(--muted); }
 .fgroup:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -68,23 +78,15 @@ button.ghost:hover { color: var(--ink); background: var(--chip); }
 .sortdir { display: grid; place-items: center; width: 36px; padding: 0; color: var(--muted); cursor: pointer; }
 .sortdir:hover { color: var(--ink); background-color: var(--chip); }
 .fgroup { position: relative; }
-.fgroup > .sorttype { display: flex; align-items: center; gap: 10px; min-width: 200px; padding: 7px 10px; border-left: 1px solid var(--line); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
-.sorttype span { flex: 1; }
-.sorttype svg { color: var(--muted); }
-.sorttype:hover, .sorttype[aria-expanded="true"] { background-color: var(--chip); }
-.sort-pop { left: auto; right: 0; width: 240px; }
-.sort-pop:focus { outline: none; }
+
 .fgroup > :first-child { border-radius: 6px 0 0 6px; }
 .fgroup > :last-child { border-radius: 0 6px 6px 0; }
-.fgroup > .sorttype { border-radius: 0 6px 6px 0; }
 .fgroup > input:focus, .fgroup > button:focus-visible { outline: none; }
 .fgroup > button:focus-visible { background-color: var(--chip); }
 .toolbar > .actions { align-self: stretch; display: flex; }
 button.btn.add { display: grid; place-items: center; width: 38px; padding: 0; }
 input, textarea, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; }
-:is(dialog, .card, .insp, .picker-pop) :is(input:not([type=checkbox]), textarea, select) { background-color: var(--field); }
-select { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 30px; background: var(--panel) var(--chevron) no-repeat right 11px center; }
-select:hover { border-color: var(--muted); }
+:is(dialog, .card, .insp, .lb-pop) :is(input:not([type=checkbox]), textarea, .lb-trigger) { background-color: var(--field); }
 input:focus, textarea:focus, select:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
 textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
 .list { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
@@ -192,7 +194,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); } .chip.wait, .chip.warn { color: var(--warn); }
 @media (max-width: 760px) { .hubsnips { grid-template-columns: 1fr; } }
 .insp-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-.insp-bar select { width: auto; min-width: 200px; }
+.insp-bar .lb { min-width: 220px; }
 .insp-info { color: var(--muted); font-size: 13px; }
 .insp { display: grid; grid-template-columns: 280px 1fr; gap: 14px; align-items: start; }
 .insp-side { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
@@ -237,15 +239,11 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
     <div class="spacer"></div>
     <div class="profile actions">
-      <button class="btn picker" id="profilePicker" aria-haspopup="listbox" aria-expanded="false">
+      <button class="btn picker" id="profilePicker">
         <span class="picker-label" id="profileLabel"></span>
         <span class="picker-dot" id="profileDot" hidden></span>
         <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
       </button>
-      <div class="picker-pop" id="profilePop" hidden>
-        <input type="search" id="profileFilter" placeholder="Profil suchen…" role="combobox" aria-controls="profileOptions" aria-expanded="true" aria-autocomplete="list" aria-label="Profil suchen">
-        <div class="picker-options" role="listbox" id="profileOptions" aria-label="Profile"></div>
-      </div>
       <button class="btn group-btn" id="profileMenuBtn" aria-label="Profil-Optionen" aria-haspopup="menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
       </button>
@@ -271,11 +269,11 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       <input type="search" id="filter" placeholder="Filtern…" aria-label="Server filtern">
       <div class="fgroup">
         <button type="button" class="sortdir" id="sortDir"></button>
-        <button type="button" class="sorttype" id="sortType" aria-haspopup="listbox" aria-expanded="false">
-          <span id="sortLabel"></span>
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
-        </button>
-        <div class="picker-pop sort-pop" id="sortPop" role="listbox" aria-label="Sortierung" tabindex="-1" hidden></div>
+        <select id="sort" aria-label="Sortierung">
+          <option value="recent">Zuletzt verwendet</option>
+          <option value="name">Name</option>
+          <option value="config">Reihenfolge der Datei</option>
+        </select>
       </div>
       <div class="actions">
         <button class="btn primary add" id="addMenuBtn" aria-label="Hinzufügen" title="Hinzufügen" aria-haspopup="menu" aria-expanded="false">
@@ -322,7 +320,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 
   <section data-panel="inspector" hidden>
     <div class="insp-bar">
-      <select id="inspServer"></select>
+      <select id="inspServer" aria-label="Server"></select>
       <button class="btn primary" id="inspConnect">Verbinden</button>
       <button class="btn" id="inspDisconnect" hidden>Trennen</button>
       <span class="insp-info" id="inspInfo">Verbindet sich direkt mit dem Server, unabhängig vom Hub.</span>
@@ -369,7 +367,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       <label class="f"><span><b>Name</b> – Präfix der Tools im Hub (<code>name__tool</code>)</span><input name="name" required pattern="[^/\s]+"></label>
       <label class="f"><span><b>Wofür</b> – kurze Beschreibung, nur für dich</span><input name="description" placeholder="z. B. Dashboards, Loki- und Prometheus-Abfragen"></label>
       <label class="f"><span><b>Art</b></span>
-        <select name="transport">
+        <select name="transport" aria-label="Art">
           <option value="stdio">Lokaler Befehl (stdio)</option>
           <option value="http">URL – Streamable HTTP</option>
           <option value="sse">URL – SSE (älteres Protokoll)</option>
@@ -534,7 +532,7 @@ function renderProfiles() {
   picker.setAttribute("aria-label", `Profil: ${label.textContent}` + (dirty ? ", ungespeicherte Änderungen" : ""));
   $("#profileUpdate").hidden = !current;
   $("#profileUpdate").textContent = `„${current}“ aktualisieren`;
-  if (!$("#profilePop").hidden) renderPickerOptions();
+  if (profileListbox.isOpen()) profileListbox.render();
   $("#profileManage").hidden = !names.length;
   $("#profileManage").previousElementSibling.hidden = !names.length;
   if ($("#profilesDialog").open) renderProfileList();
@@ -553,63 +551,168 @@ async function profileAction(action, name, message, extra = {}) {
 }
 
 const CHECK_ICON = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>`;
-let pickerItems = [];
-let pickerIndex = 0;
+const CHEVRON_ICON = `<svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>`;
+const listboxes = new Set();
+let listboxSeq = 0;
 
-function renderPickerOptions() {
-  const { active, profiles } = state.profiles;
-  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
-  const q = $("#profileFilter").value.trim().toLowerCase();
-  const none = { value: "", label: names.length ? "Kein Profil" : "Noch kein Profil" };
-  pickerItems = q ? names.filter(n => n.toLowerCase().includes(q)).map(n => ({ value: n, label: n }))
-    : [none, ...names.map(n => ({ value: n, label: n }))];
-  pickerIndex = Math.min(pickerIndex, Math.max(pickerItems.length - 1, 0));
-  const current = active && profiles[active] ? active : "";
-  const list = $("#profileOptions");
-  list.replaceChildren(...pickerItems.map((item, i) => {
-    const option = el("button", { type: "button", className: "opt" + (item.value ? "" : " none") + (i === pickerIndex ? " hi" : ""), id: `profile-opt-${i}`, tabIndex: -1 });
-    option.setAttribute("role", "option");
-    option.setAttribute("aria-selected", String(item.value === current));
-    option.append(el("span", { textContent: item.label }));
-    option.insertAdjacentHTML("beforeend", item.value === current ? CHECK_ICON : "<i></i>");
-    if (!item.value) option.title = "Schaltet alle Server und Tools ein";
-    option.onmouseenter = () => { pickerIndex = i; highlightPicker(); };
-    option.onclick = () => chooseProfile(item.value);
-    return option;
-  }));
-  if (!pickerItems.length) list.append(el("div", { className: "picker-empty", textContent: "Keine Treffer" }));
-  highlightPicker();
+function closeListboxes() {
+  for (const listbox of listboxes) listbox.close();
 }
 
-function highlightPicker() {
-  [...$("#profileOptions").querySelectorAll(".opt")].forEach((node, i) => node.classList.toggle("hi", i === pickerIndex));
-  const hi = $(`#profile-opt-${pickerIndex}`);
-  $("#profileFilter").setAttribute("aria-activedescendant", hi ? hi.id : "");
-  hi?.scrollIntoView({ block: "nearest" });
+function createListbox({ trigger, items, value, choose, search = false, align = "left" }) {
+  const id = `lb${++listboxSeq}`;
+  const pop = el("div", { className: "lb-pop" + (align === "right" ? " right" : ""), hidden: true });
+  const list = el("div", { className: "lb-options", id: `${id}-list`, tabIndex: -1 });
+  list.setAttribute("role", "listbox");
+  const filter = search ? el("input", { type: "search", className: "lb-filter", placeholder: "Suchen…" }) : null;
+  if (filter) {
+    for (const [k, v] of Object.entries({ role: "combobox", "aria-controls": list.id, "aria-expanded": "true", "aria-autocomplete": "list", "aria-label": "Suchen" })) filter.setAttribute(k, v);
+    pop.append(filter);
+  }
+  pop.append(list);
+  trigger.after(pop);
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  const keyTarget = filter || list;
+  let shown = [];
+  let index = 0;
+
+  function render() {
+    const q = filter ? filter.value.trim().toLowerCase() : "";
+    shown = items().filter(item => !q || (item.value && item.label.toLowerCase().includes(q)));
+    index = Math.min(index, Math.max(shown.length - 1, 0));
+    const current = value();
+    list.replaceChildren(...shown.map((item, i) => {
+      const option = el("button", { type: "button", className: "opt" + (item.value ? "" : " none"), id: `${id}-${i}`, tabIndex: -1, title: item.title || "" });
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", String(item.value === current));
+      option.append(el("span", { textContent: item.label }));
+      option.insertAdjacentHTML("beforeend", item.value === current ? CHECK_ICON : "<i></i>");
+      option.onmouseenter = () => { index = i; highlight(); };
+      option.onclick = () => pick(item.value);
+      return option;
+    }));
+    if (!shown.length) list.append(el("div", { className: "lb-empty", textContent: "Keine Treffer" }));
+    highlight();
+  }
+
+  function highlight() {
+    list.querySelectorAll(".opt").forEach((node, i) => node.classList.toggle("hi", i === index));
+    const hi = document.getElementById(`${id}-${index}`);
+    keyTarget.setAttribute("aria-activedescendant", hi ? hi.id : "");
+    hi?.scrollIntoView({ block: "nearest" });
+  }
+
+  function open() {
+    closeMenus();
+    if (filter) filter.value = "";
+    index = 0;
+    pop.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    render();
+    index = Math.max(shown.findIndex(item => item.value === value()), 0);
+    highlight();
+    keyTarget.focus();
+  }
+
+  function close(focus = false) {
+    if (pop.hidden) return;
+    pop.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    if (focus) trigger.focus();
+  }
+
+  function pick(next) {
+    close(true);
+    choose(next);
+  }
+
+  trigger.addEventListener("click", e => {
+    e.stopPropagation();
+    pop.hidden ? open() : close();
+  });
+  trigger.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      open();
+    }
+  });
+  pop.addEventListener("click", e => e.stopPropagation());
+  filter?.addEventListener("input", () => { index = 0; render(); });
+  pop.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!shown.length) return;
+      index = (index + (e.key === "ArrowDown" ? 1 : -1) + shown.length) % shown.length;
+      highlight();
+    } else if (e.key === "Enter" || (e.key === " " && !filter)) {
+      e.preventDefault();
+      if (shown[index]) pick(shown[index].value);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      close(true);
+    } else if (e.key === "Tab") {
+      close();
+    }
+  });
+
+  const listbox = { open, close, render, isOpen: () => !pop.hidden };
+  listboxes.add(listbox);
+  return listbox;
 }
 
-function openPicker() {
-  closeMenus();
-  const { active, profiles } = state.profiles;
-  $("#profileFilter").value = "";
-  pickerIndex = 0;
-  $("#profilePop").hidden = false;
-  $("#profilePicker").setAttribute("aria-expanded", "true");
-  renderPickerOptions();
-  pickerIndex = Math.max(pickerItems.findIndex(item => item.value === (active && profiles[active] ? active : "")), 0);
-  highlightPicker();
-  $("#profileFilter").focus();
+const nativeSelectValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+
+function enhanceSelect(select, { search = false, bare = false, align = "left" } = {}) {
+  const wrap = el("div", { className: "lb" + (bare ? " bare" : "") });
+  select.replaceWith?.(wrap);
+  select.hidden = true;
+  select.tabIndex = -1;
+  const label = el("span", { className: "lb-label" });
+  const trigger = el("button", { type: "button", className: "lb-trigger" }, label);
+  trigger.insertAdjacentHTML("beforeend", CHEVRON_ICON);
+  wrap.append(select, trigger);
+  const name = select.getAttribute("aria-label") || select.name || "Auswahl";
+  const update = () => {
+    label.textContent = select.selectedOptions[0]?.textContent || "";
+    label.classList.toggle("none", !select.value);
+    trigger.setAttribute("aria-label", `${name}: ${label.textContent}`);
+  };
+  Object.defineProperty(select, "value", {
+    configurable: true,
+    get() { return nativeSelectValue.get.call(this); },
+    set(v) { nativeSelectValue.set.call(this, v); update(); },
+  });
+  new MutationObserver(update).observe(select, { childList: true, subtree: true, attributes: true });
+  select.addEventListener("change", update);
+  createListbox({
+    trigger, search, align,
+    items: () => [...select.options].map(o => ({ value: o.value, label: o.textContent })),
+    value: () => select.value,
+    choose: next => {
+      if (next === select.value) return;
+      select.value = next;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    },
+  });
+  update();
+  return wrap;
 }
 
-function closePicker(focus = false) {
-  if ($("#profilePop").hidden) return;
-  $("#profilePop").hidden = true;
-  $("#profilePicker").setAttribute("aria-expanded", "false");
-  if (focus) $("#profilePicker").focus();
+document.addEventListener("click", closeListboxes);
+enhanceSelect($("#callServer"), { search: true });
+enhanceSelect($("#callClient"), { search: true });
+enhanceSelect($("#inspServer"), { search: true });
+enhanceSelect($("#editForm").transport);
+
+function profileItems() {
+  const names = Object.keys(state.profiles.profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  return [{ value: "", label: names.length ? "Kein Profil" : "Noch kein Profil", title: "Schaltet alle Server und Tools ein" },
+    ...names.map(n => ({ value: n, label: n }))];
 }
 
 function chooseProfile(name) {
-  closePicker(true);
   const current = state.profiles.profiles[state.profiles.active] ? state.profiles.active : "";
   if (name && name === current && !profileDirty()) return;
   if (profileDirty() && !confirm(`Die Änderungen an „${state.profiles.active}“ sind nicht gespeichert und gehen verloren. Trotzdem fortfahren?`)) return;
@@ -617,33 +720,16 @@ function chooseProfile(name) {
   profileAction("apply", name, `Profil „${name}“ aktiv`);
 }
 
-$("#profilePicker").onclick = e => {
-  e.stopPropagation();
-  $("#profilePop").hidden ? openPicker() : closePicker();
-};
-$("#profilePop").onclick = e => e.stopPropagation();
-$("#profileFilter").oninput = () => { pickerIndex = 0; renderPickerOptions(); };
-$("#profileFilter").onkeydown = e => {
-  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-    e.preventDefault();
-    if (!pickerItems.length) return;
-    pickerIndex = (pickerIndex + (e.key === "ArrowDown" ? 1 : -1) + pickerItems.length) % pickerItems.length;
-    highlightPicker();
-  } else if (e.key === "Enter") {
-    e.preventDefault();
-    if (pickerItems[pickerIndex]) chooseProfile(pickerItems[pickerIndex].value);
-  } else if (e.key === "Escape") {
-    e.preventDefault();
-    e.stopPropagation();
-    closePicker(true);
-  } else if (e.key === "Tab") {
-    closePicker();
-  }
-};
-document.addEventListener("click", () => closePicker());
+const profileListbox = createListbox({
+  trigger: $("#profilePicker"),
+  search: true,
+  items: profileItems,
+  value: () => (state.profiles.profiles[state.profiles.active] ? state.profiles.active : ""),
+  choose: chooseProfile,
+});
+
 $("#profileMenuBtn").onclick = e => {
   e.stopPropagation();
-  closePicker();
   const menu = $("#profileMenu");
   closeMenus(menu);
   menu.hidden = !menu.hidden;
@@ -744,7 +830,7 @@ function renderList() {
   const q = $("#filter").value.trim().toLowerCase();
   const entries = Object.entries(servers()).filter(([n, s]) =>
     !q || n.toLowerCase().includes(q) || [s.description, s.command, ...(s.args || [])].join(" ").toLowerCase().includes(q));
-  const sort = sortType;
+  const sort = $("#sort").value;
   const dir = sortDir === "asc" ? 1 : -1;
   const byName = ([a], [b]) => a.localeCompare(b, "de", { sensitivity: "base" });
   if (sort === "name") entries.sort((x, y) => dir * byName(x, y));
@@ -837,7 +923,7 @@ function renderList() {
 }
 
 function closeMenus(except) {
-  if (typeof closeSort === "function") closeSort();
+  closeListboxes();
   for (const m of document.querySelectorAll(".menu:not([hidden])")) {
     if (m === except) continue;
     m.hidden = true;
@@ -989,7 +1075,6 @@ $("#addHeader").onclick = () => headerRow();
 $("#addBtn").onclick = () => openEditor(null);
 $("#addMenuBtn").onclick = e => {
   e.stopPropagation();
-  closePicker();
   const menu = $("#addMenu");
   closeMenus(menu);
   menu.hidden = !menu.hidden;
@@ -1109,9 +1194,6 @@ $("#tabs").onclick = e => {
   if (b) showTab(b.dataset.tab);
 };
 $("#filter").oninput = renderList;
-const SORT_TYPES = [["recent", "Zuletzt verwendet"], ["name", "Name"], ["config", "Reihenfolge der Datei"]];
-let sortType = "recent";
-let sortIndex = 0;
 const DEFAULT_SORT_DIR = { recent: "desc", name: "asc", config: "asc" };
 const SORT_DIR_LABELS = {
   recent: { asc: "Am längsten unbenutzt zuerst", desc: "Zuletzt verwendet zuerst" },
@@ -1125,9 +1207,7 @@ const SORT_ICONS = {
 let sortDir = "desc";
 
 function renderSortDir() {
-  const label = SORT_DIR_LABELS[sortType][sortDir];
-  $("#sortLabel").textContent = Object.fromEntries(SORT_TYPES)[sortType];
-  $("#sortType").setAttribute("aria-label", `Sortierung: ${$("#sortLabel").textContent}`);
+  const label = SORT_DIR_LABELS[$("#sort").value][sortDir];
   const button = $("#sortDir");
   button.innerHTML = SORT_ICONS[sortDir];
   button.title = `${label} – klicken zum Umkehren`;
@@ -1136,85 +1216,25 @@ function renderSortDir() {
 
 function storeSort() {
   try {
-    localStorage.setItem("sort", sortType);
+    localStorage.setItem("sort", $("#sort").value);
     localStorage.setItem("sortDir", sortDir);
   } catch {}
 }
 
+enhanceSelect($("#sort"), { bare: true, align: "right" });
 try {
-  sortType = localStorage.getItem("sort") || "recent";
-  sortDir = localStorage.getItem("sortDir") || DEFAULT_SORT_DIR[sortType];
+  $("#sort").value = localStorage.getItem("sort") || "recent";
+  sortDir = localStorage.getItem("sortDir") || DEFAULT_SORT_DIR[$("#sort").value];
 } catch {}
-if (!DEFAULT_SORT_DIR[sortType]) sortType = "recent";
-if (!SORT_ICONS[sortDir]) sortDir = DEFAULT_SORT_DIR[sortType];
+if (!DEFAULT_SORT_DIR[$("#sort").value]) $("#sort").value = "recent";
+if (!SORT_ICONS[sortDir]) sortDir = DEFAULT_SORT_DIR[$("#sort").value];
 renderSortDir();
-
-function renderSortPop() {
-  $("#sortPop").replaceChildren(...SORT_TYPES.map(([value, label], i) => {
-    const option = el("button", { type: "button", className: "opt" + (i === sortIndex ? " hi" : ""), id: `sort-opt-${i}`, tabIndex: -1 });
-    option.setAttribute("role", "option");
-    option.setAttribute("aria-selected", String(value === sortType));
-    option.append(el("span", { textContent: label }));
-    option.insertAdjacentHTML("beforeend", value === sortType ? CHECK_ICON : "<i></i>");
-    option.onmouseenter = () => { sortIndex = i; renderSortPop(); };
-    option.onclick = () => chooseSort(value);
-    return option;
-  }));
-  $("#sortPop").setAttribute("aria-activedescendant", `sort-opt-${sortIndex}`);
-}
-
-function openSort() {
-  closeMenus();
-  closePicker();
-  sortIndex = SORT_TYPES.findIndex(([value]) => value === sortType);
-  renderSortPop();
-  $("#sortPop").hidden = false;
-  $("#sortType").setAttribute("aria-expanded", "true");
-  $("#sortPop").focus();
-}
-
-function closeSort(focus = false) {
-  if ($("#sortPop").hidden) return;
-  $("#sortPop").hidden = true;
-  $("#sortType").setAttribute("aria-expanded", "false");
-  if (focus) $("#sortType").focus();
-}
-
-function chooseSort(value) {
-  closeSort(true);
-  if (value === sortType) return;
-  sortType = value;
-  sortDir = DEFAULT_SORT_DIR[sortType];
+$("#sort").onchange = () => {
+  sortDir = DEFAULT_SORT_DIR[$("#sort").value];
   storeSort();
   renderSortDir();
   renderList();
-}
-
-$("#sortType").onclick = e => {
-  e.stopPropagation();
-  $("#sortPop").hidden ? openSort() : closeSort();
 };
-$("#sortType").onkeydown = e => {
-  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openSort(); }
-};
-$("#sortPop").onclick = e => e.stopPropagation();
-$("#sortPop").onkeydown = e => {
-  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-    e.preventDefault();
-    sortIndex = (sortIndex + (e.key === "ArrowDown" ? 1 : -1) + SORT_TYPES.length) % SORT_TYPES.length;
-    renderSortPop();
-  } else if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    chooseSort(SORT_TYPES[sortIndex][0]);
-  } else if (e.key === "Escape") {
-    e.preventDefault();
-    e.stopPropagation();
-    closeSort(true);
-  } else if (e.key === "Tab") {
-    closeSort();
-  }
-};
-document.addEventListener("click", () => closeSort());
 $("#sortDir").onclick = () => {
   sortDir = sortDir === "asc" ? "desc" : "asc";
   storeSort();
@@ -1351,7 +1371,7 @@ function fieldFor(name, schema = {}, required = false) {
   if (schema.default !== undefined) setFieldValue(input, schema.default);
   input.name = name;
   input.dataset.required = required ? "1" : "";
-  label.append(head, input);
+  label.append(head, input.tagName === "SELECT" ? enhanceSelect(input) : input);
   return label;
 }
 
