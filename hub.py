@@ -204,7 +204,7 @@ class Hub:
         self.load_config = load_config
         self.load_settings = load_settings
         self.load_profiles = load_profiles
-        self.listeners = set()
+        self.listeners = {}
         self.listeners_lock = threading.Lock()
         self.signature = None
         self.usage = Usage(Path(state_dir) / "usage.json")
@@ -248,15 +248,19 @@ class Hub:
     def sync_in_background(self):
         threading.Thread(target=self.sync, daemon=True).start()
 
-    def subscribe(self):
+    def subscribe(self, client):
         listener = queue.Queue()
         with self.listeners_lock:
-            self.listeners.add(listener)
+            self.listeners[listener] = client
         return listener
 
     def unsubscribe(self, listener):
         with self.listeners_lock:
-            self.listeners.discard(listener)
+            self.listeners.pop(listener, None)
+
+    def live_clients(self):
+        with self.listeners_lock:
+            return sorted(self.listeners.values())
 
     def _notify_if_changed(self, running):
         signature = json.dumps([

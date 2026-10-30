@@ -185,6 +185,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(self.state())
         if self.path == "/api/hub":
             return self.send(hub.status())
+        if self.path == "/api/live":
+            return self.send(hub.live_clients())
         if self.path == "/api/usage":
             return self.send(hub.usage.snapshot())
         if self.path.startswith("/api/hub/tools"):
@@ -195,7 +197,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/calls"):
             limit = int(parse_qs(urlparse(self.path).query).get("limit", ["300"])[0])
             return self.send(hub.calls.recent(min(limit, 1000)))
-        if MCP_PATH.match(self.path):
+        if match := MCP_PATH.match(self.path):
             if "text/event-stream" not in self.headers.get("Accept", ""):
                 self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
                 self.send_header("Allow", "POST")
@@ -204,7 +206,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if not local_origin(self.headers.get("Origin")):
                 return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
-            return self.event_stream()
+            return self.event_stream(unquote(match.group(1)) if match.group(1) else None)
         url = urlparse(self.path)
         if url.path == "/api/inspect/log":
             query = parse_qs(url.query)
@@ -254,12 +256,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.inspect(self.path.removeprefix("/api/inspect/"))
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
-    def event_stream(self):
+    def event_stream(self, profile=None):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        listener = hub.subscribe()
+        client = hub.clients.lookup(self.headers.get("Mcp-Session-Id"), self.headers.get("User-Agent", ""))
+        listener = hub.subscribe(f"{client} · {profile}" if profile else client)
         try:
             while True:
                 try:

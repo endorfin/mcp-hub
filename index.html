@@ -392,6 +392,7 @@ const $ = (s, el = document) => el.querySelector(s);
 let state = null;
 let hubStatus = {};
 let usage = {};
+let live = [];
 
 function ago(ts) {
   const s = Math.round(Date.now() / 1000 - ts);
@@ -561,7 +562,10 @@ function renderHubStatus(reachable = true) {
   $("#dot").className = `dot ${dot}`;
   $("#statusText").textContent = !reachable ? "Hub nicht erreichbar"
     : !entries.length ? "keine aktiven Server"
-    : `${running.length} Server · ${tools} Tools` + (failed ? ` · ${failed} mit Fehler` : "") + (starting ? ` · ${starting} startet` : "");
+    : `${running.length} Server · ${tools} Tools` + (failed ? ` · ${failed} mit Fehler` : "") + (starting ? ` · ${starting} startet` : "")
+      + (live.length ? ` · ${live.length} ${live.length === 1 ? "Client" : "Clients"}` : "");
+  const names = live.map(c => c.split(" · ").map((part, i) => i ? part : clientName(part)).join(" · "));
+  $("#statusText").title = reachable && live.length ? `Verbunden mit Live-Aktualisierung:\n${names.join("\n")}` : "";
 }
 
 function renderList() {
@@ -1277,7 +1281,8 @@ for (const b of document.querySelectorAll("[data-copy]")) {
 
 async function poll() {
   try {
-    const [freshHub, freshUsage] = await Promise.all([api("GET", "/api/hub"), api("GET", "/api/usage")]);
+    const [freshHub, freshUsage, freshLive] = await Promise.all([api("GET", "/api/hub"), api("GET", "/api/usage"), api("GET", "/api/live")]);
+    live = freshLive;
     const minute = Math.floor(Date.now() / 60000);
     if (JSON.stringify([freshHub, freshUsage]) !== JSON.stringify([hubStatus, usage]) || minute !== poll.minute) {
       hubStatus = freshHub;

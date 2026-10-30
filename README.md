@@ -100,6 +100,7 @@ Claude Desktop kann nur lokale Befehle starten, deshalb dort [mcp-proxy](https:/
 Ändert sich die Tool-Liste (Server an/aus, Tools abgewählt, Profil gewechselt, ein Server meldet selbst neue Tools), schickt der Hub `notifications/tools/list_changed` (ebenso für Prompts und Resources). Clients empfangen das über einen offenen SSE-Stream (`GET /mcp` mit `Accept: text/event-stream`), den sie direkt nach `initialize` öffnen.
 
 - **Claude Code und VS Code/Copilot** unterstützen das. Nach dem ersten Update des Hubs einmal neu verbinden (Claude Code: `/mcp` → Reconnect), danach kommen Änderungen ohne Reconnect an.
+- **Anzeige:** Die Kopfzeile der GUI zählt die Clients mit offenem Stream („· 2 Clients“), der Tooltip nennt sie.
 - **Claude Desktop** nicht: Die Brücke mcp-proxy leitet nur Fortschrittsmeldungen weiter und meldet `listChanged: false`. Nach Änderungen Claude Desktop neu starten.
 
 ## Betrieb über prun
@@ -153,6 +154,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `PUT` | `/api/settings` | Einstellungen speichern |
 | `GET` | `/api/hub` | Status je Server (Zustand, Fehler, Anzahl Tools/Prompts/Resources) |
 | `GET` | `/api/hub/tools?name=` | Alle Tools eines Servers mit Status `enabled` |
+| `GET` | `/api/live` | Clients mit offenem Benachrichtigungs-Stream |
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
 | `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}` |

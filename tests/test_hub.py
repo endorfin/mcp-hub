@@ -175,6 +175,7 @@ class HubTest(unittest.TestCase):
                     received.append(json.loads(line[5:])["method"])
 
         threading.Thread(target=listen, daemon=True).start()
+        self.wait_for(lambda: len(self.get("/api/live")) == 1)
         servers = self.servers()
         servers["beta"]["disabledTools"] = ["echo"]
         self.save_servers(servers)
