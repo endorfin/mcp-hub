@@ -551,7 +551,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
           </div>
         </details>
       </div>
-      <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den Schlüsselbund verschieben (macOS-Schlüsselbund bzw. Secret Service unter Linux). Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.</span>
+      <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den Schlüsselbund verschieben (macOS-Schlüsselbund, Secret Service unter Linux, Anmeldeinformationsverwaltung unter Windows). Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.</span>
       <label class="check"><input type="checkbox" name="enabled"> <span data-i18n="s.enabled">Aktiviert</span></label>
       <p class="error" id="editError"></p>
     </div>
@@ -702,7 +702,7 @@ const I18N = {
   "s.scopesPlaceholder": ["z. B. repo read:user", "e.g. repo read:user"],
   "s.authUrl": ["<b>Autorisierungs-URL</b> – nur ohne Discovery", "<b>Authorization URL</b> – only without discovery"],
   "s.tokenUrl": ["<b>Token-URL</b> – nur ohne Discovery", "<b>Token URL</b> – only without discovery"],
-  "s.secretsHint": ["Geheime Werte mit dem Schloss in den Schlüsselbund verschieben (macOS-Schlüsselbund bzw. Secret Service unter Linux). Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.", "Use the lock to move secret values into the keychain (the macOS keychain or the Secret Service on Linux). The entry then only contains <code>${keychain:…}</code>; <code>${op://vault/item/field}</code> for 1Password and <code>${env:NAME}</code> for environment variables work as well."],
+  "s.secretsHint": ["Geheime Werte mit dem Schloss in den Schlüsselbund verschieben (macOS-Schlüsselbund, Secret Service unter Linux, Anmeldeinformationsverwaltung unter Windows). Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.", "Use the lock to move secret values into the keychain (the macOS keychain, the Secret Service on Linux, Credential Manager on Windows). The entry then only contains <code>${keychain:…}</code>; <code>${op://vault/item/field}</code> for 1Password and <code>${env:NAME}</code> for environment variables work as well."],
   "s.enabled": ["Aktiviert", "Enabled"],
   "s.cancel": ["Abbrechen", "Cancel"],
   "s.importTitle": ["Server importieren", "Import servers"],
@@ -887,7 +887,7 @@ const I18N = {
   compactOffSize: ["Clients laden alle Tool-Definitionen, rund {full} Tokens pro Anfrage. Im Kompakt-Modus wären es rund {small}.", "Clients load every tool definition, about {full} tokens per request. Compact mode would need about {small}."],
   compactOnSize: ["Clients bekommen nur search_tools, describe_tool und call_tool: rund {small} statt {full} Tokens pro Anfrage.", "Clients only receive search_tools, describe_tool and call_tool: about {small} instead of {full} tokens per request."],
   clientCompact: ["kompakt", "compact"],
-  restartNeededTitle: ["Die Oberfläche ist neuer als der laufende Hub. Bitte den Hub neu starten: ./autostart.sh restart, oder im Terminal beenden und python3 app.py neu starten.", "The interface is newer than the running hub. Please restart the hub: ./autostart.sh restart, or stop it in the terminal and run python3 app.py again."],
+  restartNeededTitle: ["Die Oberfläche ist neuer als der laufende Hub. Bitte den Hub neu starten: ./autostart.sh restart (Windows: .\\autostart.ps1 restart), oder im Terminal beenden und python3 app.py neu starten.", "The interface is newer than the running hub. Please restart the hub: ./autostart.sh restart (Windows: .\\autostart.ps1 restart), or stop it in the terminal and run python3 app.py again."],
   noClients: ["Seit dem Hub-Start hat sich noch kein Client verbunden.", "No client has connected since the hub started."],
   clientLive: ["Live-Stream", "live stream"],
   clientIdle: ["inaktiv", "idle"],
@@ -927,7 +927,7 @@ function applyStaticTranslations() {
 
 const BACKEND_DE = [
   [/^secret-tool not found – install libsecret-tools$/, "secret-tool nicht gefunden – bitte libsecret-tools installieren"],
-  [/^The keychain is only available on macOS and Linux$/, "Der Schlüsselbund ist nur unter macOS und Linux verfügbar"],
+  [/^The keychain is only available on macOS, Linux and Windows$/, "Der Schlüsselbund ist nur unter macOS, Linux und Windows verfügbar"],
   [/^Server stopped unexpectedly – (.*)$/, "Server unerwartet beendet – $1"],
   [/^Server stopped unexpectedly$/, "Server unerwartet beendet"],
   [/^Unknown server: (.*)$/, "Unbekannter Server: $1"],

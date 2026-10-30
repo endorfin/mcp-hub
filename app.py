@@ -24,7 +24,9 @@ import secrets_store
 import updater as updater_module
 
 ROOT = Path(__file__).resolve().parent
-STATE_DIR = Path(os.environ.get("MCP_HUB_HOME") or Path.home() / ".config" / "mcp-hub")
+DEFAULT_HOME = Path(os.environ["APPDATA"]) / "mcp-hub" if sys.platform == "win32" and os.environ.get("APPDATA") \
+    else Path.home() / ".config" / "mcp-hub"
+STATE_DIR = Path(os.environ.get("MCP_HUB_HOME") or DEFAULT_HOME)
 SETTINGS_FILE = STATE_DIR / "gui-settings.json"
 PROFILES_FILE = STATE_DIR / "profiles.json"
 
@@ -186,6 +188,9 @@ def local_origin(origin):
 
 
 class Server(ThreadingHTTPServer):
+    # SO_REUSEADDR on Windows lets a second hub bind a port that is already in use.
+    allow_reuse_address = sys.platform != "win32"
+
     def server_bind(self):
         # HTTPServer.server_bind resolves the host name via getfqdn, which stalls for ~30 s on some macOS setups.
         socketserver.TCPServer.server_bind(self)
@@ -469,9 +474,28 @@ class Handler(BaseHTTPRequestHandler):
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
 
+def option(name, default=None):
+    if name in sys.argv[1:-1]:
+        return sys.argv[sys.argv.index(name) + 1]
+    return default
+
+
+def bind(port, attempts=20):
+    for attempt in range(attempts):
+        try:
+            return Server(("127.0.0.1", port), Handler)
+        except OSError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.5)
+
+
 def main():
-    port = int(os.environ.get("PORT", 4747))
-    server = Server(("127.0.0.1", port), Handler)
+    if log := option("--log"):
+        Path(log).parent.mkdir(parents=True, exist_ok=True)
+        sys.stdout = sys.stderr = open(log, "a", buffering=1, encoding="utf-8")
+    port = int(option("--port", os.environ.get("PORT", 4747)))
+    server = bind(port)
     atexit.register(inspector.disconnect_all)
     atexit.register(hub.close)
     sync_hub_in_background()

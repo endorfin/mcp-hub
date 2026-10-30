@@ -1,8 +1,10 @@
 import json
 import os
+import shutil
 import signal
 import socket
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -15,7 +17,10 @@ from secrets_store import SecretError, resolve_entry
 
 PROTOCOL_VERSION = "2025-06-18"
 VERSION = "0.3.0"
+WINDOWS = sys.platform == "win32"
 DEFAULT_ENV_KEYS = ("HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER", "LANG", "TMPDIR")
+WINDOWS_ENV_KEYS = ("APPDATA", "COMSPEC", "LOCALAPPDATA", "PATHEXT", "PROGRAMDATA", "PROGRAMFILES", "SYSTEMDRIVE",
+                    "SYSTEMROOT", "TEMP", "TMP", "USERNAME", "USERPROFILE", "WINDIR")
 USER_AGENT = "mcp-hub/1.0"
 
 
@@ -143,18 +148,23 @@ class BaseSession:
 class StdioSession(BaseSession):
     def __init__(self, name, entry, pass_environment, client_name):
         super().__init__(name, client_name)
-        env = {k: os.environ[k] for k in DEFAULT_ENV_KEYS if k in os.environ}
+        keys = DEFAULT_ENV_KEYS + (WINDOWS_ENV_KEYS if WINDOWS else ())
+        env = {k: os.environ[k] for k in keys if k in os.environ}
         if pass_environment:
             env.update(os.environ)
         env.update(entry.get("env") or {})
+        command = entry["command"]
+        if WINDOWS:
+            command = shutil.which(command, path=env.get("PATH")) or command
         self.proc = subprocess.Popen(
-            [entry["command"], *entry.get("args", [])],
+            [command, *entry.get("args", [])],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
             cwd=os.path.expanduser(entry["cwd"]) if entry.get("cwd") else None,
-            start_new_session=True,
+            start_new_session=not WINDOWS,
+            creationflags=(subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW) if WINDOWS else 0,
         )
         threading.Thread(target=self._read_stdout, daemon=True).start()
         threading.Thread(target=self._read_stderr, daemon=True).start()
@@ -185,7 +195,14 @@ class StdioSession(BaseSession):
         return self.proc.poll() is None
 
     def close(self):
-        if self.alive():
+        if self.alive() and WINDOWS:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(self.proc.pid)], capture_output=True,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+            try:
+                self.proc.wait(3)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+        elif self.alive():
             try:
                 os.killpg(self.proc.pid, signal.SIGTERM)
                 self.proc.wait(3)
