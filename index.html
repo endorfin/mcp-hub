@@ -61,16 +61,24 @@ button.ghost:hover { color: var(--ink); background: var(--chip); }
 .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .toolbar input[type=search] { flex: 1; min-width: 180px; }
 .toolbar select { width: auto; }
-.fgroup { display: flex; flex: 1; min-width: 260px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+.fgroup { display: flex; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
 .fgroup:hover { border-color: var(--muted); }
 .fgroup:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
-.fgroup > input, .fgroup > select { border: 0; border-radius: 0; background-color: transparent; outline: none; }
+.fgroup > input, .fgroup > button { border: 0; border-radius: 0; background-color: transparent; outline: none; }
+.sortdir { display: grid; place-items: center; width: 36px; padding: 0; color: var(--muted); cursor: pointer; }
+.sortdir:hover { color: var(--ink); background-color: var(--chip); }
+.fgroup { position: relative; }
+.fgroup > .sorttype { display: flex; align-items: center; gap: 10px; min-width: 200px; padding: 7px 10px; border-left: 1px solid var(--line); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.sorttype span { flex: 1; }
+.sorttype svg { color: var(--muted); }
+.sorttype:hover, .sorttype[aria-expanded="true"] { background-color: var(--chip); }
+.sort-pop { left: auto; right: 0; width: 240px; }
+.sort-pop:focus { outline: none; }
 .fgroup > :first-child { border-radius: 6px 0 0 6px; }
 .fgroup > :last-child { border-radius: 0 6px 6px 0; }
-.fgroup > select { border-left: 1px solid var(--line); }
-.fgroup > select:hover { background-color: var(--chip); }
-.fgroup > input:focus, .fgroup > select:focus-visible { outline: none; }
-.fgroup > select:focus-visible { border-left-color: var(--line); }
+.fgroup > .sorttype { border-radius: 0 6px 6px 0; }
+.fgroup > input:focus, .fgroup > button:focus-visible { outline: none; }
+.fgroup > button:focus-visible { background-color: var(--chip); }
 .toolbar > .actions { align-self: stretch; display: flex; }
 button.btn.add { display: grid; place-items: center; width: 38px; padding: 0; }
 input, textarea, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; }
@@ -252,13 +260,14 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 <main>
   <section data-panel="servers">
     <div class="toolbar">
+      <input type="search" id="filter" placeholder="Filtern…" aria-label="Server filtern">
       <div class="fgroup">
-        <input type="search" id="filter" placeholder="Filtern…" aria-label="Server filtern">
-        <select id="sort" aria-label="Sortierung">
-          <option value="recent">Zuletzt verwendet</option>
-          <option value="name">Name</option>
-          <option value="config">Reihenfolge der Datei</option>
-        </select>
+        <button type="button" class="sortdir" id="sortDir"></button>
+        <button type="button" class="sorttype" id="sortType" aria-haspopup="listbox" aria-expanded="false">
+          <span id="sortLabel"></span>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+        </button>
+        <div class="picker-pop sort-pop" id="sortPop" role="listbox" aria-label="Sortierung" tabindex="-1" hidden></div>
       </div>
       <div class="actions">
         <button class="btn primary add" id="addMenuBtn" aria-label="Hinzufügen" title="Hinzufügen" aria-haspopup="menu" aria-expanded="false">
@@ -727,10 +736,12 @@ function renderList() {
   const q = $("#filter").value.trim().toLowerCase();
   const entries = Object.entries(servers()).filter(([n, s]) =>
     !q || n.toLowerCase().includes(q) || [s.description, s.command, ...(s.args || [])].join(" ").toLowerCase().includes(q));
-  const sort = $("#sort").value;
+  const sort = sortType;
+  const dir = sortDir === "asc" ? 1 : -1;
   const byName = ([a], [b]) => a.localeCompare(b, "de", { sensitivity: "base" });
-  if (sort === "name") entries.sort(byName);
-  if (sort === "recent") entries.sort((x, y) => (usage[y[0]]?.last || 0) - (usage[x[0]]?.last || 0) || byName(x, y));
+  if (sort === "name") entries.sort((x, y) => dir * byName(x, y));
+  if (sort === "recent") entries.sort((x, y) => dir * ((usage[x[0]]?.last || 0) - (usage[y[0]]?.last || 0)) || byName(x, y));
+  if (sort === "config" && dir < 0) entries.reverse();
   const list = $("#list");
   list.replaceChildren();
   if (!entries.length) {
@@ -818,6 +829,7 @@ function renderList() {
 }
 
 function closeMenus(except) {
+  if (typeof closeSort === "function") closeSort();
   for (const m of document.querySelectorAll(".menu:not([hidden])")) {
     if (m === except) continue;
     m.hidden = true;
@@ -1089,9 +1101,116 @@ $("#tabs").onclick = e => {
   if (b) showTab(b.dataset.tab);
 };
 $("#filter").oninput = renderList;
-try { $("#sort").value = localStorage.getItem("sort") || "recent"; } catch {}
-$("#sort").onchange = () => {
-  try { localStorage.setItem("sort", $("#sort").value); } catch {}
+const SORT_TYPES = [["recent", "Zuletzt verwendet"], ["name", "Name"], ["config", "Reihenfolge der Datei"]];
+let sortType = "recent";
+let sortIndex = 0;
+const DEFAULT_SORT_DIR = { recent: "desc", name: "asc", config: "asc" };
+const SORT_DIR_LABELS = {
+  recent: { asc: "Am längsten unbenutzt zuerst", desc: "Zuletzt verwendet zuerst" },
+  name: { asc: "A–Z", desc: "Z–A" },
+  config: { asc: "Wie in der Datei", desc: "Umgekehrt zur Datei" },
+};
+const SORT_ICONS = {
+  asc: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13V3M1.5 5.5 4 3l2.5 2.5M9 4h2M9 8h4M9 12h6"/></svg>`,
+  desc: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v10M1.5 10.5 4 13l2.5-2.5M9 4h6M9 8h4M9 12h2"/></svg>`,
+};
+let sortDir = "desc";
+
+function renderSortDir() {
+  const label = SORT_DIR_LABELS[sortType][sortDir];
+  $("#sortLabel").textContent = Object.fromEntries(SORT_TYPES)[sortType];
+  $("#sortType").setAttribute("aria-label", `Sortierung: ${$("#sortLabel").textContent}`);
+  const button = $("#sortDir");
+  button.innerHTML = SORT_ICONS[sortDir];
+  button.title = `${label} – klicken zum Umkehren`;
+  button.setAttribute("aria-label", `Richtung: ${label}`);
+}
+
+function storeSort() {
+  try {
+    localStorage.setItem("sort", sortType);
+    localStorage.setItem("sortDir", sortDir);
+  } catch {}
+}
+
+try {
+  sortType = localStorage.getItem("sort") || "recent";
+  sortDir = localStorage.getItem("sortDir") || DEFAULT_SORT_DIR[sortType];
+} catch {}
+if (!DEFAULT_SORT_DIR[sortType]) sortType = "recent";
+if (!SORT_ICONS[sortDir]) sortDir = DEFAULT_SORT_DIR[sortType];
+renderSortDir();
+
+function renderSortPop() {
+  $("#sortPop").replaceChildren(...SORT_TYPES.map(([value, label], i) => {
+    const option = el("button", { type: "button", className: "opt" + (i === sortIndex ? " hi" : ""), id: `sort-opt-${i}`, tabIndex: -1 });
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(value === sortType));
+    option.innerHTML = value === sortType ? CHECK_ICON : "<i></i>";
+    option.append(el("span", { textContent: label }));
+    option.onmouseenter = () => { sortIndex = i; renderSortPop(); };
+    option.onclick = () => chooseSort(value);
+    return option;
+  }));
+  $("#sortPop").setAttribute("aria-activedescendant", `sort-opt-${sortIndex}`);
+}
+
+function openSort() {
+  closeMenus();
+  closePicker();
+  sortIndex = SORT_TYPES.findIndex(([value]) => value === sortType);
+  renderSortPop();
+  $("#sortPop").hidden = false;
+  $("#sortType").setAttribute("aria-expanded", "true");
+  $("#sortPop").focus();
+}
+
+function closeSort(focus = false) {
+  if ($("#sortPop").hidden) return;
+  $("#sortPop").hidden = true;
+  $("#sortType").setAttribute("aria-expanded", "false");
+  if (focus) $("#sortType").focus();
+}
+
+function chooseSort(value) {
+  closeSort(true);
+  if (value === sortType) return;
+  sortType = value;
+  sortDir = DEFAULT_SORT_DIR[sortType];
+  storeSort();
+  renderSortDir();
+  renderList();
+}
+
+$("#sortType").onclick = e => {
+  e.stopPropagation();
+  $("#sortPop").hidden ? openSort() : closeSort();
+};
+$("#sortType").onkeydown = e => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openSort(); }
+};
+$("#sortPop").onclick = e => e.stopPropagation();
+$("#sortPop").onkeydown = e => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    sortIndex = (sortIndex + (e.key === "ArrowDown" ? 1 : -1) + SORT_TYPES.length) % SORT_TYPES.length;
+    renderSortPop();
+  } else if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    chooseSort(SORT_TYPES[sortIndex][0]);
+  } else if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    closeSort(true);
+  } else if (e.key === "Tab") {
+    closeSort();
+  }
+};
+document.addEventListener("click", () => closeSort());
+$("#sortDir").onclick = () => {
+  sortDir = sortDir === "asc" ? "desc" : "asc";
+  storeSort();
+  renderSortDir();
   renderList();
 };
 
