@@ -184,6 +184,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .chart-head { display: flex; align-items: center; gap: 12px; }
 .legend { display: flex; gap: 14px; margin-left: auto; font-size: 12.5px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend b { font-weight: 400; }
 .sw { width: 10px; height: 10px; border-radius: 4px; display: inline-block; }
 .sw.ok { background: var(--series); }
 .sw.err { background: var(--series-error); }
@@ -295,21 +296,21 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         <span class="picker-dot" id="profileDot" hidden></span>
         <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
       </button>
-      <button class="btn group-btn" id="profileMenuBtn" aria-label="Profil-Optionen" aria-haspopup="menu" aria-expanded="false">
+      <button class="btn group-btn" id="profileMenuBtn" aria-label="Profil-Optionen" data-i18n-aria="s.profileOptions" aria-haspopup="menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
       </button>
       <div class="menu" role="menu" id="profileMenu" hidden>
-        <button role="menuitem" id="profileSave">Als neues Profil speichern…</button>
+        <button role="menuitem" id="profileSave" data-i18n="s.saveProfile">Als neues Profil speichern…</button>
         <button role="menuitem" id="profileUpdate">Profil aktualisieren</button>
         <hr>
-        <button role="menuitem" id="profileManage">Profile verwalten…</button>
+        <button role="menuitem" id="profileManage" data-i18n="s.manageProfiles">Profile verwalten…</button>
       </div>
     </div>
     <nav id="tabs">
-      <button data-tab="servers" class="active">Server</button>
-      <button data-tab="calls">Protokoll</button>
+      <button data-tab="servers" class="active" data-i18n="s.tabServers">Server</button>
+      <button data-tab="calls" data-i18n="s.tabLog">Protokoll</button>
       <button data-tab="inspector">Inspector</button>
-      <button data-tab="settings">Einstellungen</button>
+      <button data-tab="settings" data-i18n="s.tabSettings">Einstellungen</button>
     </nav>
   </div>
 </header>
@@ -317,42 +318,42 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 <main>
   <section data-panel="servers">
     <div class="toolbar">
-      <input type="search" id="filter" placeholder="Filtern…" aria-label="Server filtern">
+      <input type="search" id="filter" placeholder="Filtern…" aria-label="Server filtern" data-i18n-placeholder="s.filter" data-i18n-aria="s.filterServers">
       <div class="fgroup">
         <button type="button" class="sortdir" id="sortDir"></button>
-        <select id="sort" aria-label="Sortierung">
-          <option value="recent">Zuletzt verwendet</option>
+        <select id="sort" aria-label="Sortierung" data-i18n-aria="s.sort">
+          <option value="recent" data-i18n="s.sortRecent">Zuletzt verwendet</option>
           <option value="name">Name</option>
-          <option value="config">Reihenfolge der Datei</option>
+          <option value="config" data-i18n="s.sortConfig">Reihenfolge der Datei</option>
         </select>
       </div>
       <div class="actions">
-        <button class="btn primary add" id="addMenuBtn" aria-label="Hinzufügen" title="Hinzufügen" aria-haspopup="menu" aria-expanded="false">
+        <button class="btn primary add" id="addMenuBtn" aria-label="Hinzufügen" title="Hinzufügen" data-i18n-aria="s.add" data-i18n-title="s.add" aria-haspopup="menu" aria-expanded="false">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
         </button>
         <div class="menu" role="menu" id="addMenu" hidden>
-          <button role="menuitem" id="addBtn">Server hinzufügen…</button>
-          <button role="menuitem" id="importBtn">Importieren…</button>
+          <button role="menuitem" id="addBtn" data-i18n="s.addServer">Server hinzufügen…</button>
+          <button role="menuitem" id="importBtn" data-i18n="s.import">Importieren…</button>
         </div>
       </div>
     </div>
     <div class="list" id="list"></div>
-    <p class="hint" style="margin-top:12px">Datei: <code id="cfgPath"></code></p>
+    <p class="hint" style="margin-top:12px" data-i18n="s.file">Datei: <code id="cfgPath"></code></p>
     <div class="card hubcard">
       <div class="hubhead">
         <div>
-          <div class="name">Hub-Endpunkt</div>
-          <div class="hint">Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).</div>
+          <div class="name" data-i18n="s.hubEndpoint">Hub-Endpunkt</div>
+          <div class="hint" data-i18n="s.hubHint">Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).</div>
         </div>
         <code id="hubUrl"></code>
       </div>
       <div class="hubsnips">
         <div>
-          <div class="hubsnip-head"><b>Claude Code</b><button class="chip" data-copy="hubCode">kopieren</button></div>
+          <div class="hubsnip-head"><b>Claude Code</b><button class="chip" data-copy="hubCode" data-i18n="s.copy">kopieren</button></div>
           <pre id="hubCode"></pre>
         </div>
         <div>
-          <div class="hubsnip-head"><b>Claude Desktop</b> <span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop">kopieren</button></div>
+          <div class="hubsnip-head"><b>Claude Desktop</b> <span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop" data-i18n="s.copy">kopieren</button></div>
           <pre id="hubDesktop"></pre>
         </div>
       </div>
@@ -361,27 +362,27 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 
   <section data-panel="calls" hidden>
     <div class="toolbar">
-      <select id="callServer" aria-label="Server"><option value="">Alle Server</option></select>
-      <select id="callClient" aria-label="Client"><option value="">Alle Clients</option></select>
-      <label class="check"><input type="checkbox" id="callErrors"> Nur Fehler</label>
+      <select id="callServer" aria-label="Server"><option value="" data-i18n="allServers">Alle Server</option></select>
+      <select id="callClient" aria-label="Client"><option value="" data-i18n="allClients">Alle Clients</option></select>
+      <label class="check"><input type="checkbox" id="callErrors"> <span data-i18n="s.errorsOnly">Nur Fehler</span></label>
       <span class="hint" id="callCount" style="margin-left:auto"></span>
     </div>
     <details class="card stats" id="stats" open>
-      <summary><h2>Statistik</h2><span class="hint" id="statsScope"></span></summary>
+      <summary><h2 data-i18n="s.statistics">Statistik</h2><span class="hint" id="statsScope"></span></summary>
       <div class="stats-body">
       <div class="kpis" id="statsKpis"></div>
       <div class="chart-head">
-        <h3>Aufrufe pro Tag</h3>
-        <div class="legend"><span><i class="sw ok"></i>Erfolgreich</span><span><i class="sw err"></i>Fehler</span></div>
+        <h3 data-i18n="s.callsPerDay">Aufrufe pro Tag</h3>
+        <div class="legend"><span><i class="sw ok"></i><b data-i18n="s.successful">Erfolgreich</b></span><span><i class="sw err"></i><b data-i18n="s.errors">Fehler</b></span></div>
       </div>
       <div class="chart" id="statsChart"></div>
       <div class="stat-tables">
         <div>
-          <h3>Server</h3>
+          <h3 data-i18n="s.servers">Server</h3>
           <table class="stat-table" id="statsServers"></table>
         </div>
         <div>
-          <h3>Langsamste Tools <span class="hint">nach p95</span></h3>
+          <h3 data-i18n="s.slowest">Langsamste Tools <span class="hint">nach p95</span></h3>
           <table class="stat-table" id="statsSlowest"></table>
         </div>
       </div>
@@ -393,9 +394,9 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   <section data-panel="inspector" hidden>
     <div class="insp-bar">
       <select id="inspServer" aria-label="Server"></select>
-      <button class="btn primary" id="inspConnect">Verbinden</button>
-      <button class="btn" id="inspDisconnect" hidden>Trennen</button>
-      <span class="insp-info" id="inspInfo">Verbindet sich direkt mit dem Server, unabhängig vom Hub.</span>
+      <button class="btn primary" id="inspConnect" data-i18n="s.connect">Verbinden</button>
+      <button class="btn" id="inspDisconnect" hidden data-i18n="s.disconnect">Trennen</button>
+      <span class="insp-info" id="inspInfo" data-i18n="s.inspInfo">Verbindet sich direkt mit dem Server, unabhängig vom Hub.</span>
     </div>
     <p class="error" id="inspError" style="white-space:pre-wrap"></p>
     <div class="insp" id="inspMain" hidden>
@@ -403,28 +404,35 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         <nav id="inspKinds"></nav>
         <div class="items" id="inspItems"></div>
       </div>
-      <div class="detail" id="inspDetail"><p class="desc">Links etwas auswählen.</p></div>
+      <div class="detail" id="inspDetail"><p class="desc" data-i18n="s.pickLeft">Links etwas auswählen.</p></div>
     </div>
     <details class="raw ilog" id="inspLogBox">
-      <summary>Server-Ausgabe (stderr &amp; Notifications)</summary>
+      <summary data-i18n="s.serverOutput">Server-Ausgabe (stderr &amp; Notifications)</summary>
       <pre class="log" id="inspLog"></pre>
     </details>
   </section>
 
   <section data-panel="settings" hidden class="settings">
     <form class="card" id="settingsForm">
-      <h2>Allgemein</h2>
-      <label class="f"><span><b>Konfigurationsdatei</b></span><input name="configPath"></label>
-      <label class="check"><input type="checkbox" name="passEnvironment"> Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</label>
-      <div><button class="btn primary">Speichern</button></div>
+      <h2 data-i18n="s.general">Allgemein</h2>
+      <label class="f"><span data-i18n="s.configFile"><b>Konfigurationsdatei</b></span><input name="configPath"></label>
+      <label class="f"><span data-i18n="s.language"><b>Sprache</b></span>
+        <select name="language" aria-label="Sprache" data-i18n-aria="s.languageAria">
+          <option value="auto" data-i18n="s.languageAuto">Automatisch (Browser)</option>
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" name="passEnvironment"> <span data-i18n="s.passEnv">Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</span></label>
+      <div><button class="btn primary" data-i18n="s.save">Speichern</button></div>
     </form>
     <div class="card">
       <div class="toolbar" style="margin:0">
-        <h2 style="flex:1">Server als JSON</h2>
-        <button class="btn" id="jsonReset">Verwerfen</button>
-        <button class="btn primary" id="jsonSave">Speichern</button>
+        <h2 style="flex:1" data-i18n="s.serversJson">Server als JSON</h2>
+        <button class="btn" id="jsonReset" data-i18n="s.discard">Verwerfen</button>
+        <button class="btn primary" id="jsonSave" data-i18n="s.save">Speichern</button>
       </div>
-      <span class="hint">Komplette <code>mcpServers</code>-Definition bearbeiten, z. B. zum Kopieren in andere Clients oder für viele Änderungen auf einmal.</span>
+      <span class="hint" data-i18n="s.jsonHint">Komplette <code>mcpServers</code>-Definition bearbeiten, z. B. zum Kopieren in andere Clients oder für viele Änderungen auf einmal.</span>
       <textarea id="jsonText" rows="24" spellcheck="false"></textarea>
       <p class="error" id="jsonError"></p>
     </div>
@@ -436,21 +444,21 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   <form method="dialog" id="editForm">
     <div class="dhead" id="editTitle">Server</div>
     <div class="dbody">
-      <label class="f"><span><b>Name</b> – Präfix der Tools im Hub (<code>name__tool</code>)</span><input name="name" required pattern="[^/\s]+"></label>
-      <label class="f"><span><b>Wofür</b> – kurze Beschreibung, nur für dich</span><input name="description" placeholder="z. B. Dashboards, Loki- und Prometheus-Abfragen"></label>
-      <label class="f"><span><b>Art</b></span>
-        <select name="transport" aria-label="Art">
-          <option value="stdio">Lokaler Befehl (stdio)</option>
+      <label class="f"><span data-i18n="s.nameLabel"><b>Name</b> – Präfix der Tools im Hub (<code>name__tool</code>)</span><input name="name" required pattern="[^\/\s]+"></label>
+      <label class="f"><span data-i18n="s.purposeLabel"><b>Wofür</b> – kurze Beschreibung, nur für dich</span><input name="description" placeholder="z. B. Dashboards, Loki- und Prometheus-Abfragen" data-i18n-placeholder="s.purposePlaceholder"></label>
+      <label class="f"><span data-i18n="s.typeLabel"><b>Art</b></span>
+        <select name="transport" aria-label="Art" data-i18n-aria="s.type">
+          <option value="stdio" data-i18n="s.typeStdio">Lokaler Befehl (stdio)</option>
           <option value="http">URL – Streamable HTTP</option>
-          <option value="sse">URL – SSE (älteres Protokoll)</option>
+          <option value="sse" data-i18n="s.typeSse">URL – SSE (älteres Protokoll)</option>
         </select>
       </label>
       <div class="fields" id="stdioFields">
-        <label class="f"><span><b>Befehl</b></span><input name="command" placeholder="npx" style="font-family:var(--mono)"></label>
-        <label class="f"><span><b>Argumente</b> – eins pro Zeile</span><textarea name="args" rows="4" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/Users/me/Documents"></textarea></label>
-        <span class="hint">Tipp: eine komplette Befehlszeile ins Feld „Befehl“ einfügen – sie wird beim Speichern automatisch in Befehl und Argumente zerlegt.</span>
+        <label class="f"><span data-i18n="s.commandLabel"><b>Befehl</b></span><input name="command" placeholder="npx" style="font-family:var(--mono)"></label>
+        <label class="f"><span data-i18n="s.argsLabel"><b>Argumente</b> – eins pro Zeile</span><textarea name="args" rows="4" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/Users/me/Documents"></textarea></label>
+        <span class="hint" data-i18n="s.commandTip">Tipp: eine komplette Befehlszeile ins Feld „Befehl“ einfügen – sie wird beim Speichern automatisch in Befehl und Argumente zerlegt.</span>
         <div class="f">
-          <span style="font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)">Umgebungsvariablen</b></span>
+          <span style="font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)" data-i18n="s.envLabel">Umgebungsvariablen</b></span>
           <div class="env" id="envRows"></div>
           <div><button type="button" class="btn" id="addEnv">+ Variable</button></div>
         </div>
@@ -458,81 +466,81 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       <div class="fields" id="urlFields" hidden>
         <label class="f"><span><b>URL</b></span><span class="urlrow"><input name="url" inputmode="url" placeholder="https://example.com/mcp" style="font-family:var(--mono)"><button type="button" class="btn ghost lock" id="urlLock"></button></span></label>
         <div class="f">
-          <span style="font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)">Header</b> – z. B. Authorization: Bearer …</span>
+          <span style="font-size:12.5px;color:var(--muted)" data-i18n="s.headersLabel"><b style="color:var(--ink)">Header</b> – z. B. Authorization: Bearer …</span>
           <div class="env" id="headerRows"></div>
           <div><button type="button" class="btn" id="addHeader">+ Header</button></div>
         </div>
         <details class="oauth-box" id="oauthBox">
-          <summary><b>OAuth</b> <span>– nur nötig, wenn der Anbieter keine automatische Registrierung anbietet</span></summary>
+          <summary data-i18n="s.oauthSummary"><b>OAuth</b> <span>– nur nötig, wenn der Anbieter keine automatische Registrierung anbietet</span></summary>
           <div class="oauth-fields">
             <div class="f">
-              <span>Callback-URL – beim Anbieter in der OAuth-App eintragen</span>
-              <span class="urlrow"><code class="callback" id="oauthCallback"></code><button type="button" class="btn" id="oauthCopy">Kopieren</button></span>
+              <span data-i18n="s.callbackLabel">Callback-URL – beim Anbieter in der OAuth-App eintragen</span>
+              <span class="urlrow"><code class="callback" id="oauthCallback"></code><button type="button" class="btn" id="oauthCopy" data-i18n="s.copyButton">Kopieren</button></span>
             </div>
             <div class="grid2">
-              <label class="f"><span><b>Client-ID</b></span><input name="oauthClientId" autocomplete="off" style="font-family:var(--mono)"></label>
-              <label class="f"><span><b>Client-Secret</b> – falls verlangt</span><span class="urlrow"><input name="oauthClientSecret" autocomplete="off" style="font-family:var(--mono)"><button type="button" class="btn ghost lock" id="oauthSecretLock"></button></span></label>
+              <label class="f"><span data-i18n="s.clientId"><b>Client-ID</b></span><input name="oauthClientId" autocomplete="off" style="font-family:var(--mono)"></label>
+              <label class="f"><span data-i18n="s.clientSecret"><b>Client-Secret</b> – falls verlangt</span><span class="urlrow"><input name="oauthClientSecret" autocomplete="off" style="font-family:var(--mono)"><button type="button" class="btn ghost lock" id="oauthSecretLock"></button></span></label>
             </div>
-            <label class="f"><span><b>Scopes</b> – durch Leerzeichen getrennt, leer = vom Anbieter vorgeschlagen</span><input name="oauthScopes" placeholder="z. B. repo read:user" style="font-family:var(--mono)"></label>
+            <label class="f"><span data-i18n="s.scopes"><b>Scopes</b> – durch Leerzeichen getrennt, leer = vom Anbieter vorgeschlagen</span><input name="oauthScopes" placeholder="z. B. repo read:user" data-i18n-placeholder="s.scopesPlaceholder" style="font-family:var(--mono)"></label>
             <div class="grid2">
-              <label class="f"><span><b>Autorisierungs-URL</b> – nur ohne Discovery</span><input name="oauthAuthorizationUrl" inputmode="url" placeholder="https://…/authorize" style="font-family:var(--mono)"></label>
-              <label class="f"><span><b>Token-URL</b> – nur ohne Discovery</span><input name="oauthTokenUrl" inputmode="url" placeholder="https://…/token" style="font-family:var(--mono)"></label>
+              <label class="f"><span data-i18n="s.authUrl"><b>Autorisierungs-URL</b> – nur ohne Discovery</span><input name="oauthAuthorizationUrl" inputmode="url" placeholder="https://…/authorize" style="font-family:var(--mono)"></label>
+              <label class="f"><span data-i18n="s.tokenUrl"><b>Token-URL</b> – nur ohne Discovery</span><input name="oauthTokenUrl" inputmode="url" placeholder="https://…/token" style="font-family:var(--mono)"></label>
             </div>
           </div>
         </details>
       </div>
-      <span class="hint">Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password geht ebenso.</span>
-      <label class="check"><input type="checkbox" name="enabled"> Aktiviert</label>
+      <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password geht ebenso.</span>
+      <label class="check"><input type="checkbox" name="enabled"> <span data-i18n="s.enabled">Aktiviert</span></label>
       <p class="error" id="editError"></p>
     </div>
     <div class="dfoot">
-      <button type="button" class="btn" value="cancel" id="editCancel">Abbrechen</button>
-      <button class="btn primary" id="editSave">Speichern</button>
+      <button type="button" class="btn" value="cancel" id="editCancel" data-i18n="s.cancel">Abbrechen</button>
+      <button class="btn primary" id="editSave" data-i18n="s.save">Speichern</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="importer">
   <form method="dialog" id="importForm">
-    <div class="dhead">Server importieren</div>
+    <div class="dhead" data-i18n="s.importTitle">Server importieren</div>
     <div class="dbody">
-      <span class="hint">JSON im Format von Claude Desktop, Cursor &amp; Co. einfügen – entweder mit <code>mcpServers</code> oder direkt die Server-Objekte. Bestehende Einträge gleichen Namens werden überschrieben. Lokale Befehle (<code>command</code>) und URLs (<code>url</code>, optional mit <code>headers</code>) werden übernommen.</span>
+      <span class="hint" data-i18n="s.importHint">JSON im Format von Claude Desktop, Cursor &amp; Co. einfügen – entweder mit <code>mcpServers</code> oder direkt die Server-Objekte. Bestehende Einträge gleichen Namens werden überschrieben. Lokale Befehle (<code>command</code>) und URLs (<code>url</code>, optional mit <code>headers</code>) werden übernommen.</span>
       <textarea id="importText" rows="14" spellcheck="false" placeholder='{ "mcpServers": { "fetch": { "command": "uvx", "args": ["mcp-server-fetch"] } } }'></textarea>
       <p class="error" id="importError"></p>
     </div>
     <div class="dfoot">
-      <button type="button" class="btn" id="importCancel">Abbrechen</button>
-      <button class="btn primary">Importieren</button>
+      <button type="button" class="btn" id="importCancel" data-i18n="s.cancel">Abbrechen</button>
+      <button class="btn primary" data-i18n="s.importButton">Importieren</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="profilesDialog">
-  <div class="dhead">Profile</div>
+  <div class="dhead" data-i18n="s.profiles">Profile</div>
   <div class="dbody">
-    <span class="hint">Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, fehlen allerdings auch dort.</span>
+    <span class="hint" data-i18n="s.profilesHint">Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, fehlen allerdings auch dort.</span>
     <div class="prof-list" id="profileList"></div>
   </div>
-  <div class="dfoot"><button type="button" class="btn" id="profilesClose">Schließen</button></div>
+  <div class="dfoot"><button type="button" class="btn" id="profilesClose" data-i18n="s.close">Schließen</button></div>
 </dialog>
 
 <dialog id="toolsDialog">
   <form method="dialog" id="toolsForm">
     <div class="dhead" id="toolsTitle">Tools</div>
     <div class="dbody">
-      <span class="hint">Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Verbundene Clients bekommen die neue Liste automatisch, Claude Desktop erst nach einem Neustart.</span>
+      <span class="hint" data-i18n="s.toolsHint">Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Verbundene Clients bekommen die neue Liste automatisch.</span>
       <div class="tool-bar">
-        <input type="search" id="toolsFilter" placeholder="Tools filtern…" aria-label="Tools filtern">
-        <button type="button" class="btn" id="toolsAll">Alle an</button>
-        <button type="button" class="btn" id="toolsNone">Alle aus</button>
+        <input type="search" id="toolsFilter" placeholder="Tools filtern…" aria-label="Tools filtern" data-i18n-placeholder="s.filterTools" data-i18n-aria="s.filterToolsAria">
+        <button type="button" class="btn" id="toolsAll" data-i18n="s.allOn">Alle an</button>
+        <button type="button" class="btn" id="toolsNone" data-i18n="s.allOff">Alle aus</button>
       </div>
       <div class="tool-list" id="toolsList"></div>
       <p class="error" id="toolsError"></p>
     </div>
     <div class="dfoot">
       <span class="hint" id="toolsCount" style="margin-right:auto;align-self:center"></span>
-      <button type="button" class="btn" id="toolsCancel">Abbrechen</button>
-      <button class="btn primary">Speichern</button>
+      <button type="button" class="btn" id="toolsCancel" data-i18n="s.cancel">Abbrechen</button>
+      <button class="btn primary" data-i18n="s.save">Speichern</button>
     </div>
   </form>
 </dialog>
@@ -541,18 +549,299 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 
 <script>
 const $ = (s, el = document) => el.querySelector(s);
+const pl = (n, one, many) => (n === 1 ? one : many).replace("{n}", n);
+const I18N = {
+  "s.profileOptions": ["Profil-Optionen", "Profile options"],
+  "s.saveProfile": ["Als neues Profil speichern…", "Save as new profile…"],
+  "s.manageProfiles": ["Profile verwalten…", "Manage profiles…"],
+  "s.tabServers": ["Server", "Servers"],
+  "s.tabLog": ["Protokoll", "Log"],
+  "s.tabSettings": ["Einstellungen", "Settings"],
+  "s.filter": ["Filtern…", "Filter…"],
+  "s.filterServers": ["Server filtern", "Filter servers"],
+  "s.sort": ["Sortierung", "Sort"],
+  "s.sortRecent": ["Zuletzt verwendet", "Recently used"],
+  "s.sortName": ["Name", "Name"],
+  "s.sortConfig": ["Reihenfolge der Datei", "File order"],
+  "s.add": ["Hinzufügen", "Add"],
+  "s.addServer": ["Server hinzufügen…", "Add server…"],
+  "s.import": ["Importieren…", "Import…"],
+  "s.file": ["Datei: <code id=\"cfgPath\"></code>", "File: <code id=\"cfgPath\"></code>"],
+  "s.hubEndpoint": ["Hub-Endpunkt", "Hub endpoint"],
+  "s.hubHint": ["Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).", "All enabled servers bundled behind one address. Tool names carry the server as a prefix (<code>server__tool</code>)."],
+  "s.copy": ["kopieren", "copy"],
+  "s.errorsOnly": ["Nur Fehler", "Errors only"],
+  "s.statistics": ["Statistik", "Statistics"],
+  "s.callsPerDay": ["Aufrufe pro Tag", "Calls per day"],
+  "s.successful": ["Erfolgreich", "Successful"],
+  "s.errors": ["Fehler", "Errors"],
+  "s.servers": ["Server", "Servers"],
+  "s.slowest": ["Langsamste Tools <span class=\"hint\">nach p95</span>", "Slowest tools <span class=\"hint\">by p95</span>"],
+  "s.connect": ["Verbinden", "Connect"],
+  "s.disconnect": ["Trennen", "Disconnect"],
+  "s.inspInfo": ["Verbindet sich direkt mit dem Server, unabhängig vom Hub.", "Connects directly to the server, independent of the hub."],
+  "s.pickLeft": ["Links etwas auswählen.", "Select something on the left."],
+  "s.serverOutput": ["Server-Ausgabe (stderr &amp; Notifications)", "Server output (stderr &amp; notifications)"],
+  "s.general": ["Allgemein", "General"],
+  "s.configFile": ["<b>Konfigurationsdatei</b>", "<b>Configuration file</b>"],
+  "s.language": ["<b>Sprache</b>", "<b>Language</b>"],
+  "s.languageAria": ["Sprache", "Language"],
+  "s.languageAuto": ["Automatisch (Browser)", "Automatic (browser)"],
+  "s.passEnv": ["Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben", "Pass the hub’s own environment variables to locally started servers"],
+  "s.save": ["Speichern", "Save"],
+  "s.serversJson": ["Server als JSON", "Servers as JSON"],
+  "s.discard": ["Verwerfen", "Discard"],
+  "s.jsonHint": ["Komplette <code>mcpServers</code>-Definition bearbeiten, z. B. zum Kopieren in andere Clients oder für viele Änderungen auf einmal.", "Edit the complete <code>mcpServers</code> definition, e.g. to copy it into other clients or for many changes at once."],
+  "s.nameLabel": ["<b>Name</b> – Präfix der Tools im Hub (<code>name__tool</code>)", "<b>Name</b> – prefix of the tools in the hub (<code>name__tool</code>)"],
+  "s.purposeLabel": ["<b>Wofür</b> – kurze Beschreibung, nur für dich", "<b>Purpose</b> – short description, just for you"],
+  "s.purposePlaceholder": ["z. B. Dashboards, Loki- und Prometheus-Abfragen", "e.g. dashboards, Loki and Prometheus queries"],
+  "s.typeLabel": ["<b>Art</b>", "<b>Type</b>"],
+  "s.type": ["Art", "Type"],
+  "s.typeStdio": ["Lokaler Befehl (stdio)", "Local command (stdio)"],
+  "s.typeHttp": ["URL – Streamable HTTP", "URL – Streamable HTTP"],
+  "s.typeSse": ["URL – SSE (älteres Protokoll)", "URL – SSE (older protocol)"],
+  "s.commandLabel": ["<b>Befehl</b>", "<b>Command</b>"],
+  "s.argsLabel": ["<b>Argumente</b> – eins pro Zeile", "<b>Arguments</b> – one per line"],
+  "s.commandTip": ["Tipp: eine komplette Befehlszeile ins Feld „Befehl“ einfügen – sie wird beim Speichern automatisch in Befehl und Argumente zerlegt.", "Tip: paste a complete command line into “Command” – it is split into command and arguments when saving."],
+  "s.envLabel": ["Umgebungsvariablen", "Environment variables"],
+  "s.headersLabel": ["<b style=\"color:var(--ink)\">Header</b> – z. B. Authorization: Bearer …", "<b style=\"color:var(--ink)\">Headers</b> – e.g. Authorization: Bearer …"],
+  "s.oauthSummary": ["<b>OAuth</b> <span>– nur nötig, wenn der Anbieter keine automatische Registrierung anbietet</span>", "<b>OAuth</b> <span>– only needed if the provider does not offer automatic registration</span>"],
+  "s.callbackLabel": ["Callback-URL – beim Anbieter in der OAuth-App eintragen", "Callback URL – enter it in the provider’s OAuth app"],
+  "s.copyButton": ["Kopieren", "Copy"],
+  "s.clientId": ["<b>Client-ID</b>", "<b>Client ID</b>"],
+  "s.clientSecret": ["<b>Client-Secret</b> – falls verlangt", "<b>Client secret</b> – if required"],
+  "s.scopes": ["<b>Scopes</b> – durch Leerzeichen getrennt, leer = vom Anbieter vorgeschlagen", "<b>Scopes</b> – space-separated, empty = suggested by the provider"],
+  "s.scopesPlaceholder": ["z. B. repo read:user", "e.g. repo read:user"],
+  "s.authUrl": ["<b>Autorisierungs-URL</b> – nur ohne Discovery", "<b>Authorization URL</b> – only without discovery"],
+  "s.tokenUrl": ["<b>Token-URL</b> – nur ohne Discovery", "<b>Token URL</b> – only without discovery"],
+  "s.secretsHint": ["Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password geht ebenso.", "Use the lock to move secret values into the macOS keychain. The entry then only contains <code>${keychain:…}</code>; <code>${op://vault/item/field}</code> works for 1Password as well."],
+  "s.enabled": ["Aktiviert", "Enabled"],
+  "s.cancel": ["Abbrechen", "Cancel"],
+  "s.importTitle": ["Server importieren", "Import servers"],
+  "s.importHint": ["JSON im Format von Claude Desktop, Cursor &amp; Co. einfügen – entweder mit <code>mcpServers</code> oder direkt die Server-Objekte. Bestehende Einträge gleichen Namens werden überschrieben. Lokale Befehle (<code>command</code>) und URLs (<code>url</code>, optional mit <code>headers</code>) werden übernommen.", "Paste JSON in the format of Claude Desktop, Cursor &amp; co. – either with <code>mcpServers</code> or the server objects directly. Existing entries with the same name are overwritten. Local commands (<code>command</code>) and URLs (<code>url</code>, optionally with <code>headers</code>) are imported."],
+  "s.importButton": ["Importieren", "Import"],
+  "s.profiles": ["Profile", "Profiles"],
+  "s.profilesHint": ["Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, fehlen allerdings auch dort.", "Each profile has its own endpoint. A client connected there always sees that profile’s servers and tools – regardless of which profile is active above. Servers that are switched off in the hub are missing there too."],
+  "s.close": ["Schließen", "Close"],
+  "s.toolsHint": ["Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Verbundene Clients bekommen die neue Liste automatisch.", "The hub hides deselected tools and rejects calls to them. The server itself is not restarted. Connected clients receive the new list automatically."],
+  "s.filterTools": ["Tools filtern…", "Filter tools…"],
+  "s.filterToolsAria": ["Tools filtern", "Filter tools"],
+  "s.allOn": ["Alle an", "All on"],
+  "s.allOff": ["Alle aus", "All off"],
+  justNow: ["gerade eben", "just now"],
+  noProfile: ["Kein Profil", "No profile"],
+  noProfileYet: ["Noch kein Profil", "No profile yet"],
+  profileDirty: ["Ungespeicherte Änderungen: Server oder Tools weichen vom Profil ab", "Unsaved changes: servers or tools differ from the profile"],
+  profileAria: ["Profil: {name}", "Profile: {name}"],
+  profileAriaDirty: [", ungespeicherte Änderungen", ", unsaved changes"],
+  profileUpdate: ["„{name}“ aktualisieren", "Update “{name}”"],
+  noProfileTitle: ["Schaltet alle Server und Tools ein", "Turns on all servers and tools"],
+  confirmDiscard: ["Die Änderungen an „{name}“ sind nicht gespeichert und gehen verloren. Trotzdem fortfahren?", "Changes to “{name}” are not saved and will be lost. Continue anyway?"],
+  profileCleared: ["Kein Profil – alle Server und Tools aktiv", "No profile – all servers and tools active"],
+  profileActive: ["Profil „{name}“ aktiv", "Profile “{name}” active"],
+  profileNamePrompt: ["Name des Profils:", "Profile name:"],
+  profileExists: ["Profil „{name}“ gibt es schon. Überschreiben?", "Profile “{name}” already exists. Overwrite?"],
+  profileSaved: ["Profil „{name}“ gespeichert", "Profile “{name}” saved"],
+  profileUpdated: ["Profil „{name}“ aktualisiert", "Profile “{name}” updated"],
+  noProfiles: ["Keine Profile.", "No profiles."],
+  urlCopied: ["URL kopiert", "URL copied"],
+  active: ["aktiv", "active"],
+  profileSummary: ["{on} von {total} Servern an", "{on} of {total} servers on"],
+  toolsDisabled: [v => pl(v.n, "1 Tool deaktiviert", "{n} Tools deaktiviert"), v => pl(v.n, "1 tool disabled", "{n} tools disabled")],
+  copyUrl: ["URL kopieren", "Copy URL"],
+  profileMenu: ["Optionen für Profil", "Profile options"],
+  activate: ["Aktivieren", "Activate"],
+  rename: ["Umbenennen…", "Rename…"],
+  delete: ["Löschen", "Delete"],
+  newNamePrompt: ["Neuer Name:", "New name:"],
+  profileRenamed: ["Profil heißt jetzt „{name}“", "Profile renamed to “{name}”"],
+  confirmDeleteProfile: ["Profil „{name}“ löschen? Server und Tools bleiben, wie sie gerade sind.", "Delete profile “{name}”? Servers and tools stay as they are."],
+  profileDeleted: ["Profil „{name}“ gelöscht", "Profile “{name}” deleted"],
+  hubUnreachable: ["Hub nicht erreichbar", "Hub not reachable"],
+  noActiveServers: ["keine aktiven Server", "no active servers"],
+  statusSummary: [v => `${v.servers} Server · ${v.tools} Tools`, v => `${pl(v.servers, "1 server", "{n} servers")} · ${pl(v.tools, "1 tool", "{n} tools")}`],
+  withErrors: ["{n} mit Fehler", "{n} with errors"],
+  startingN: ["{n} startet", "{n} starting"],
+  awaitingAuth: [v => pl(v.n, "1 wartet auf Anmeldung", "{n} warten auf Anmeldung"), v => `${v.n} awaiting sign-in`],
+  clientsN: [v => pl(v.n, "1 Client", "{n} Clients"), v => pl(v.n, "1 client", "{n} clients")],
+  liveTitle: ["Verbunden mit Live-Aktualisierung:", "Connected with live updates:"],
+  noMatches: ["Keine Treffer.", "No matches."],
+  noServers: ["Noch keine Server. Leg einen an oder importiere eine bestehende Konfiguration.", "No servers yet. Add one or import an existing configuration."],
+  disable: ["Deaktivieren", "Disable"],
+  enable: ["Aktivieren", "Enable"],
+  options: ["Optionen", "Options"],
+  inspect: ["Inspizieren", "Inspect"],
+  signInMenu: ["Anmelden…", "Sign in…"],
+  signOut: ["Abmelden", "Sign out"],
+  chooseTools: ["Tools auswählen…", "Choose tools…"],
+  edit: ["Bearbeiten", "Edit"],
+  duplicate: ["Duplizieren", "Duplicate"],
+  autoPurpose: ["Vom Server gemeldet – unter „Bearbeiten“ durch eigene Beschreibung ersetzen", "Reported by the server – replace it with your own description under “Edit”"],
+  signInRequired: ["Anmeldung nötig – anmelden", "Sign-in required – sign in"],
+  signInTitle: ["Beim Anbieter anmelden (OAuth)", "Sign in with the provider (OAuth)"],
+  hubTools: [v => `Hub: ${pl(v.n, "1 Tool", "{n} Tools")}`, v => `Hub: ${pl(v.n, "1 tool", "{n} tools")}`],
+  hubError: ["Hub: Fehler", "Hub: error"],
+  hubStarting: ["Hub: startet…", "Hub: starting…"],
+  clickToEdit: ["Klicken zum Bearbeiten", "Click to edit"],
+  usedTimes: ["{n}× genutzt · {ago}", "used {n}× · {ago}"],
+  neverUsed: ["noch nie genutzt", "never used"],
+  lastUsed: ["Zuletzt: {date}", "Last: {date}"],
+  tokenValid: [", Token gültig bis {date} (wird automatisch erneuert)", ", token valid until {date} (renewed automatically)"],
+  signedIn: ["Angemeldet", "Signed in"],
+  headerCount: [v => `${v.n} Header`, v => pl(v.n, "1 header", "{n} headers")],
+  confirmSignOut: ["Bei „{name}“ abmelden? Das Token wird aus dem Schlüsselbund gelöscht.", "Sign out of “{name}”? The token will be removed from the keychain."],
+  signedOutToast: ["Bei „{name}“ abgemeldet", "Signed out of “{name}”"],
+  confirmDeleteServer: ["Server „{name}“ löschen?", "Delete server “{name}”?"],
+  signInFailed: ["Anmeldung fehlgeschlagen: {error}", "Sign-in failed: {error}"],
+  signedInToast: ["Bei „{name}“ angemeldet", "Signed in to “{name}”"],
+  saved: ["Gespeichert", "Saved"],
+  moveToKeychain: ["In den Schlüsselbund verschieben", "Move to keychain"],
+  fillNameKey: ["Erst Name und Schlüssel ausfüllen", "Fill in name and key first"],
+  inKeychain: ["Im Schlüsselbund – zum Übernehmen speichern", "Stored in keychain – save to apply"],
+  value: ["Wert", "Value"],
+  callbackCopied: ["Callback-URL kopiert", "Callback URL copied"],
+  duplicateTitle: ["„{name}“ duplizieren", "Duplicate “{name}”"],
+  editTitle: ["„{name}“ bearbeiten", "Edit “{name}”"],
+  newServer: ["Neuer Server", "New server"],
+  copySuffix: ["-kopie", "-copy"],
+  serverExists: ["Es gibt bereits einen Server „{name}“.", "A server named “{name}” already exists."],
+  toolsCount: ["{n} von {total} aktiv", "{n} of {total} enabled"],
+  toolsOf: ["Tools von „{name}“", "Tools of “{name}”"],
+  noServersFound: ["Keine Server gefunden.", "No servers found."],
+  imported: ["{n} importiert", "{n} imported"],
+  skipped: [", übersprungen: {list}", ", skipped: {list}"],
+  settingsSaved: ["Einstellungen gespeichert", "Settings saved"],
+  recentAsc: ["Am längsten unbenutzt zuerst", "Least recently used first"],
+  recentDesc: ["Zuletzt verwendet zuerst", "Most recently used first"],
+  nameAsc: ["A–Z", "A–Z"],
+  nameDesc: ["Z–A", "Z–A"],
+  configAsc: ["Wie in der Datei", "As in the file"],
+  configDesc: ["Umgekehrt zur Datei", "Reverse file order"],
+  clickToReverse: ["{label} – klicken zum Umkehren", "{label} – click to reverse"],
+  direction: ["Richtung: {label}", "Direction: {label}"],
+  startingServer: ["Starte {name}…", "Starting {name}…"],
+  protocolInfo: ["{name} {version} · Protokoll {protocol}", "{name} {version} · protocol {protocol}"],
+  disconnected: ["Getrennt.", "Disconnected."],
+  processEnded: ["Der Server-Prozess wurde beendet.", "The server process has ended."],
+  nothingHere: ["Nichts vorhanden.", "Nothing here."],
+  jsonOrText: ["JSON oder Text", "JSON or text"],
+  requiredField: ["{name} ist ein Pflichtfeld", "{name} is required"],
+  editAsJson: ["Als JSON bearbeiten", "Edit as JSON"],
+  editAsForm: ["Als Formular bearbeiten", "Edit as form"],
+  noParams: ["Keine Parameter.", "No parameters."],
+  run: ["Ausführen", "Run"],
+  read: ["Lesen", "Read"],
+  get: ["Abrufen", "Get"],
+  running: ["Läuft…", "Running…"],
+  error: ["Fehler", "Error"],
+  binaryData: ["{n} Bytes Binärdaten", "{n} bytes of binary data"],
+  toolError: ["Tool meldet Fehler", "Tool reported an error"],
+  rawData: ["Rohdaten (Request & Response)", "Raw data (request & response)"],
+  allServers: ["Alle Server", "All servers"],
+  allClients: ["Alle Clients", "All clients"],
+  statsScope: ["{n} Aufrufe seit {date}", "{n} calls since {date}"],
+  statsKept: [" (die letzten {n})", " (the last {n})"],
+  noCallsYet: ["Noch keine Aufrufe", "No calls yet"],
+  calls: ["Aufrufe", "Calls"],
+  inDays: ["{n} in 14 Tagen", "{n} in 14 days"],
+  errorRate: ["Fehlerquote", "Error rate"],
+  errorsN: [v => `${v.n} Fehler`, v => `${v.n} ${v.count === 1 ? "error" : "errors"}`],
+  typicalDuration: ["Typische Dauer", "Typical duration"],
+  median: ["Median", "Median"],
+  clients: ["Clients", "Clients"],
+  withCalls: ["mit Aufrufen", "with calls"],
+  dayAria: ["{day}: {n} Aufrufe, davon {e} Fehler", "{day}: {n} calls, {e} errors"],
+  dayTip: ["{n} Aufrufe · {e} Fehler", "{n} calls · {e} errors"],
+  server: ["Server", "Server"],
+  errors: ["Fehler", "Errors"],
+  last: ["Zuletzt", "Last"],
+  tool: ["Tool", "Tool"],
+  filterLog: ["Protokoll auf {name} filtern", "Filter the log by {name}"],
+  noCallsYetDot: ["Noch keine Aufrufe.", "No calls yet."],
+  callCount: ["{n} von {total} Aufrufen", "{n} of {total} calls"],
+  noHubCalls: ["Noch keine Aufrufe über den Hub.", "No calls through the hub yet."],
+  arguments: ["Argumente", "Arguments"],
+  responseStart: ["Antwort (Anfang)", "Response (beginning)"],
+  empty: ["(leer)", "(empty)"],
+  copied: ["Kopiert", "Copied"],
+  search: ["Suchen…", "Search…"],
+  searchAria: ["Suchen", "Search"],
+  noHits: ["Keine Treffer", "No matches"],
+  selection: ["Auswahl", "Selection"],
+};
+const languageSetting = (() => { try { return localStorage.getItem("language") || "auto"; } catch { return "auto"; } })();
+const resolveLanguage = setting => (setting === "de" || setting === "en" ? setting : (navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en");
+const LANG = resolveLanguage(languageSetting);
+const LOCALE = LANG === "de" ? "de-DE" : "en-US";
+document.documentElement.lang = LANG;
+
+function t(key, vars = {}) {
+  const value = I18N[key]?.[LANG === "en" ? 1 : 0];
+  if (typeof value === "function") return value(vars);
+  return (value ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+}
+
+function applyStaticTranslations() {
+  if (LANG === "de") return;
+  for (const node of document.querySelectorAll("[data-i18n]")) node.innerHTML = t(node.dataset.i18n);
+  for (const [attr, name] of [["i18nPlaceholder", "placeholder"], ["i18nTitle", "title"], ["i18nAria", "aria-label"]]) {
+    for (const node of document.querySelectorAll(`[data-${attr.replace(/[A-Z]/g, c => "-" + c.toLowerCase())}]`)) node.setAttribute(name, t(node.dataset[attr]));
+  }
+}
+
+const BACKEND_DE = [
+  [/^Origin not allowed$/, "Herkunft (Origin) nicht erlaubt"],
+  [/^Invalid name: (.*)$/, "Ungültiger Name: $1"],
+  [/^(.*): entry must be an object$/, "$1: Eintrag muss ein Objekt sein"],
+  [/^(.*): command or url is missing$/, "$1: command oder url fehlt"],
+  [/^(.*): (headers|env|oauth) must be an object$/, "$1: $2 muss ein Objekt sein"],
+  [/^(.*): (args|disabledTools) must be a list$/, "$1: $2 muss eine Liste sein"],
+  [/^mcpServers must be an object$/, "mcpServers muss ein Objekt sein"],
+  [/^Profile name is missing or contains “\/”$/, "Profilname fehlt oder enthält „/“"],
+  [/^Unknown profile: (.*)$/, "Unbekanntes Profil: $1"],
+  [/^Invalid new name$/, "Ungültiger neuer Name"],
+  [/^Profile “(.*)” already exists$/, "Profil „$1“ gibt es schon"],
+  [/^Server is not running in the hub$/, "Server läuft nicht im Hub"],
+  [/^Invalid JSON: (.*)$/, "Ungültiges JSON: $1"],
+  [/^Not a remote server: (.*)$/, "Kein entfernter Server: $1"],
+  [/^Unknown server: (.*)$/, "Unbekannter Server: $1"],
+  [/^Start failed: (.*)$/, "Start fehlgeschlagen: $1"],
+  [/^Sign-in required.*$/, "Anmeldung nötig"],
+  [/^Server process is no longer running$/, "Server-Prozess läuft nicht mehr"],
+  [/^Connection failed: (.*)$/, "Verbindung fehlgeschlagen: $1"],
+  [/^No response to (\S+) after (\d+) s$/, "Keine Antwort auf $1 nach $2 s"],
+  [/^Connection to the server was closed$/, "Verbindung zum Server wurde beendet"],
+  [/^No endpoint received from the SSE server$/, "Kein Endpunkt vom SSE-Server erhalten"],
+  [/^Secret: No keychain entry “(.*)”$/, "Secret: Kein Schlüsselbund-Eintrag „$1“"],
+  [/^No keychain entry “(.*)”$/, "Kein Schlüsselbund-Eintrag „$1“"],
+  [/^Name may only contain letters, digits, \. _ \/ -$/, "Name darf nur Buchstaben, Ziffern, . _ / - enthalten"],
+  [/^Printable ASCII only.*$/, "Nur druckbare ASCII-Zeichen – security liest andere Werte als Hex aus"],
+  [/^The provider does not offer automatic client registration\..*$/, "Der Anbieter bietet keine automatische Client-Registrierung an. Eine OAuth-App beim Anbieter anlegen und die Client-ID im Server-Eintrag unter „OAuth“ hinterlegen."],
+  [/^Automatic client registration failed \((.*)\)\..*$/, "Automatische Client-Registrierung fehlgeschlagen ($1). Eine OAuth-App beim Anbieter anlegen und die Client-ID im Server-Eintrag unter „OAuth“ hinterlegen."],
+  [/^Unknown or expired sign-in, please start again$/, "Unbekannte oder abgelaufene Anmeldung, bitte neu starten"],
+  [/^The authorization server does not support PKCE \(S256\)$/, "Der Anmeldeserver unterstützt kein PKCE (S256)"],
+  [/^(.*) \(no session\)$/, "$1 (ohne Sitzung)"],
+  [/^unknown$/, "unbekannt"],
+];
+const fromBackend = msg => {
+  if (LANG !== "de" || typeof msg !== "string") return msg;
+  for (const [pattern, replacement] of BACKEND_DE) if (pattern.test(msg)) return msg.replace(pattern, replacement);
+  return msg;
+};
+applyStaticTranslations();
 let state = null;
 let hubStatus = {};
 let usage = {};
 let live = [];
 
+const relative = new Intl.RelativeTimeFormat(LOCALE, { numeric: "auto" });
+
 function ago(ts) {
   const s = Math.round(Date.now() / 1000 - ts);
-  if (s < 60) return "gerade eben";
-  const units = [[86400 * 30, "Monat", "Monaten"], [86400, "Tag", "Tagen"], [3600, "Stunde", "Stunden"], [60, "Minute", "Minuten"]];
-  for (const [size, one, many] of units) {
+  if (s < 60) return t("justNow");
+  for (const [size, unit] of [[86400 * 30, "month"], [86400, "day"], [3600, "hour"], [60, "minute"]]) {
     const n = Math.floor(s / size);
-    if (n >= 1) return `vor ${n} ${n === 1 ? one : many}`;
+    if (n >= 1) return relative.format(-n, unit);
   }
 }
 let editing = null;
@@ -560,7 +849,7 @@ let editing = null;
 async function api(method, path, body) {
   const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  if (!res.ok) throw new Error(fromBackend(data.error) || res.statusText);
   return data;
 }
 
@@ -610,18 +899,18 @@ function profileDirty() {
 
 function renderProfiles() {
   const { active, profiles } = state.profiles;
-  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, LOCALE, { sensitivity: "base" }));
   const current = active && profiles[active] ? active : "";
   const dirty = profileDirty();
   const label = $("#profileLabel");
-  label.textContent = current || (names.length ? "Kein Profil" : "Noch kein Profil");
+  label.textContent = current || t(names.length ? "noProfile" : "noProfileYet");
   label.classList.toggle("none", !current);
   $("#profileDot").hidden = !dirty;
   const picker = $("#profilePicker");
-  picker.title = dirty ? "Ungespeicherte Änderungen: Server oder Tools weichen vom Profil ab" : "";
-  picker.setAttribute("aria-label", `Profil: ${label.textContent}` + (dirty ? ", ungespeicherte Änderungen" : ""));
+  picker.title = dirty ? t("profileDirty") : "";
+  picker.setAttribute("aria-label", t("profileAria", { name: label.textContent }) + (dirty ? t("profileAriaDirty") : ""));
   $("#profileUpdate").hidden = !current;
-  $("#profileUpdate").textContent = `„${current}“ aktualisieren`;
+  $("#profileUpdate").textContent = t("profileUpdate", { name: current });
   if (profileListbox.isOpen()) profileListbox.render();
   $("#profileManage").hidden = !names.length;
   $("#profileManage").previousElementSibling.hidden = !names.length;
@@ -654,9 +943,9 @@ function createListbox({ trigger, items, value, choose, search = false, align = 
   const pop = el("div", { className: "lb-pop" + (align === "right" ? " right" : ""), hidden: true });
   const list = el("div", { className: "lb-options", id: `${id}-list`, tabIndex: -1 });
   list.setAttribute("role", "listbox");
-  const filter = search ? el("input", { type: "search", className: "lb-filter", placeholder: "Suchen…" }) : null;
+  const filter = search ? el("input", { type: "search", className: "lb-filter", placeholder: t("search") }) : null;
   if (filter) {
-    for (const [k, v] of Object.entries({ role: "combobox", "aria-controls": list.id, "aria-expanded": "true", "aria-autocomplete": "list", "aria-label": "Suchen" })) filter.setAttribute(k, v);
+    for (const [k, v] of Object.entries({ role: "combobox", "aria-controls": list.id, "aria-expanded": "true", "aria-autocomplete": "list", "aria-label": t("searchAria") })) filter.setAttribute(k, v);
     pop.append(filter);
   }
   pop.append(list);
@@ -682,7 +971,7 @@ function createListbox({ trigger, items, value, choose, search = false, align = 
       option.onclick = () => pick(item.value);
       return option;
     }));
-    if (!shown.length) list.append(el("div", { className: "lb-empty", textContent: "Keine Treffer" }));
+    if (!shown.length) list.append(el("div", { className: "lb-empty", textContent: t("noHits") }));
     highlight();
   }
 
@@ -763,7 +1052,7 @@ function enhanceSelect(select, { search = false, bare = false, align = "left" } 
   const trigger = el("button", { type: "button", className: "lb-trigger" }, label);
   trigger.insertAdjacentHTML("beforeend", CHEVRON_ICON);
   wrap.append(select, trigger);
-  const name = select.getAttribute("aria-label") || select.name || "Auswahl";
+  const name = select.getAttribute("aria-label") || select.name || t("selection");
   const update = () => {
     label.textContent = select.selectedOptions[0]?.textContent || "";
     label.classList.toggle("none", !select.value);
@@ -795,19 +1084,20 @@ enhanceSelect($("#callServer"), { search: true });
 enhanceSelect($("#callClient"), { search: true });
 enhanceSelect($("#inspServer"), { search: true });
 enhanceSelect($("#editForm").transport);
+enhanceSelect($("#settingsForm").language);
 
 function profileItems() {
-  const names = Object.keys(state.profiles.profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
-  return [{ value: "", label: names.length ? "Kein Profil" : "Noch kein Profil", title: "Schaltet alle Server und Tools ein" },
+  const names = Object.keys(state.profiles.profiles).sort((a, b) => a.localeCompare(b, LOCALE, { sensitivity: "base" }));
+  return [{ value: "", label: t(names.length ? "noProfile" : "noProfileYet"), title: t("noProfileTitle") },
     ...names.map(n => ({ value: n, label: n }))];
 }
 
 function chooseProfile(name) {
   const current = state.profiles.profiles[state.profiles.active] ? state.profiles.active : "";
   if (name && name === current && !profileDirty()) return;
-  if (profileDirty() && !confirm(`Die Änderungen an „${state.profiles.active}“ sind nicht gespeichert und gehen verloren. Trotzdem fortfahren?`)) return;
-  if (!name) return profileAction("clear", null, "Kein Profil – alle Server und Tools aktiv");
-  profileAction("apply", name, `Profil „${name}“ aktiv`);
+  if (profileDirty() && !confirm(t("confirmDiscard", { name: state.profiles.active }))) return;
+  if (!name) return profileAction("clear", null, t("profileCleared"));
+  profileAction("apply", name, t("profileActive", { name }));
 }
 
 const profileListbox = createListbox({
@@ -826,42 +1116,42 @@ $("#profileMenuBtn").onclick = e => {
   e.currentTarget.setAttribute("aria-expanded", String(!menu.hidden));
 };
 $("#profileSave").onclick = () => {
-  const name = prompt("Name des Profils:", "")?.trim();
+  const name = prompt(t("profileNamePrompt"), "")?.trim();
   if (!name) return;
-  if (state.profiles.profiles[name] && !confirm(`Profil „${name}“ gibt es schon. Überschreiben?`)) return;
-  profileAction("save", name, `Profil „${name}“ gespeichert`);
+  if (state.profiles.profiles[name] && !confirm(t("profileExists", { name }))) return;
+  profileAction("save", name, t("profileSaved", { name }));
 };
-$("#profileUpdate").onclick = () => profileAction("save", state.profiles.active, `Profil „${state.profiles.active}“ aktualisiert`);
+$("#profileUpdate").onclick = () => profileAction("save", state.profiles.active, t("profileUpdated", { name: state.profiles.active }));
 const profileUrl = name => `http://127.0.0.1:${location.port}/p/${encodeURIComponent(name)}/mcp`;
 
 function renderProfileList() {
   const { active, profiles } = state.profiles;
-  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, LOCALE, { sensitivity: "base" }));
   const list = $("#profileList");
   list.replaceChildren();
-  if (!names.length) return list.append(el("div", { className: "empty", textContent: "Keine Profile." }));
+  if (!names.length) return list.append(el("div", { className: "empty", textContent: t("noProfiles") }));
   for (const name of names) {
     const saved = Object.values(profiles[name].servers);
     const on = saved.filter(x => x.enabled).length;
     const off = saved.filter(x => x.enabled).reduce((n, x) => n + x.disabledTools.length, 0);
     const url = profileUrl(name);
-    const copyUrl = async () => { await navigator.clipboard.writeText(url); toast("URL kopiert"); };
+    const copyUrl = async () => { await navigator.clipboard.writeText(url); toast(t("urlCopied")); };
     const row = el("div", { className: "prof" },
       el("div", { className: "prof-main" },
-        el("div", {}, el("b", { textContent: name }), name === active ? el("span", { className: "chip ok", textContent: "aktiv", style: "margin-left:8px;cursor:default" }) : null),
-        el("small", { textContent: `${on} von ${saved.length} Servern an` + (off ? ` · ${off} ${off === 1 ? "Tool" : "Tools"} deaktiviert` : "") }),
-        el("button", { type: "button", className: "prof-url", title: "URL kopieren", onclick: copyUrl }, el("code", { textContent: url }))));
+        el("div", {}, el("b", { textContent: name }), name === active ? el("span", { className: "chip ok", textContent: t("active"), style: "margin-left:8px;cursor:default" }) : null),
+        el("small", { textContent: t("profileSummary", { on, total: saved.length }) + (off ? ` · ${t("toolsDisabled", { n: off })}` : "") }),
+        el("button", { type: "button", className: "prof-url", title: t("copyUrl"), onclick: copyUrl }, el("code", { textContent: url }))));
     const actions = el("div", { className: "actions" });
     actions.innerHTML = `
-      <button type="button" class="btn ghost dots" aria-label="Optionen für Profil" aria-haspopup="menu" aria-expanded="false">
+      <button type="button" class="btn ghost dots" aria-label="${t("profileMenu")}" aria-haspopup="menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
       </button>
       <div class="menu" role="menu" hidden>
-        <button type="button" role="menuitem" data-act="copy">URL kopieren</button>
-        <button type="button" role="menuitem" data-act="apply">Aktivieren</button>
-        <button type="button" role="menuitem" data-act="rename">Umbenennen…</button>
+        <button type="button" role="menuitem" data-act="copy">${t("copyUrl")}</button>
+        <button type="button" role="menuitem" data-act="apply">${t("activate")}</button>
+        <button type="button" role="menuitem" data-act="rename">${t("rename")}</button>
         <hr>
-        <button type="button" role="menuitem" class="danger" data-act="delete">Löschen</button>
+        <button type="button" role="menuitem" class="danger" data-act="delete">${t("delete")}</button>
       </div>`;
     row.append(actions);
     $("[data-act=apply]", row).hidden = name === active;
@@ -875,11 +1165,11 @@ function renderProfileList() {
     $("[data-act=copy]", row).onclick = copyUrl;
     $("[data-act=apply]", row).onclick = () => { $("#profilesDialog").close(); chooseProfile(name); };
     $("[data-act=rename]", row).onclick = () => {
-      const next = prompt("Neuer Name:", name)?.trim();
-      if (next && next !== name) profileAction("rename", name, `Profil heißt jetzt „${next}“`, { newName: next });
+      const next = prompt(t("newNamePrompt"), name)?.trim();
+      if (next && next !== name) profileAction("rename", name, t("profileRenamed", { name: next }), { newName: next });
     };
     $("[data-act=delete]", row).onclick = () => {
-      if (confirm(`Profil „${name}“ löschen? Server und Tools bleiben, wie sie gerade sind.`)) profileAction("delete", name, `Profil „${name}“ gelöscht`);
+      if (confirm(t("confirmDeleteProfile", { name }))) profileAction("delete", name, t("profileDeleted", { name }));
     };
     list.append(row);
   }
@@ -909,12 +1199,12 @@ function renderHubStatus(reachable = true) {
   const tools = running.reduce((sum, h) => sum + h.tools, 0);
   const dot = !reachable || (entries.length && !running.length) ? "bad" : failed || starting || auth ? "warn" : "ok";
   $("#dot").className = `dot ${dot}`;
-  $("#statusText").textContent = !reachable ? "Hub nicht erreichbar"
-    : !entries.length ? "keine aktiven Server"
-    : `${running.length} Server · ${tools} Tools` + (failed ? ` · ${failed} mit Fehler` : "") + (starting ? ` · ${starting} startet` : "") + (auth ? ` · ${auth} ${auth === 1 ? "wartet" : "warten"} auf Anmeldung` : "")
-      + (live.length ? ` · ${live.length} ${live.length === 1 ? "Client" : "Clients"}` : "");
+  $("#statusText").textContent = !reachable ? t("hubUnreachable")
+    : !entries.length ? t("noActiveServers")
+    : t("statusSummary", { servers: running.length, tools }) + (failed ? ` · ${t("withErrors", { n: failed })}` : "") + (starting ? ` · ${t("startingN", { n: starting })}` : "") + (auth ? ` · ${t("awaitingAuth", { n: auth })}` : "")
+      + (live.length ? ` · ${t("clientsN", { n: live.length })}` : "");
   const names = live.map(c => c.split(" · ").map((part, i) => i ? part : clientName(part)).join(" · "));
-  $("#statusText").title = reachable && live.length ? `Verbunden mit Live-Aktualisierung:\n${names.join("\n")}` : "";
+  $("#statusText").title = reachable && live.length ? `${t("liveTitle")}\n${names.join("\n")}` : "";
 }
 
 function renderList() {
@@ -923,14 +1213,14 @@ function renderList() {
     !q || n.toLowerCase().includes(q) || [s.description, s.command, ...(s.args || [])].join(" ").toLowerCase().includes(q));
   const sort = $("#sort").value;
   const dir = sortDir === "asc" ? 1 : -1;
-  const byName = ([a], [b]) => a.localeCompare(b, "de", { sensitivity: "base" });
+  const byName = ([a], [b]) => a.localeCompare(b, LOCALE, { sensitivity: "base" });
   if (sort === "name") entries.sort((x, y) => dir * byName(x, y));
   if (sort === "recent") entries.sort((x, y) => dir * ((usage[x[0]]?.last || 0) - (usage[y[0]]?.last || 0)) || byName(x, y));
   if (sort === "config" && dir < 0) entries.reverse();
   const list = $("#list");
   list.replaceChildren();
   if (!entries.length) {
-    list.innerHTML = `<div class="empty">${q ? "Keine Treffer." : "Noch keine Server. Leg einen an oder importiere eine bestehende Konfiguration."}</div>`;
+    list.innerHTML = `<div class="empty">${t(q ? "noMatches" : "noServers")}</div>`;
     return;
   }
   for (const [name, s] of entries) {
@@ -938,7 +1228,7 @@ function renderList() {
     const row = document.createElement("div");
     row.className = "row" + (on ? "" : " off");
     row.innerHTML = `
-      <label class="switch" title="${on ? "Deaktivieren" : "Aktivieren"}"><input type="checkbox" ${on ? "checked" : ""}><span></span></label>
+      <label class="switch" title="${t(on ? "disable" : "enable")}"><input type="checkbox" ${on ? "checked" : ""}><span></span></label>
       <div style="min-width:0">
         <div class="name"></div>
         <div class="purpose"></div>
@@ -946,18 +1236,18 @@ function renderList() {
         <div class="meta"></div>
       </div>
       <div class="actions">
-        <button class="btn ghost dots" aria-label="Optionen" aria-haspopup="menu" aria-expanded="false">
+        <button class="btn ghost dots" aria-label="${t("options")}" aria-haspopup="menu" aria-expanded="false">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
         </button>
         <div class="menu" role="menu" hidden>
-          <button role="menuitem" data-act="inspect">Inspizieren</button>
-          <button role="menuitem" data-act="login">Anmelden…</button>
-          <button role="menuitem" data-act="logout">Abmelden</button>
-          <button role="menuitem" data-act="tools">Tools auswählen…</button>
-          <button role="menuitem" data-act="edit">Bearbeiten</button>
-          <button role="menuitem" data-act="dup">Duplizieren</button>
+          <button role="menuitem" data-act="inspect">${t("inspect")}</button>
+          <button role="menuitem" data-act="login">${t("signInMenu")}</button>
+          <button role="menuitem" data-act="logout">${t("signOut")}</button>
+          <button role="menuitem" data-act="tools">${t("chooseTools")}</button>
+          <button role="menuitem" data-act="edit">${t("edit")}</button>
+          <button role="menuitem" data-act="dup">${t("duplicate")}</button>
           <hr>
-          <button role="menuitem" class="danger" data-act="del">Löschen</button>
+          <button role="menuitem" class="danger" data-act="del">${t("delete")}</button>
         </div>
       </div>`;
     $(".name", row).textContent = name;
@@ -966,26 +1256,26 @@ function renderList() {
     else if (hubStatus[name]?.summary) {
       purpose.textContent = hubStatus[name].summary;
       purpose.classList.add("auto");
-      purpose.title = "Vom Server gemeldet – unter „Bearbeiten“ durch eigene Beschreibung ersetzen";
+      purpose.title = t("autoPurpose");
     } else purpose.remove();
     const kind = transportOf(s);
     $(".cmd", row).textContent = kind === "stdio" ? [s.command, ...(s.args || [])].map(shellQuote).join(" ") : `${kind.toUpperCase()} · ${s.url}`;
     const meta = $(".meta", row);
     const h = hubStatus[name];
     if (on && h?.state === "auth") {
-      meta.append(el("button", { className: "chip warn", textContent: "Anmeldung nötig – anmelden", title: "Beim Anbieter anmelden (OAuth)", onclick: () => startOAuth(name) }));
+      meta.append(el("button", { className: "chip warn", textContent: t("signInRequired"), title: t("signInTitle"), onclick: () => startOAuth(name) }));
     } else if (on && h) {
-      const text = h.state === "running" ? `Hub: ${h.tools} ${h.tools === 1 ? "Tool" : "Tools"}` + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
-        : h.state === "error" ? "Hub: Fehler" : "Hub: startet…";
-      meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: h.error || "", style: "cursor:default" }));
+      const text = h.state === "running" ? t("hubTools", { n: h.tools }) + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
+        : t(h.state === "error" ? "hubError" : "hubStarting");
+      meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: fromBackend(h.error) || "", style: "cursor:default" }));
     }
     const hidden = s.disabledTools || [];
     if (hidden.length) {
       const canOpen = on && h?.state === "running";
       meta.append(el("button", {
         className: "chip warn",
-        textContent: `${hidden.length} ${hidden.length === 1 ? "Tool" : "Tools"} deaktiviert`,
-        title: hidden.join("\n") + (canOpen ? "\n\nKlicken zum Bearbeiten" : ""),
+        textContent: t("toolsDisabled", { n: hidden.length }),
+        title: hidden.join("\n") + (canOpen ? `\n\n${t("clickToEdit")}` : ""),
         style: canOpen ? "" : "cursor:default",
         onclick: canOpen ? () => openTools(name) : null,
       }));
@@ -993,17 +1283,17 @@ function renderList() {
     const u = usage[name];
     meta.append(el("span", {
       className: "chip", style: "cursor:default",
-      textContent: u ? `${u.count}× genutzt · ${ago(u.last)}` : "noch nie genutzt",
-      title: u ? `Zuletzt: ${new Date(u.last * 1000).toLocaleString("de-DE")}` : "",
+      textContent: u ? t("usedTimes", { n: u.count, ago: ago(u.last) }) : t("neverUsed"),
+      title: u ? t("lastUsed", { date: new Date(u.last * 1000).toLocaleString(LOCALE) }) : "",
     }));
     const envCount = Object.keys(s.env || {}).length;
     if (envCount) meta.append(Object.assign(document.createElement("span"), { className: "chip", textContent: `${envCount} env`, style: "cursor:default" }));
     if (h?.oauth?.signedIn) {
-      const until = h.oauth.expiresAt ? `, Token gültig bis ${new Date(h.oauth.expiresAt * 1000).toLocaleString("de-DE")} (wird automatisch erneuert)` : "";
-      meta.append(el("span", { className: "chip", textContent: "OAuth", title: `Angemeldet${until}`, style: "cursor:default" }));
+      const until = h.oauth.expiresAt ? t("tokenValid", { date: new Date(h.oauth.expiresAt * 1000).toLocaleString(LOCALE) }) : "";
+      meta.append(el("span", { className: "chip", textContent: "OAuth", title: t("signedIn") + until, style: "cursor:default" }));
     }
     const headerCount = Object.keys(s.headers || {}).length;
-    if (headerCount) meta.append(el("span", { className: "chip", textContent: `${headerCount} Header`, style: "cursor:default" }));
+    if (headerCount) meta.append(el("span", { className: "chip", textContent: t("headerCount", { n: headerCount }), style: "cursor:default" }));
     $("input", row).onchange = e => saveServers({ ...servers(), [name]: { ...s, enabled: e.target.checked } });
     $(".dots", row).onclick = e => { e.stopPropagation(); toggleMenu(row); };
     $("[data-act=inspect]", row).onclick =() => { showTab("inspector"); $("#inspServer").value = name; inspConnect(); };
@@ -1012,15 +1302,15 @@ function renderList() {
     $("[data-act=logout]", row).hidden = !(s.url && h?.oauth?.signedIn);
     $("[data-act=login]", row).onclick = () => startOAuth(name);
     $("[data-act=logout]", row).onclick = async () => {
-      if (!confirm(`Bei „${name}“ abmelden? Das Token wird aus dem Schlüsselbund gelöscht.`)) return;
-      try { await api("POST", "/api/oauth/logout", { name }); toast(`Bei „${name}“ abgemeldet`); }
+      if (!confirm(t("confirmSignOut", { name }))) return;
+      try { await api("POST", "/api/oauth/logout", { name }); toast(t("signedOutToast", { name })); }
       catch (e) { toast(e.message, true); }
     };
     $("[data-act=tools]", row).onclick = () => openTools(name);
     $("[data-act=edit]", row).onclick = () => openEditor(name);
     $("[data-act=dup]", row).onclick = () => openEditor(name, true);
     $("[data-act=del]", row).onclick = () => {
-      if (!confirm(`Server „${name}“ löschen?`)) return;
+      if (!confirm(t("confirmDeleteServer", { name }))) return;
       const next = { ...servers() };
       delete next[name];
       saveServers(next);
@@ -1042,8 +1332,8 @@ async function startOAuth(name) {
 
 window.addEventListener("message", e => {
   if (e.origin !== location.origin || e.data?.type !== "mcp-hub-oauth") return;
-  if (e.data.error) toast(`Anmeldung fehlgeschlagen: ${e.data.error}`, true);
-  else toast(`Bei „${e.data.server}“ angemeldet`);
+  if (e.data.error) toast(t("signInFailed", { error: fromBackend(e.data.error) }), true);
+  else toast(t("signedInToast", { name: e.data.server }));
 });
 
 function closeMenus(except) {
@@ -1071,7 +1361,7 @@ async function saveServers(next) {
     state = await api("PUT", "/api/servers", { mcpServers: next });
     syncJson();
     render();
-    toast("Gespeichert");
+    toast(t("saved"));
     return true;
   } catch (e) {
     toast(e.message, true);
@@ -1090,7 +1380,7 @@ const LOCK_ICON = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" s
 
 function lockButton(button, input, keyOf) {
   button.innerHTML = LOCK_ICON;
-  button.title = "In den Schlüsselbund verschieben";
+  button.title = t("moveToKeychain");
   button.setAttribute("aria-label", button.title);
   const update = () => { button.hidden = !input.value || /\$\{(keychain:|op:\/\/)/.test(input.value); };
   input.addEventListener("input", update);
@@ -1098,12 +1388,12 @@ function lockButton(button, input, keyOf) {
   button.onclick = async () => {
     const server = $("#editForm").name.value.trim();
     const key = keyOf();
-    if (!server || !key) return toast("Erst Name und Schlüssel ausfüllen", true);
+    if (!server || !key) return toast(t("fillNameKey"), true);
     try {
       const { ref } = await api("POST", "/api/secrets", { name: `${server}/${key}`.replace(/[^A-Za-z0-9._\/-]/g, "_"), value: input.value });
       input.value = ref;
       update();
-      toast("Im Schlüsselbund – zum Übernehmen speichern");
+      toast(t("inKeychain"));
     } catch (e) {
       toast(e.message, true);
     }
@@ -1114,7 +1404,7 @@ function lockButton(button, input, keyOf) {
 function kvRow(container, k = "", v = "", keyLabel = "NAME") {
   const row = document.createElement("div");
   row.className = "envrow";
-  row.innerHTML = `<input class="k"><input placeholder="Wert" class="v"><button type="button" class="btn ghost lock"></button><button type="button" class="btn ghost del">✕</button>`;
+  row.innerHTML = `<input class="k"><input placeholder="${t("value")}" class="v"><button type="button" class="btn ghost lock"></button><button type="button" class="btn ghost del">✕</button>`;
   $(".k", row).placeholder = keyLabel;
   $(".k", row).value = k;
   $(".v", row).value = v;
@@ -1146,14 +1436,14 @@ const updateUrlLock = lockButton($("#urlLock"), $("#editForm").url, () => "url")
 const updateSecretLock = lockButton($("#oauthSecretLock"), $("#editForm").oauthClientSecret, () => "oauth-client-secret");
 const OAUTH_FIELDS = { oauthClientId: "clientId", oauthClientSecret: "clientSecret", oauthScopes: "scopes", oauthAuthorizationUrl: "authorizationUrl", oauthTokenUrl: "tokenUrl" };
 const callbackUrl = () => `http://127.0.0.1:${location.port}/oauth/callback`;
-$("#oauthCopy").onclick = async () => { await navigator.clipboard.writeText(callbackUrl()); toast("Callback-URL kopiert"); };
+$("#oauthCopy").onclick = async () => { await navigator.clipboard.writeText(callbackUrl()); toast(t("callbackCopied")); };
 
 function openEditor(name, duplicate = false) {
   const f = $("#editForm");
   const s = name ? servers()[name] : { command: "", args: [], env: {}, enabled: true };
   editing = duplicate ? null : name;
-  $("#editTitle").textContent = duplicate ? `„${name}“ duplizieren` : name ? `„${name}“ bearbeiten` : "Neuer Server";
-  f.name.value = duplicate ? `${name}-kopie` : name || "";
+  $("#editTitle").textContent = duplicate ? t("duplicateTitle", { name }) : name ? t("editTitle", { name }) : t("newServer");
+  f.name.value = duplicate ? `${name}${t("copySuffix")}` : name || "";
   f.description.value = s.description || "";
   f.transport.value = transportOf(s);
   f.command.value = s.command || "";
@@ -1179,7 +1469,7 @@ $("#editForm").onsubmit = async e => {
   e.preventDefault();
   const f = e.target;
   const name = f.name.value.trim();
-  if (name !== editing && servers()[name]) return ($("#editError").textContent = `Es gibt bereits einen Server „${name}“.`);
+  if (name !== editing && servers()[name]) return ($("#editError").textContent = t("serverExists", { name }));
   const prev = editing ? servers()[editing] : {};
   const kind = f.transport.value;
   const entry = { ...prev, enabled: f.enabled.checked };
@@ -1220,7 +1510,7 @@ let toolsServer = null;
 
 function renderToolsCount() {
   const boxes = [...$("#toolsList").querySelectorAll("input")];
-  $("#toolsCount").textContent = `${boxes.filter(b => b.checked).length} von ${boxes.length} aktiv`;
+  $("#toolsCount").textContent = t("toolsCount", { n: boxes.filter(b => b.checked).length, total: boxes.length });
 }
 
 async function openTools(name) {
@@ -1228,7 +1518,7 @@ async function openTools(name) {
   try { tools = await api("GET", `/api/hub/tools?name=${encodeURIComponent(name)}`); }
   catch (e) { return toast(e.message, true); }
   toolsServer = name;
-  $("#toolsTitle").textContent = `Tools von „${name}“`;
+  $("#toolsTitle").textContent = t("toolsOf", { name });
   $("#toolsFilter").value = "";
   $("#toolsError").textContent = "";
   $("#toolsList").replaceChildren(...tools.map(t => {
@@ -1278,10 +1568,10 @@ $("#importForm").onsubmit = async e => {
       ? { ...base, command: s.command, args: s.args || [], ...(s.env ? { env: s.env } : {}) }
       : { ...base, type: transportOf(s), url: s.url, ...(s.headers ? { headers: s.headers } : {}) };
   }
-  if (!Object.keys(picked).length) return ($("#importError").textContent = "Keine Server gefunden.");
+  if (!Object.keys(picked).length) return ($("#importError").textContent = t("noServersFound"));
   if (await saveServers({ ...servers(), ...picked })) {
     $("#importer").close();
-    toast(`${Object.keys(picked).length} importiert` + (skipped.length ? `, übersprungen: ${skipped.join(", ")}` : ""));
+    toast(t("imported", { n: Object.keys(picked).length }) + (skipped.length ? t("skipped", { list: skipped.join(", ") }) : ""));
   }
 };
 
@@ -1309,8 +1599,9 @@ $("#settingsForm").onsubmit = async e => {
   for (const k of Object.keys(state.settings)) if (f[k]) body[k] = f[k].type === "checkbox" ? f[k].checked : f[k].value;
   try {
     state = await api("PUT", "/api/settings", body);
+    if (rememberLanguage(state.settings.language)) return;
     fillSettings(); syncJson(); render();
-    toast("Einstellungen gespeichert");
+    toast(t("settingsSaved"));
   } catch (err) { toast(err.message, true); }
 };
 
@@ -1330,9 +1621,9 @@ $("#tabs").onclick = e => {
 $("#filter").oninput = renderList;
 const DEFAULT_SORT_DIR = { recent: "desc", name: "asc", config: "asc" };
 const SORT_DIR_LABELS = {
-  recent: { asc: "Am längsten unbenutzt zuerst", desc: "Zuletzt verwendet zuerst" },
-  name: { asc: "A–Z", desc: "Z–A" },
-  config: { asc: "Wie in der Datei", desc: "Umgekehrt zur Datei" },
+  recent: { asc: t("recentAsc"), desc: t("recentDesc") },
+  name: { asc: t("nameAsc"), desc: t("nameDesc") },
+  config: { asc: t("configAsc"), desc: t("configDesc") },
 };
 const SORT_ICONS = {
   asc: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13V3M1.5 5.5 4 3l2.5 2.5M9 4h2M9 8h4M9 12h6"/></svg>`,
@@ -1344,8 +1635,8 @@ function renderSortDir() {
   const label = SORT_DIR_LABELS[$("#sort").value][sortDir];
   const button = $("#sortDir");
   button.innerHTML = SORT_ICONS[sortDir];
-  button.title = `${label} – klicken zum Umkehren`;
-  button.setAttribute("aria-label", `Richtung: ${label}`);
+  button.title = t("clickToReverse", { label });
+  button.setAttribute("aria-label", t("direction", { label }));
 }
 
 function storeSort() {
@@ -1396,7 +1687,7 @@ async function inspConnect() {
   if (!name) return;
   if (insp.name) await inspDisconnect();
   $("#inspError").textContent = "";
-  $("#inspInfo").textContent = `Starte ${name}…`;
+  $("#inspInfo").textContent = t("startingServer", { name });
   $("#inspConnect").disabled = true;
   $("#inspLog").textContent = "";
   insp.logSince = 0;
@@ -1406,7 +1697,7 @@ async function inspConnect() {
     insp.selected = null;
     insp.kind = KINDS.find(([k]) => insp.catalog[k].length)?.[0] || "tools";
     const info = insp.catalog.initialize;
-    $("#inspInfo").textContent = `${info.serverInfo?.name || name} ${info.serverInfo?.version || ""} · Protokoll ${info.protocolVersion}`;
+    $("#inspInfo").textContent = t("protocolInfo", { name: info.serverInfo?.name || name, version: info.serverInfo?.version || "", protocol: info.protocolVersion });
     $("#inspMain").hidden = false;
     $("#inspConnect").hidden = true;
     $("#inspDisconnect").hidden = false;
@@ -1430,7 +1721,7 @@ async function inspDisconnect() {
   $("#inspMain").hidden = true;
   $("#inspConnect").hidden = false;
   $("#inspDisconnect").hidden = true;
-  $("#inspInfo").textContent = "Getrennt.";
+  $("#inspInfo").textContent = t("disconnected");
   if (name) await api("POST", "/api/inspect/disconnect", { name }).catch(() => {});
 }
 
@@ -1455,7 +1746,7 @@ async function pollInspLog() {
   }
   if (data.entries.length) pre.scrollTop = pre.scrollHeight;
   if (insp.name && !data.connected) {
-    $("#inspError").textContent = "Der Server-Prozess wurde beendet.";
+    $("#inspError").textContent = t("processEnded");
     inspDisconnect();
   }
 }
@@ -1469,7 +1760,7 @@ function renderInspSide() {
   }));
   const items = insp.catalog[insp.kind];
   const box = $("#inspItems");
-  if (!items.length) return box.replaceChildren(el("div", { className: "empty", textContent: "Nichts vorhanden." }));
+  if (!items.length) return box.replaceChildren(el("div", { className: "empty", textContent: t("nothingHere") }));
   box.replaceChildren(...items.map((item, i) => {
     const b = el("button", { className: "item" + (i === insp.selected ? " active" : "") },
       el("b", { textContent: item.name || item.uri || item.uriTemplate }),
@@ -1496,7 +1787,7 @@ function fieldFor(name, schema = {}, required = false) {
     input = el("input", { type: "number", step: type === "integer" ? "1" : "any" });
     input.dataset.kind = "number";
   } else if (type === "object" || type === "array" || !type) {
-    input = el("textarea", { rows: 3, placeholder: type === "array" ? "[ ]" : type === "object" ? "{ }" : "JSON oder Text" });
+    input = el("textarea", { rows: 3, placeholder: type === "array" ? "[ ]" : type === "object" ? "{ }" : t("jsonOrText") });
     input.dataset.kind = "json";
   } else {
     input = el("input", { type: "text", placeholder: schema.format || "" });
@@ -1521,7 +1812,7 @@ function readFields(container) {
   for (const input of container.querySelectorAll("[name]")) {
     const raw = input.value;
     if (raw === "") {
-      if (input.dataset.required) throw new Error(`${input.name} ist ein Pflichtfeld`);
+      if (input.dataset.required) throw new Error(t("requiredField", { name: input.name }));
       continue;
     }
     if (input.dataset.kind === "enum") out[input.name] = JSON.parse(raw);
@@ -1538,7 +1829,7 @@ function argsEditor(schema) {
   const required = new Set(schema?.required || []);
   const fields = el("div", { className: "fields" }, ...Object.entries(props).map(([k, s]) => fieldFor(k, s, required.has(k))));
   const json = el("textarea", { rows: 10, spellcheck: false, hidden: true });
-  const toggle = el("button", { type: "button", className: "btn ghost", textContent: "Als JSON bearbeiten" });
+  const toggle = el("button", { type: "button", className: "btn ghost", textContent: t("editAsJson") });
   let jsonMode = false;
   toggle.onclick = () => {
     try {
@@ -1551,9 +1842,9 @@ function argsEditor(schema) {
     jsonMode = !jsonMode;
     fields.hidden = jsonMode;
     json.hidden = !jsonMode;
-    toggle.textContent = jsonMode ? "Als Formular bearbeiten" : "Als JSON bearbeiten";
+    toggle.textContent = t(jsonMode ? "editAsForm" : "editAsJson");
   };
-  const node = el("div", { className: "fields" }, Object.keys(props).length ? fields : el("p", { className: "desc", textContent: "Keine Parameter." }), json,
+  const node = el("div", { className: "fields" }, Object.keys(props).length ? fields : el("p", { className: "desc", textContent: t("noParams") }), json,
     el("div", {}, toggle));
   node.read = () => (jsonMode ? JSON.parse(json.value || "{}") : readFields(fields));
   return node;
@@ -1585,7 +1876,7 @@ function expandTemplate(uriTemplate, values) {
 function renderInspDetail() {
   const d = $("#inspDetail");
   const item = insp.catalog[insp.kind][insp.selected];
-  if (!item) return d.replaceChildren(el("p", { className: "desc", textContent: "Links etwas auswählen." }));
+  if (!item) return d.replaceChildren(el("p", { className: "desc", textContent: t("s.pickLeft") }));
   const title = item.name || item.uri || item.uriTemplate;
   const parts = [el("h2", { textContent: title })];
   if (item.title && item.title !== title) parts.push(el("div", { textContent: item.title }));
@@ -1595,23 +1886,23 @@ function renderInspDetail() {
 
   if (insp.kind === "tools") {
     editor = argsEditor(item.inputSchema);
-    buttonLabel = "Ausführen";
+    buttonLabel = t("run");
     run = () => ["tools/call", { name: item.name, arguments: editor.read() }];
     if (item.annotations) parts.push(el("div", { className: "meta" }, ...Object.entries(item.annotations)
       .filter(([, v]) => v !== false && typeof v !== "string").map(([k]) => el("span", { className: "chip", style: "cursor:default", textContent: k }))));
   } else if (insp.kind === "resources") {
     parts.push(el("div", {}, el("code", { textContent: item.uri }), item.mimeType ? el("span", { className: "hint", textContent: ` · ${item.mimeType}` }) : null));
-    buttonLabel = "Lesen";
+    buttonLabel = t("read");
     run = () => ["resources/read", { uri: item.uri }];
   } else if (insp.kind === "resourceTemplates") {
     const vars = templateVars(item.uriTemplate);
     editor = argsEditor({ properties: Object.fromEntries(vars.map(v => [v, { type: "string" }])), required: vars });
     parts.push(el("div", {}, el("code", { textContent: item.uriTemplate })));
-    buttonLabel = "Lesen";
+    buttonLabel = t("read");
     run = () => ["resources/read", { uri: expandTemplate(item.uriTemplate, editor.read()) }];
   } else {
     editor = argsEditor(promptArgsSchema(item));
-    buttonLabel = "Abrufen";
+    buttonLabel = t("get");
     run = () => ["prompts/get", { name: item.name, arguments: editor.read() }];
   }
 
@@ -1620,13 +1911,13 @@ function renderInspDetail() {
     let method, params;
     try { [method, params] = run(); } catch (e) { return toast(e.message, true); }
     button.disabled = true;
-    result.replaceChildren(el("div", { className: "result-head", textContent: "Läuft…" }));
+    result.replaceChildren(el("div", { className: "result-head", textContent: t("running") }));
     const started = performance.now();
     try {
       const data = await api("POST", "/api/inspect/call", { name: insp.name, method, params });
       renderResult(result, data.result, Math.round(performance.now() - started), { method, params });
     } catch (e) {
-      result.replaceChildren(el("div", { className: "result-head" }, el("span", { className: "bad", textContent: "Fehler" })),
+      result.replaceChildren(el("div", { className: "result-head" }, el("span", { className: "bad", textContent: t("error") })),
         el("div", { className: "block" }, el("pre", { textContent: e.message })));
     } finally { button.disabled = false; }
   };
@@ -1645,7 +1936,7 @@ function contentBlock(c) {
   else if (c.type === "audio") body = el("audio", { controls: true, src: `data:${c.mimeType};base64,${c.data}` });
   else if (c.type === "resource") return contentBlock({ ...c.resource, type: c.resource.text !== undefined ? "text" : "blob" });
   else if (c.type === "blob" && c.mimeType?.startsWith("image/")) body = el("img", { src: `data:${c.mimeType};base64,${c.blob}` });
-  else if (c.type === "blob") body = el("pre", { textContent: `${Math.round((c.blob?.length || 0) * 0.75)} Bytes Binärdaten` });
+  else if (c.type === "blob") body = el("pre", { textContent: t("binaryData", { n: Math.round((c.blob?.length || 0) * 0.75) }) });
   else body = el("pre", { textContent: JSON.stringify(c, null, 2) });
   return el("div", { className: "block" }, el("span", { textContent: label }), body);
 }
@@ -1657,7 +1948,7 @@ function prettyMaybe(text) {
 
 function renderResult(box, res, ms, request) {
   const isError = res?.isError;
-  const head = el("div", { className: "result-head" }, el("span", { className: isError ? "bad" : "good", textContent: isError ? "Tool meldet Fehler" : "OK" }), `${ms} ms`);
+  const head = el("div", { className: "result-head" }, el("span", { className: isError ? "bad" : "good", textContent: isError ? t("toolError") : "OK" }), `${ms} ms`);
   const blocks = [];
   if (res?.content) blocks.push(...res.content.map(contentBlock));
   if (res?.contents) blocks.push(...res.contents.map(c => contentBlock({ ...c, type: c.text !== undefined ? "text" : "blob" })));
@@ -1668,13 +1959,13 @@ function renderResult(box, res, ms, request) {
   }));
   if (res?.structuredContent) blocks.push(el("div", { className: "block" }, el("span", { textContent: "structuredContent" }), el("pre", { textContent: JSON.stringify(res.structuredContent, null, 2) })));
   box.replaceChildren(head, ...blocks,
-    el("details", { className: "raw" }, el("summary", { textContent: "Rohdaten (Request & Response)" }),
+    el("details", { className: "raw" }, el("summary", { textContent: t("rawData") }),
       el("pre", { textContent: JSON.stringify({ request, response: res }, null, 2) })));
 }
 
 
 const CLIENT_NAMES = { "claude-code": "Claude Code", "claude-ai": "Claude Desktop", "mcp": "mcp-proxy (Claude Desktop)", "mcp-hub-inspector": "Inspector" };
-const clientName = c => CLIENT_NAMES[c] || (c.startsWith("local-agent-mode-") ? "Claude Desktop (Agent)" : c);
+const clientName = c => CLIENT_NAMES[c] || (c.startsWith("local-agent-mode-") ? "Claude Desktop (Agent)" : fromBackend(c));
 let calls = [];
 
 function fillSelect(sel, values, allLabel, label = v => v) {
@@ -1684,7 +1975,7 @@ function fillSelect(sel, values, allLabel, label = v => v) {
 }
 
 let stats = null;
-const fmt = new Intl.NumberFormat("de-DE");
+const fmt = new Intl.NumberFormat(LOCALE);
 const ms = v => v >= 1000 ? `${fmt.format(Math.round(v / 100) / 10)} s` : `${fmt.format(v)} ms`;
 
 async function refreshStats() {
@@ -1697,38 +1988,38 @@ async function refreshStats() {
 function renderStats() {
   const s = stats;
   $("#statsScope").textContent = s.total
-    ? `${fmt.format(s.total)} Aufrufe seit ${new Date(s.since * 1000).toLocaleDateString("de-DE")}` + (s.total >= s.kept ? ` (die letzten ${fmt.format(s.kept)})` : "")
-    : "Noch keine Aufrufe";
+    ? t("statsScope", { n: fmt.format(s.total), date: new Date(s.since * 1000).toLocaleDateString(LOCALE) }) + (s.total >= s.kept ? t("statsKept", { n: fmt.format(s.kept) }) : "")
+    : t("noCallsYet");
   const rate = s.total ? (s.errors / s.total) * 100 : 0;
   const kpi = (label, value, note) => el("div", { className: "kpi" }, el("span", { textContent: label }), el("b", { textContent: value }), note ? el("small", { textContent: note }) : null);
   $("#statsKpis").replaceChildren(
-    kpi("Aufrufe", fmt.format(s.total), `${fmt.format(s.days.reduce((n, d) => n + d.ok + d.errors, 0))} in 14 Tagen`),
-    kpi("Fehlerquote", `${fmt.format(Math.round(rate * 10) / 10)} %`, `${fmt.format(s.errors)} ${s.errors === 1 ? "Fehler" : "Fehler"}`),
-    kpi("Typische Dauer", ms(s.median), "Median"),
-    kpi("Clients", fmt.format(s.clients), "mit Aufrufen"),
+    kpi(t("calls"), fmt.format(s.total), t("inDays", { n: fmt.format(s.days.reduce((n, d) => n + d.ok + d.errors, 0)) })),
+    kpi(t("errorRate"), `${fmt.format(Math.round(rate * 10) / 10)} %`, t("errorsN", { n: fmt.format(s.errors), count: s.errors })),
+    kpi(t("typicalDuration"), ms(s.median), t("median")),
+    kpi(t("clients"), fmt.format(s.clients), t("withCalls")),
   );
 
   const max = Math.max(1, ...s.days.map(d => d.ok + d.errors));
   const chart = $("#statsChart");
   chart.style.setProperty("--days", s.days.length);
-  const label = d => new Date(`${d.day}T12:00`).toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric" });
+  const label = d => new Date(`${d.day}T12:00`).toLocaleDateString(LOCALE, { weekday: "short", day: "numeric", month: "numeric" });
   chart.replaceChildren(el("div", { className: "max" }, el("span", { textContent: fmt.format(max) })), ...s.days.map(d => {
     const col = el("div", { className: "col", role: "img" });
-    col.setAttribute("aria-label", `${label(d)}: ${d.ok + d.errors} Aufrufe, davon ${d.errors} Fehler`);
+    col.setAttribute("aria-label", t("dayAria", { day: label(d), n: d.ok + d.errors, e: d.errors }));
     const part = (n, cls) => n ? el("i", { className: cls, style: `height:${(n / max) * 150}px` }) : null;
-    col.append(el("div", { className: "tip" }, el("b", { textContent: label(d) }), el("br"), `${fmt.format(d.ok + d.errors)} Aufrufe · ${fmt.format(d.errors)} Fehler`),
+    col.append(el("div", { className: "tip" }, el("b", { textContent: label(d) }), el("br"), t("dayTip", { n: fmt.format(d.ok + d.errors), e: fmt.format(d.errors) })),
       ...[part(d.errors, "err"), part(d.ok, "ok")].filter(Boolean));
     return col;
   }));
   const days = el("div", { className: "chart-days" });
   days.style.setProperty("--days", s.days.length);
-  days.append(...s.days.map((d, i) => el("span", { textContent: i % 2 === s.days.length % 2 ? "" : new Date(`${d.day}T12:00`).toLocaleDateString("de-DE", { day: "numeric", month: "numeric" }) })));
+  days.append(...s.days.map((d, i) => el("span", { textContent: i % 2 === s.days.length % 2 ? "" : new Date(`${d.day}T12:00`).toLocaleDateString(LOCALE, { day: "numeric", month: "numeric" }) })));
   chart.nextElementSibling?.classList.contains("chart-days") ? chart.nextElementSibling.replaceWith(days) : chart.after(days);
 
   const head = (...cols) => el("tr", {}, ...cols.map(c => el("th", { textContent: c })));
   const top = Math.max(1, ...s.servers.map(x => x.calls));
-  $("#statsServers").replaceChildren(head("Server", "Aufrufe", "Fehler", "Median", "p95", "Zuletzt"), ...s.servers.map(x => {
-    const row = el("tr", { className: "pick", title: `Protokoll auf ${x.server} filtern` },
+  $("#statsServers").replaceChildren(head(t("server"), t("calls"), t("errors"), t("median"), "p95", t("last")), ...s.servers.map(x => {
+    const row = el("tr", { className: "pick", title: t("filterLog", { name: x.server }) },
       el("td", { className: "name", textContent: x.server }),
       el("td", {}, el("span", { className: "share" }, el("i", { style: `width:${Math.max(2, (x.calls / top) * 60)}px` }), fmt.format(x.calls))),
       el("td", { textContent: x.errors ? `${fmt.format(x.errors)} (${fmt.format(Math.round((x.errors / x.calls) * 100))} %)` : "–" }),
@@ -1738,8 +2029,8 @@ function renderStats() {
     row.onclick = () => { $("#callServer").value = x.server; renderCalls(); };
     return row;
   }));
-  if (!s.servers.length) $("#statsServers").append(el("tr", {}, el("td", { colSpan: 6, className: "hint", textContent: "Noch keine Aufrufe." })));
-  $("#statsSlowest").replaceChildren(head("Tool", "Aufrufe", "Median", "p95"), ...s.slowest.map(x => el("tr", {},
+  if (!s.servers.length) $("#statsServers").append(el("tr", {}, el("td", { colSpan: 6, className: "hint", textContent: t("noCallsYetDot") })));
+  $("#statsSlowest").replaceChildren(head(t("tool"), t("calls"), t("median"), "p95"), ...s.slowest.map(x => el("tr", {},
     el("td", { className: "name", textContent: `${x.server}__${x.tool}`, title: `${x.server}__${x.tool}` }),
     el("td", { textContent: fmt.format(x.calls) }),
     el("td", { textContent: ms(x.median) }),
@@ -1759,28 +2050,28 @@ async function refreshCalls() {
 }
 
 function renderCalls() {
-  fillSelect($("#callServer"), [...new Set(calls.map(c => c.server))].sort(), "Alle Server");
-  fillSelect($("#callClient"), [...new Set(calls.map(c => c.client))].sort(), "Alle Clients", clientName);
+  fillSelect($("#callServer"), [...new Set(calls.map(c => c.server))].sort(), t("allServers"));
+  fillSelect($("#callClient"), [...new Set(calls.map(c => c.client))].sort(), t("allClients"), clientName);
   const server = $("#callServer").value, client = $("#callClient").value, errors = $("#callErrors").checked;
   const shown = calls.filter(c => (!server || c.server === server) && (!client || c.client === client) && (!errors || !c.ok));
-  $("#callCount").textContent = `${shown.length} von ${calls.length} Aufrufen`;
+  $("#callCount").textContent = t("callCount", { n: shown.length, total: calls.length });
   const open = new Set([...document.querySelectorAll(".call[open]")].map(d => d.dataset.key));
   const box = $("#calls");
-  if (!shown.length) return box.replaceChildren(el("div", { className: "empty", textContent: calls.length ? "Keine Treffer." : "Noch keine Aufrufe über den Hub." }));
+  if (!shown.length) return box.replaceChildren(el("div", { className: "empty", textContent: t(calls.length ? "noMatches" : "noHubCalls") }));
   box.replaceChildren(...shown.map(c => {
     const key = `${c.t}-${c.target}`;
     const d = new Date(c.t * 1000);
     const today = d.toDateString() === new Date().toDateString();
     const details = el("details", { className: "call", open: open.has(key) },
       el("summary", {},
-        el("span", { className: "when", textContent: (today ? "" : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " ") + d.toLocaleTimeString("de-DE"), title: d.toLocaleString("de-DE") }),
+        el("span", { className: "when", textContent: (today ? "" : d.toLocaleDateString(LOCALE, { day: "2-digit", month: "2-digit" }) + " ") + d.toLocaleTimeString(LOCALE), title: d.toLocaleString(LOCALE) }),
         el("span", { className: "who", textContent: clientName(c.client), title: c.client }),
         el("span", { className: "what" }, el("b", { textContent: c.server }), ` · ${c.kind === "tool" ? "" : c.kind + " "}${c.target}`),
         el("span", { className: "ms", textContent: c.ms >= 1000 ? `${(c.ms / 1000).toFixed(1)} s` : `${c.ms} ms` }),
-        el("span", { className: "st " + (c.ok ? "ok" : "bad"), textContent: c.ok ? "OK" : "Fehler" })),
+        el("span", { className: "st " + (c.ok ? "ok" : "bad"), textContent: c.ok ? "OK" : t("error") })),
       el("div", { className: "body" },
-        c.args && c.args !== "{}" ? el("div", {}, el("div", { className: "lbl", textContent: "Argumente" }), el("pre", { textContent: prettyMaybe(c.args) })) : null,
-        el("div", {}, el("div", { className: "lbl", textContent: c.ok ? "Antwort (Anfang)" : "Fehler" }), el("pre", { textContent: prettyMaybe(c.result) || "(leer)" }))));
+        c.args && c.args !== "{}" ? el("div", {}, el("div", { className: "lbl", textContent: t("arguments") }), el("pre", { textContent: prettyMaybe(c.args) })) : null,
+        el("div", {}, el("div", { className: "lbl", textContent: c.ok ? t("responseStart") : t("error") }), el("pre", { textContent: prettyMaybe(fromBackend(c.result)) || t("empty") }))));
     details.dataset.key = key;
     return details;
   }));
@@ -1788,7 +2079,7 @@ function renderCalls() {
 for (const id of ["#callServer", "#callClient", "#callErrors"]) $(id).onchange = renderCalls;
 
 for (const b of document.querySelectorAll("[data-copy]")) {
-  b.onclick = () => navigator.clipboard.writeText($("#" + b.dataset.copy).textContent).then(() => toast("Kopiert"));
+  b.onclick = () => navigator.clipboard.writeText($("#" + b.dataset.copy).textContent).then(() => toast(t("copied")));
 }
 
 async function poll() {
@@ -1817,8 +2108,16 @@ async function poll() {
   }
 }
 
+function rememberLanguage(setting = "auto") {
+  try { localStorage.setItem("language", setting); } catch {}
+  if (resolveLanguage(setting) === LANG) return false;
+  location.reload();
+  return true;
+}
+
 (async () => {
   [state, hubStatus, usage] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/hub"), api("GET", "/api/usage")]);
+  if (rememberLanguage(state.settings.language)) return;
   syncJson(); fillSettings(); render();
   setInterval(poll, 2000);
 })();

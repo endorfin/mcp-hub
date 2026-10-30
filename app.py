@@ -43,6 +43,11 @@ PROFILES_FILE = STATE_DIR / "profiles.json"
 DEFAULT_SETTINGS = {
     "configPath": str(STATE_DIR / "servers.json"),
     "passEnvironment": True,
+    "language": "auto",
+}
+CALLBACK_TEXT = {
+    "en": {"ok": "Signed in", "fail": "Sign-in failed", "connected": "“{server}” is connected.", "back": "Back to MCP Hub"},
+    "de": {"ok": "Angemeldet", "fail": "Anmeldung fehlgeschlagen", "connected": "„{server}“ ist verbunden.", "back": "Zurück zum MCP Hub"},
 }
 
 
@@ -316,12 +321,16 @@ class Handler(BaseHTTPRequestHandler):
                 hub.reconnect(server)
             except (oauth.OAuthError, secrets_store.SecretError) as e:
                 error = str(e)
-        title = "Sign-in failed" if error else "Signed in"
-        text = error or f"“{server}” is connected."
+        language = load_settings()["language"]
+        if language not in CALLBACK_TEXT:
+            language = "de" if self.headers.get("Accept-Language", "").lower().startswith("de") else "en"
+        words = CALLBACK_TEXT[language]
+        title = words["fail"] if error else words["ok"]
+        text = error or words["connected"].format(server=server)
         message = json.dumps({"type": "mcp-hub-oauth", "server": server, "error": error or None}).replace("<", "\\u003c")
-        page = f"""<!doctype html><html lang="en"><meta charset="utf-8"><title>{title} · MCP Hub</title>
+        page = f"""<!doctype html><html lang="{language}"><meta charset="utf-8"><title>{title} · MCP Hub</title>
 <style>:root{{--bg:#f6f6f4;--ink:#1c1c1a;--muted:#6b6b66;--tone:{"#c0362c" if error else "#1f8a4c"}}}@media (prefers-color-scheme:dark){{:root{{--bg:#141413;--ink:#ecebe6;--muted:#9a998f;--tone:{"#ff7366" if error else "#4cc27f"}}}}}body{{margin:0;min-height:100vh;display:grid;place-items:center;font:14px/1.45 -apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink)}}main{{max-width:420px;padding:24px;text-align:center;display:grid;gap:14px}}h1{{font-size:16px;margin:0;color:var(--tone)}}p{{margin:0;color:var(--muted)}}a{{color:var(--ink);text-underline-offset:3px}}</style>
-<main><h1>{title}</h1><p>{html.escape(text)}</p><a href="/">Back to MCP Hub</a></main>
+<main><h1>{title}</h1><p>{html.escape(text)}</p><a href="/">{words["back"]}</a></main>
 <script>if (window.opener) {{ window.opener.postMessage({message}, location.origin); {"" if error else "setTimeout(() => window.close(), 1200);"} }}</script></html>"""
         self.send(page.encode(), HTTPStatus.BAD_REQUEST if error else HTTPStatus.OK, "text/html; charset=utf-8")
 
