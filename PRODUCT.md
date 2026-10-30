@@ -34,13 +34,13 @@ One local endpoint for all clients instead of per-client configuration, with no 
 - Python 3.11+ without third-party packages; server and GUI in one process (`app.py`), interface as a single file (`index.html`) without a build step.
 - Local only: listens on `127.0.0.1`, rejects write requests with a foreign `Origin`.
 - Tool and prompt names carry the server name as a prefix (`server__tool`), titles read `server: Name`.
-- Secrets as references: `${keychain:…}` (macOS keychain) and `${op://…}` (1Password CLI).
+- Secrets as references: `${keychain:…}` (macOS keychain or Secret Service on Linux), `${op://…}` (1Password CLI) and `${env:…}`.
 - OAuth for remote servers per the MCP specification (discovery, automatic client registration, PKCE), also with fixed client credentials; tokens in the keychain, refreshed automatically.
 - Statistics over the last 5,000 calls: key figures, daily history, per server, slowest tools.
 - Profiles store on/off and deselected tools per server; every profile has its own endpoint.
-- macOS is the only tested platform (keychain, LaunchAgent).
+- macOS and Linux are supported and tested (keychain or Secret Service, LaunchAgent or systemd user service).
 - License: MIT. Interface in German and English (selectable in Settings, default: browser language); README, design documents and messages from hub and API in English.
-- **Open:** support for Linux and Windows.
+- **Open:** support for Windows.
 
 ## Brand Commitments
 

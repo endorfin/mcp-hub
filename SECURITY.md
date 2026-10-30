@@ -1,6 +1,6 @@
 # Security Policy
 
-MCP Hub runs locally and handles credentials: tokens in the macOS keychain, OAuth access and refresh tokens, and references to 1Password. Reports about anything that could expose those, or let another website or process control the hub, are very welcome.
+MCP Hub runs locally and handles credentials: tokens in the keychain (macOS keychain or Secret Service on Linux), OAuth access and refresh tokens, and references to 1Password. Reports about anything that could expose those, or let another website or process control the hub, are very welcome.
 
 ## Reporting a vulnerability
 

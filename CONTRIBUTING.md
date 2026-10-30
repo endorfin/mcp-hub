@@ -22,7 +22,7 @@ MCP_HUB_HOME=/tmp/mcp-hub-dev PORT=4800 python3 app.py
 python3 -m unittest discover -s tests -v
 ```
 
-The tests start their own hub with a temporary configuration, so they never touch `~/.config/mcp-hub`. On macOS they also exercise the keychain and the OAuth flow (they create and delete `mcp-hub/selftest/…` and `mcp-hub/oauth/selftest-oauth`); elsewhere those tests are skipped. CI runs the suite on macOS and Ubuntu with Python 3.11 and 3.13.
+The tests start their own hub with a temporary configuration, so they never touch `~/.config/mcp-hub`. Where a keychain is usable (macOS, or Linux with a Secret Service such as GNOME Keyring and `secret-tool`), they also exercise the keychain and the OAuth flow (they create and delete `mcp-hub/selftest/…` and `mcp-hub/oauth/selftest-oauth`); otherwise those tests are skipped. CI runs the suite on macOS and Ubuntu with Python 3.11 and 3.13, with a keychain on both.
 
 Please add or extend a test for every behavior change. `tests/dummy_server.py` is a minimal stdio MCP server, `tests/dummy_oauth_server.py` a combined OAuth provider and protected MCP server.
 
