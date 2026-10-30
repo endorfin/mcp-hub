@@ -167,6 +167,7 @@ img { max-width: 100%; display: block; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 22px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 550; text-decoration: none; cursor: pointer; transition: border-color .15s, background-color .15s, box-shadow .25s var(--ease), transform .25s var(--ease); }
 .btn:hover { border-color: var(--muted); }
 .btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .55; cursor: default; transform: none; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: var(--lift); }
 .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 14px 32px -10px color-mix(in srgb, var(--accent) 75%, transparent); }
 .btn.small { height: 34px; padding: 0 15px; font-size: 13.5px; }
@@ -269,6 +270,9 @@ section.block { padding: 120px 0 0; }
 .feature h3 { font-size: 25px; letter-spacing: -.025em; line-height: 1.2; font-weight: 600; }
 .feature .text p { margin-top: 12px; color: var(--muted); max-width: 34em; }
 .feature .text p + p { margin-top: 10px; }
+.sources { list-style: none; margin: 12px 0 14px; padding: 0; display: grid; gap: 6px; }
+.sources li { display: flex; align-items: center; gap: 10px; }
+.sources li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
 .demo { min-width: 0; }
 
 .tabs { display: flex; gap: 2px; width: fit-content; max-width: 100%; background: color-mix(in srgb, var(--chip) 80%, transparent); border-radius: 99px; padding: 4px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
@@ -302,6 +306,8 @@ section.block { padding: 120px 0 0; }
 .hint { margin-top: 8px; font-size: 12.5px; color: var(--muted); min-height: 1.5em; }
 .sep { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
 .oauth { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.field-label + .oauth { margin-top: 10px; }
+.oauth .btn { width: 104px; }
 .oauth .nm { font-weight: 600; }
 .oauth .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .refs { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
@@ -551,8 +557,15 @@ footer a:hover { color: var(--ink); }
       <article class="feature">
         <div class="text">
           <h3 data-i18n="secrets.title">No tokens in plain text</h3>
-          <p data-i18n="secrets.text">The lock next to a value moves it into the macOS keychain, the Secret Service on Linux or the Windows Credential Manager; the file keeps only a reference. 1Password and environment variables work too.</p>
-          <p data-i18n="secrets.oauth">Remote servers with OAuth only need their URL: discovery, client registration and PKCE follow the MCP specification, and tokens refresh on their own.</p>
+          <p data-i18n="secrets.oauth">One click on the lock moves a value into the keychain. Remote servers with OAuth only need their URL.</p>
+          <p data-i18n="secrets.text">servers.json only holds a reference. The value comes from:</p>
+          <ul class="sources">
+            <li data-i18n="secrets.s1">macOS keychain</li>
+            <li data-i18n="secrets.s2">Secret Service on Linux</li>
+            <li data-i18n="secrets.s3">Windows Credential Manager</li>
+            <li data-i18n="secrets.s4">1Password CLI</li>
+            <li data-i18n="secrets.s5">Environment variables</li>
+          </ul>
         </div>
         <div class="demo">
           <div class="card">
@@ -567,7 +580,9 @@ footer a:hover { color: var(--ink); }
               <li><code>Bearer ${env:GITHUB_TOKEN}</code> <span data-i18n="secrets.envref">environment of the hub</span></li>
             </ul>
             <hr class="sep">
+            <div class="field-label"><b data-i18n="oauth.title">Remote server with OAuth</b> <span>– HTTP · mcp.sentry.dev</span></div>
             <div class="oauth">
+              <button class="btn small" type="button" id="oauthBtn"></button>
               <span class="nm">sentry</span>
               <span class="chips" id="oauthChips" aria-live="polite"></span>
             </div>
@@ -735,13 +750,14 @@ const I18N = {
     "import.btn": "Import", "import.detected": "Detected", "import.servers": "Servers", "import.dropped": "Not carried over:",
     "import.done": n => `${n} servers imported, nothing else changed.`, "import.again": "Import",
     "secrets.title": "No tokens in plain text",
-    "secrets.text": "The lock next to a value moves it into the macOS keychain, the Secret Service on Linux or the Windows Credential Manager; the file keeps only a reference. 1Password and environment variables work too.",
-    "secrets.oauth": "Remote servers with OAuth only need their URL: discovery, client registration and PKCE follow the MCP specification, and tokens refresh on their own.",
+    "secrets.text": "servers.json only holds a reference. The value comes from:",
+    "secrets.s1": "macOS keychain", "secrets.s2": "Secret Service on Linux", "secrets.s3": "Windows Credential Manager", "secrets.s4": "1Password CLI", "secrets.s5": "Environment variables",
+    "secrets.oauth": "One click on the lock moves a value into the keychain. Remote servers with OAuth only need their URL.",
     "secrets.env": "– env of grafana", "secrets.lock": "Move to keychain", "secrets.unlock": "Show plain value again",
     "secrets.plain": "Plain text in servers.json. Click the lock.",
     "secrets.locked": "Stored in the keychain. servers.json keeps only the reference.",
     "secrets.op": "1Password CLI", "secrets.envref": "environment of the hub",
-    "oauth.need": "Sign-in required", "oauth.signin": "Sign in", "oauth.wait": "Waiting for the provider…", "oauth.ok": "OAuth", "oauth.tip": "Token in the keychain, refreshed automatically", "oauth.out": "Sign out",
+    "oauth.title": "Remote server with OAuth", "oauth.need": "Sign-in required", "oauth.signin": "Sign in", "oauth.wait": "Waiting for the provider…", "oauth.ok": "OAuth", "oauth.tip": "Token in the keychain, refreshed automatically", "oauth.out": "Sign out",
     "compact.title": "Compact mode: 300 tokens instead of 60,000",
     "compact.text": "Clients load every tool definition into their context on every request. At <code>/mcp/compact</code> they get three tools instead and find the rest by searching, locally, without an index or a model. Each client picks its mode by its URL.",
     "compact.all": "All tools on /mcp", "compact.allV": "≈ 60,000 tokens", "compact.small": "Compact on /mcp/compact", "compact.smallV": "≈ 300 tokens",
@@ -805,13 +821,14 @@ const I18N = {
     "import.btn": "Importieren", "import.detected": "Erkannt", "import.servers": "Server", "import.dropped": "Nicht übernommen:",
     "import.done": n => `${n} Server importiert, sonst nichts geändert.`, "import.again": "Importieren",
     "secrets.title": "Keine Tokens im Klartext",
-    "secrets.text": "Das Schloss neben einem Wert legt ihn im macOS-Schlüsselbund, im Secret Service unter Linux oder in der Windows-Anmeldeinformationsverwaltung ab; in der Datei bleibt nur ein Verweis. 1Password und Umgebungsvariablen gehen auch.",
-    "secrets.oauth": "Remote-Server mit OAuth brauchen nur ihre URL: Discovery, Client-Registrierung und PKCE folgen der MCP-Spezifikation, Tokens erneuern sich selbst.",
+    "secrets.text": "In servers.json steht nur ein Verweis. Der Wert kommt aus:",
+    "secrets.s1": "macOS-Schlüsselbund", "secrets.s2": "Secret Service unter Linux", "secrets.s3": "Windows-Anmeldeinformationsverwaltung", "secrets.s4": "1Password CLI", "secrets.s5": "Umgebungsvariablen",
+    "secrets.oauth": "Ein Klick aufs Schloss verschiebt einen Wert in den Schlüsselbund. Remote-Server mit OAuth brauchen nur ihre URL.",
     "secrets.env": "– env von grafana", "secrets.lock": "In den Schlüsselbund verschieben", "secrets.unlock": "Klartext wieder anzeigen",
     "secrets.plain": "Klartext in servers.json. Klick auf das Schloss.",
     "secrets.locked": "Im Schlüsselbund gespeichert. servers.json enthält nur noch den Verweis.",
     "secrets.op": "1Password CLI", "secrets.envref": "Umgebung des Hubs",
-    "oauth.need": "Anmeldung nötig", "oauth.signin": "Anmelden", "oauth.wait": "Warte auf den Anbieter…", "oauth.ok": "OAuth", "oauth.tip": "Token im Schlüsselbund, wird automatisch erneuert", "oauth.out": "Abmelden",
+    "oauth.title": "Remote-Server mit OAuth", "oauth.need": "Anmeldung nötig", "oauth.signin": "Anmelden", "oauth.wait": "Warte auf den Anbieter…", "oauth.ok": "OAuth", "oauth.tip": "Token im Schlüsselbund, wird automatisch erneuert", "oauth.out": "Abmelden",
     "compact.title": "Kompaktmodus: 300 statt 60.000 Tokens",
     "compact.text": "Clients laden bei jeder Anfrage alle Tool-Definitionen in ihren Kontext. Unter <code>/mcp/compact</code> bekommen sie stattdessen drei Tools und finden den Rest per Suche, lokal, ohne Index und ohne Modell. Jeder Client wählt seinen Modus über seine URL.",
     "compact.all": "Alle Tools über /mcp", "compact.allV": "≈ 60.000 Tokens", "compact.small": "Kompakt über /mcp/compact", "compact.smallV": "≈ 300 Tokens",
@@ -1126,20 +1143,20 @@ function renderSecrets() {
   btn.setAttribute("aria-label", t(locked ? "secrets.unlock" : "secrets.lock"));
   btn.title = btn.getAttribute("aria-label");
   $("#secretHint").innerHTML = locked ? `<span class="ok-text">${t("secrets.locked")}</span>` : t("secrets.plain");
-  const chips = $("#oauthChips");
-  if (oauth === "need") chips.innerHTML = `<span class="chip warn">${t("oauth.need")}</span><button class="btn small" type="button" data-oauth="go">${t("oauth.signin")}</button>`;
+  const chips = $("#oauthChips"), ob = $("#oauthBtn");
+  ob.textContent = t(oauth === "ok" ? "oauth.out" : "oauth.signin");
+  ob.disabled = oauth === "wait";
+  if (oauth === "need") chips.innerHTML = `<span class="chip warn">${t("oauth.need")}</span>`;
   else if (oauth === "wait") chips.innerHTML = `<span class="chip">${t("oauth.wait")}</span>`;
-  else chips.innerHTML = `<span class="chip ok">${t("board.tools", 12)}</span><span class="chip" title="${t("oauth.tip")}">${t("oauth.ok")}</span><button class="btn small" type="button" data-oauth="out">${t("oauth.out")}</button>`;
+  else chips.innerHTML = `<span class="chip ok">${t("board.tools", 12)}</span><span class="chip" title="${t("oauth.tip")}">${t("oauth.ok")}</span>`;
 }
 function setupSecrets() {
   $("#lock").addEventListener("click", () => { locked = !locked; renderSecrets(); });
-  $("#oauthChips").addEventListener("click", e => {
-    const b = e.target.closest("[data-oauth]");
-    if (!b) return;
-    if (b.dataset.oauth === "go") {
+  $("#oauthBtn").addEventListener("click", () => {
+    if (oauth === "need") {
       oauth = "wait"; renderSecrets();
-      setTimeout(() => { oauth = "ok"; renderSecrets(); $('[data-oauth="out"]')?.focus(); }, reduced ? 200 : 1300);
-    } else { oauth = "need"; renderSecrets(); $('[data-oauth="go"]')?.focus(); }
+      setTimeout(() => { oauth = "ok"; renderSecrets(); $("#oauthBtn").focus(); }, reduced ? 200 : 1300);
+    } else if (oauth === "ok") { oauth = "need"; renderSecrets(); }
   });
   new IntersectionObserver(([en], ob) => { if (en.isIntersecting) { $("#bars").classList.remove("idle"); ob.disconnect(); } }, { threshold: .5 }).observe($("#bars"));
 }
