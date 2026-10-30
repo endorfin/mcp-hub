@@ -6,14 +6,14 @@
 <title>MCP Hub</title>
 <style>
 :root {
-  --bg: #f6f6f4; --panel: #ffffff; --ink: #1c1c1a; --muted: #6b6b66; --line: #e3e2de;
+  --bg: #f6f6f4; --panel: #ffffff; --field: #f6f6f4; --ink: #1c1c1a; --muted: #6b6b66; --line: #e3e2de;
   --accent: #1f8a4c; --on-accent: #ffffff; --ok: #1f8a4c; --warn: #b26a00; --bad: #c0362c; --chip: #efeeea;
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%236b6b66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2e2e2b;
+    --bg: #141413; --panel: #1d1d1b; --field: #151514; --ink: #ecebe6; --muted: #9a998f; --line: #2e2e2b;
     --accent: #4cc27f; --on-accent: #0e1a12; --ok: #4cc27f; --warn: #e0a440; --bad: #ff7366; --chip: #262624;
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%239a998f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   }
@@ -38,7 +38,7 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .picker-pop { position: absolute; left: 0; top: calc(100% + 4px); z-index: 6; width: 260px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: grid; gap: 4px; }
 .picker-pop input { padding: 6px 9px; font-size: 13px; }
 .picker-options { display: grid; max-height: 260px; overflow: auto; }
-.opt { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: center; text-align: left; font: inherit; background: none; border: 0; color: var(--ink); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.opt { display: grid; grid-template-columns: 1fr 16px; gap: 10px; align-items: center; text-align: left; font: inherit; background: none; border: 0; color: var(--ink); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
 .opt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .opt.hi { background: var(--chip); }
 .opt.none span { color: var(--muted); }
@@ -82,6 +82,7 @@ button.ghost:hover { color: var(--ink); background: var(--chip); }
 .toolbar > .actions { align-self: stretch; display: flex; }
 button.btn.add { display: grid; place-items: center; width: 38px; padding: 0; }
 input, textarea, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; }
+:is(dialog, .card, .insp, .picker-pop) :is(input:not([type=checkbox]), textarea, select) { background-color: var(--field); }
 select { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 30px; background: var(--panel) var(--chevron) no-repeat right 11px center; }
 select:hover { border-color: var(--muted); }
 input:focus, textarea:focus, select:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
@@ -118,10 +119,11 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
 .dhead { padding: 16px 20px; border-bottom: 1px solid var(--line); font-weight: 600; }
 .dbody { padding: 16px 20px; display: grid; gap: 14px; max-height: 70vh; overflow: auto; }
 .dfoot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
-label.f { display: grid; gap: 5px; font-size: 12.5px; color: var(--muted); }
+.f { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); }
 label.f > span b { color: var(--ink); font-weight: 600; }
 .hint { font-size: 12px; color: var(--muted); }
 .env { display: grid; gap: 6px; }
+.env:empty { display: none; }
 .envrow { display: grid; grid-template-columns: 1fr 1.6fr auto auto; gap: 6px; }
 .urlrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
 .lock { display: grid; place-items: center; padding: 4px 8px; }
@@ -562,8 +564,8 @@ function renderPickerOptions() {
     const option = el("button", { type: "button", className: "opt" + (item.value ? "" : " none") + (i === pickerIndex ? " hi" : ""), id: `profile-opt-${i}`, tabIndex: -1 });
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", String(item.value === current));
-    option.innerHTML = item.value === current ? CHECK_ICON : "<i></i>";
     option.append(el("span", { textContent: item.label }));
+    option.insertAdjacentHTML("beforeend", item.value === current ? CHECK_ICON : "<i></i>");
     if (!item.value) option.title = "Schaltet alle Server und Tools ein";
     option.onmouseenter = () => { pickerIndex = i; highlightPicker(); };
     option.onclick = () => chooseProfile(item.value);
@@ -1146,8 +1148,8 @@ function renderSortPop() {
     const option = el("button", { type: "button", className: "opt" + (i === sortIndex ? " hi" : ""), id: `sort-opt-${i}`, tabIndex: -1 });
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", String(value === sortType));
-    option.innerHTML = value === sortType ? CHECK_ICON : "<i></i>";
     option.append(el("span", { textContent: label }));
+    option.insertAdjacentHTML("beforeend", value === sortType ? CHECK_ICON : "<i></i>");
     option.onmouseenter = () => { sortIndex = i; renderSortPop(); };
     option.onclick = () => chooseSort(value);
     return option;
