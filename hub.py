@@ -1,4 +1,5 @@
 import json
+import queue
 import re
 import threading
 import uuid
@@ -34,8 +35,9 @@ class JsonRpcError(Exception):
 
 
 class Upstream:
-    def __init__(self, name, entry, key):
+    def __init__(self, name, entry, key, on_change=None):
         self.name = name
+        self.on_change = on_change
         self.entry = entry
         self.key = key
         self.prefix = re.sub(r"[^A-Za-z0-9_-]", "_", name)
@@ -67,6 +69,8 @@ class Upstream:
     def _on_notification(self, message):
         if message["method"].endswith("/list_changed"):
             self.stale = True
+            if self.on_change:
+                self.on_change()
 
     def refresh(self):
         self.stale = False
@@ -79,8 +83,9 @@ class Upstream:
                 except RpcError:
                     self.catalog[key] = []
 
-    def tools(self):
-        disabled = set(self.entry.get("disabledTools") or [])
+    def tools(self, disabled=None):
+        if disabled is None:
+            disabled = set(self.entry.get("disabledTools") or [])
         return [t for t in self.catalog["tools"] if t["name"] not in disabled]
 
     def alive(self):
@@ -195,9 +200,13 @@ def first_text(result):
 
 
 class Hub:
-    def __init__(self, load_config, load_settings, state_dir):
+    def __init__(self, load_config, load_settings, state_dir, load_profiles=lambda: {"profiles": {}}):
         self.load_config = load_config
         self.load_settings = load_settings
+        self.load_profiles = load_profiles
+        self.listeners = set()
+        self.listeners_lock = threading.Lock()
+        self.signature = None
         self.usage = Usage(Path(state_dir) / "usage.json")
         self.calls = CallLog(Path(state_dir) / "calls.jsonl")
         self.clients = Clients(Path(state_dir) / "clients.json")
@@ -222,7 +231,7 @@ class Hub:
                 if name in self.upstreams:
                     self.upstreams[name].entry = entry
                 else:
-                    upstream = Upstream(name, entry, runtime_key(entry, pass_environment))
+                    upstream = Upstream(name, entry, runtime_key(entry, pass_environment), self.sync_in_background)
                     self.upstreams[name] = upstream
                     thread = threading.Thread(target=upstream.start, args=(pass_environment,), daemon=True)
                     thread.start()
@@ -232,7 +241,38 @@ class Hub:
             for upstream in self.upstreams.values():
                 if upstream.state == "running" and upstream.stale:
                     upstream.refresh()
-            return [u for u in self.upstreams.values() if u.state == "running"]
+            running = [u for u in self.upstreams.values() if u.state == "running"]
+            self._notify_if_changed(running)
+            return running
+
+    def sync_in_background(self):
+        threading.Thread(target=self.sync, daemon=True).start()
+
+    def subscribe(self):
+        listener = queue.Queue()
+        with self.listeners_lock:
+            self.listeners.add(listener)
+        return listener
+
+    def unsubscribe(self, listener):
+        with self.listeners_lock:
+            self.listeners.discard(listener)
+
+    def _notify_if_changed(self, running):
+        signature = json.dumps([
+            [(u.name, sorted(t["name"] for t in u.tools()), sorted(p["name"] for p in u.catalog["prompts"]),
+              sorted(r["uri"] for r in u.catalog["resources"]), len(u.catalog["resourceTemplates"]))
+             for u in sorted(running, key=lambda u: u.name)],
+            self.load_profiles().get("profiles"),
+        ], sort_keys=True)
+        changed = self.signature is not None and signature != self.signature
+        self.signature = signature
+        if not changed:
+            return
+        with self.listeners_lock:
+            for listener in self.listeners:
+                for kind in ("tools", "prompts", "resources"):
+                    listener.put({"jsonrpc": "2.0", "method": f"notifications/{kind}/list_changed"})
 
     def close(self):
         with self.lock:
@@ -264,28 +304,47 @@ class Hub:
                  "enabled": t["name"] not in disabled}
                 for t in upstream.catalog["tools"]]
 
+    def _view(self, running, profile):
+        if not profile:
+            return {u: set(u.entry.get("disabledTools") or []) for u in running}
+        saved = self.load_profiles()["profiles"].get(profile)
+        if saved is None:
+            raise JsonRpcError(-32602, f"Unbekanntes Profil: {profile}")
+        view = {}
+        for upstream in running:
+            wanted = saved["servers"].get(upstream.name)
+            if wanted is None:
+                view[upstream] = set(upstream.entry.get("disabledTools") or [])
+            elif wanted["enabled"]:
+                view[upstream] = set(wanted["disabledTools"])
+        return view
+
     def _route(self, running, prefixed):
         for upstream in sorted(running, key=lambda u: -len(u.prefix)):
             if prefixed.startswith(upstream.prefix + SEPARATOR):
                 return upstream, prefixed[len(upstream.prefix) + len(SEPARATOR):]
         raise JsonRpcError(-32602, f"Unbekannt: {prefixed}")
 
-    def handle(self, method, params, client="unbekannt"):
+    def handle(self, method, params, client="unbekannt", profile=None):
         params = params or {}
         if method == "initialize":
+            if profile and profile not in self.load_profiles()["profiles"]:
+                raise JsonRpcError(-32602, f"Unbekanntes Profil: {profile}")
             requested = params.get("protocolVersion")
             return {
                 "protocolVersion": requested if requested in SUPPORTED_VERSIONS else PROTOCOL_VERSION,
-                "capabilities": {"tools": {}, "resources": {}, "prompts": {}, "logging": {}},
+                "capabilities": {"tools": {"listChanged": True}, "resources": {"listChanged": True},
+                                 "prompts": {"listChanged": True}, "logging": {}},
                 "serverInfo": {"name": "mcp-hub", "version": "1.0"},
                 "instructions": "Bündelt mehrere MCP-Server. Tool- und Prompt-Namen tragen den Servernamen als Präfix (server__tool).",
             }
         if method in ("ping", "logging/setLevel"):
             return {}
 
-        running = self.sync()
+        view = self._view(self.sync(), profile)
+        running = list(view)
         if method == "tools/list":
-            return {"tools": [labelled(u, t) for u in running for t in u.tools()]}
+            return {"tools": [labelled(u, t) for u, disabled in view.items() for t in u.tools(disabled)]}
         if method == "prompts/list":
             return {"prompts": [labelled(u, p) for u in running for p in u.catalog["prompts"]]}
         if method == "resources/list":
@@ -294,7 +353,7 @@ class Hub:
             return {"resourceTemplates": [t for u in running for t in u.catalog["resourceTemplates"]]}
         if method == "tools/call":
             upstream, name = self._route(running, params.get("name", ""))
-            if name in (upstream.entry.get("disabledTools") or []):
+            if name in view[upstream]:
                 raise JsonRpcError(-32602, f"Tool im Hub deaktiviert: {params.get('name')}")
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)
         if method == "prompts/get":

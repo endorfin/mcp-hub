@@ -2,6 +2,8 @@
 import atexit
 import json
 import os
+import queue
+import re
 import shutil
 import signal
 import sys
@@ -9,7 +11,7 @@ import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 import hub as hub_module
 import inspector
@@ -95,8 +97,8 @@ def update_profiles(action, name):
     profiles = data["profiles"]
     if action == "clear":
         data["active"] = None
-    elif not name or not name.strip():
-        return "Profilname fehlt"
+    elif not name or not name.strip() or "/" in name:
+        return "Profilname fehlt oder enthält „/“"
     elif action == "save":
         profiles[name] = {"servers": profile_snapshot(load_config()["mcpServers"])}
         data["active"] = name
@@ -126,7 +128,8 @@ def update_profiles(action, name):
     return None
 
 
-hub = hub_module.Hub(load_config, load_settings, STATE_DIR)
+hub = hub_module.Hub(load_config, load_settings, STATE_DIR, load_profiles)
+MCP_PATH = re.compile(r"^/(?:p/([^/]+)/)?mcp$")
 
 
 def sync_hub_in_background():
@@ -181,12 +184,16 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/calls"):
             limit = int(parse_qs(urlparse(self.path).query).get("limit", ["300"])[0])
             return self.send(hub.calls.recent(min(limit, 1000)))
-        if self.path == "/mcp":
-            self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
-            self.send_header("Allow", "POST")
-            self.send_header("Content-Length", "0")
-            self.end_headers()
-            return
+        if MCP_PATH.match(self.path):
+            if "text/event-stream" not in self.headers.get("Accept", ""):
+                self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
+                self.send_header("Allow", "POST")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            if not local_origin(self.headers.get("Origin")):
+                return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
+            return self.event_stream()
         url = urlparse(self.path)
         if url.path == "/api/inspect/log":
             query = parse_qs(url.query)
@@ -219,8 +226,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not local_origin(self.headers.get("Origin")):
             return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
-        if self.path == "/mcp":
-            return self.mcp()
+        if match := MCP_PATH.match(self.path):
+            return self.mcp(unquote(match.group(1)) if match.group(1) else None)
         if self.path == "/api/profiles":
             data = self.body()
             if error := update_profiles(data.get("action"), data.get("name")):
@@ -236,7 +243,26 @@ class Handler(BaseHTTPRequestHandler):
             return self.inspect(self.path.removeprefix("/api/inspect/"))
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
-    def mcp(self):
+    def event_stream(self):
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        listener = hub.subscribe()
+        try:
+            while True:
+                try:
+                    message = listener.get(timeout=25)
+                    self.wfile.write(f"event: message\ndata: {json.dumps(message)}\n\n".encode())
+                except queue.Empty:
+                    self.wfile.write(b": ping\n\n")
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            hub.unsubscribe(listener)
+
+    def mcp(self, profile=None):
         try:
             message = self.body()
         except json.JSONDecodeError:
@@ -256,8 +282,10 @@ class Handler(BaseHTTPRequestHandler):
             client = hub.clients.lookup(headers["Mcp-Session-Id"], user_agent)
         else:
             client = hub.clients.lookup(self.headers.get("Mcp-Session-Id"), user_agent)
+        if profile:
+            client = f"{client} · {profile}"
         try:
-            reply["result"] = hub.handle(message["method"], message.get("params"), client)
+            reply["result"] = hub.handle(message["method"], message.get("params"), client, profile)
         except hub_module.JsonRpcError as e:
             reply["error"] = {"code": e.code, "message": str(e)}
         except Exception as e:
@@ -265,7 +293,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send(reply, headers=headers)
 
     def do_DELETE(self):
-        if self.path == "/mcp":
+        if MCP_PATH.match(self.path):
             self.send_response(HTTPStatus.NO_CONTENT)
             self.end_headers()
             return

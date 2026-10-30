@@ -95,7 +95,12 @@ Claude Desktop kann nur lokale Befehle starten, deshalb dort [mcp-proxy](https:/
 { "mcpServers": { "mcp-hub": { "command": "/Users/<du>/.local/bin/mcp-proxy", "args": ["--transport", "streamablehttp", "http://127.0.0.1:4747/mcp"] } } }
 ```
 
-Clients laden die Tool-Liste meist nur beim Start. Nach neuen Servern also den Client neu starten bzw. in Claude Code `/mcp` → Reconnect.
+### Live-Aktualisierung
+
+Ändert sich die Tool-Liste (Server an/aus, Tools abgewählt, Profil gewechselt, ein Server meldet selbst neue Tools), schickt der Hub `notifications/tools/list_changed` (ebenso für Prompts und Resources). Clients empfangen das über einen offenen SSE-Stream (`GET /mcp` mit `Accept: text/event-stream`), den sie direkt nach `initialize` öffnen.
+
+- **Claude Code und VS Code/Copilot** unterstützen das. Nach dem ersten Update des Hubs einmal neu verbinden (Claude Code: `/mcp` → Reconnect), danach kommen Änderungen ohne Reconnect an.
+- **Claude Desktop** nicht: Die Brücke mcp-proxy leitet nur Fortschrittsmeldungen weiter und meldet `listChanged: false`. Nach Änderungen Claude Desktop neu starten.
 
 ## Betrieb über prun
 
@@ -123,7 +128,15 @@ Ein Profil merkt sich je Server, ob er aktiviert ist und welche Tools abgewählt
 - **Neue Server:** Server, die ein Profil nicht kennt, lässt der Wechsel unverändert. Mit „aktualisieren“ kommen sie ins Profil.
 - **Löschen:** über ⋯ → „… löschen“ für das aktive Profil. Server und Tools bleiben dabei, wie sie sind.
 
-Das Profil gilt für den ganzen Hub, also für alle Clients gleichzeitig.
+Das Profil oben gilt für den ganzen Hub, also für alle Clients am Standard-Endpunkt `/mcp`.
+
+**Endpunkt pro Profil:** Jedes Profil ist zusätzlich unter `http://127.0.0.1:4747/p/<profil>/mcp` erreichbar (URL zum Kopieren in „Profile verwalten…“). Ein Client dort sieht immer die Server und Tools dieses Profils, egal welches Profil oben aktiv ist. So kann z. B. Copilot fest mit „Frontend“ arbeiten und Claude Code mit allem:
+
+```bash
+claude mcp add --scope user --transport http mcp-hub-frontend http://127.0.0.1:4747/p/Frontend/mcp
+```
+
+Der Profil-Endpunkt filtert nur: Server, die im Hub ausgeschaltet sind, fehlen auch dort. Server, die das Profil nicht kennt, erscheinen mit ihrer aktuellen Einstellung. Im Protokoll steht hinter dem Client das Profil, z. B. `claude-code · Frontend`.
 
 ### Nutzung und Protokoll
 
@@ -149,6 +162,8 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `POST` | `/api/inspect/disconnect` | Sitzung schließen |
 | `GET` | `/api/inspect/log?name=&since=` | stderr und Notifications der Sitzung |
 | `POST` | `/mcp` | MCP-Endpunkt des Hubs |
+| `GET` | `/mcp` | SSE-Stream für Benachrichtigungen (`Accept: text/event-stream`) |
+| `POST` | `/p/<profil>/mcp` | MCP-Endpunkt mit festem Profil (auch `GET` für den Stream) |
 
 ## Fehlersuche
 
@@ -162,7 +177,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 1. **Remote und Backup:** Den Code in ein privates Git-Repo pushen und `servers.json` verschlüsselt sichern, etwa per Time Machine oder als 1Password-Dokument.
 2. **Tokens aus der JSON holen:** Erledigt, siehe „Secrets“.
 3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
-4. **Änderungen an Clients melden:** `notifications/tools/list_changed` per SSE an verbundene Clients schicken, damit neue Server ohne Reconnect erscheinen.
+4. **Änderungen an Clients melden:** Erledigt, siehe „Live-Aktualisierung“.
 5. **Statistik im Protokoll:** Aufrufe pro Tag, langsamste Tools und Fehlerquote je Server, berechnet aus `calls.jsonl`.
 6. **OAuth für entfernte Server:** Für gehostete MCPs, die nur OAuth anbieten.
 7. **Alte Reste entfernen:** Erledigt.
