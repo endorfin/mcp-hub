@@ -39,7 +39,8 @@ Ein einziger lokaler Endpunkt für alle Clients statt Konfiguration pro Client, 
 - Statistik über die letzten 5.000 Aufrufe: Kennzahlen, Verlauf je Tag, je Server, langsamste Tools.
 - Profile speichern An/Aus und abgewählte Tools je Server; jedes Profil hat einen eigenen Endpunkt.
 - macOS ist die einzige getestete Plattform (Schlüsselbund, LaunchAgent).
-- **Offen:** Lizenz; Sprache der Oberfläche und der Doku (derzeit Deutsch, für Open Source eventuell Englisch oder zweisprachig); neutrale Defaults statt persönlicher Werte (z. B. LaunchAgent-Label `de.tpwd.mcp-hub`); Unterstützung für Linux und Windows.
+- Lizenz: MIT. Oberfläche auf Deutsch und Englisch (wählbar in den Einstellungen, Standard: Browsersprache); README und Meldungen von Hub und API auf Englisch.
+- **Offen:** neutrale Defaults statt persönlicher Werte (z. B. LaunchAgent-Label `de.tpwd.mcp-hub`); Unterstützung für Linux und Windows.
 
 ## Brand Commitments
 

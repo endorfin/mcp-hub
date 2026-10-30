@@ -1,62 +1,62 @@
 # MCP Hub
 
-Lokaler Hub für MCP-Server: alle Server an einer Stelle pflegen, testen und gebündelt unter einem Endpunkt an Claude Code, Claude Desktop, Copilot & Co. ausliefern.
+A local hub for MCP servers: manage all your servers in one place, test them, and serve them bundled behind a single endpoint to Claude Code, Claude Desktop, Copilot and other clients.
 
 ```bash
-python3 app.py   # GUI: http://127.0.0.1:4747, Hub: http://127.0.0.1:4747/mcp
+python3 app.py   # GUI: http://127.0.0.1:4747, hub: http://127.0.0.1:4747/mcp
 ```
 
-Keine Abhängigkeiten außer Python 3.11+. Der Server lauscht nur auf `127.0.0.1`.
+No dependencies besides Python 3.11+. The server only listens on `127.0.0.1`. The interface is available in English and German (see “GUI”).
 
-## Dateien
+## Files
 
-Alles liegt in `~/.config/mcp-hub/` (änderbar per `MCP_HUB_HOME`), nicht im Repo. Ein alter Ordner `~/.config/mcp-proxy/` wird beim ersten Start dorthin umgezogen; `MCP_PROXY_GUI_HOME` funktioniert weiter.
+Everything lives in `~/.config/mcp-hub/` (override with `MCP_HUB_HOME`), not in the repository. An old `~/.config/mcp-proxy/` folder is moved there on first start; `MCP_PROXY_GUI_HOME` still works.
 
-| Datei | Inhalt |
+| File | Contents |
 | --- | --- |
-| `servers.json` | Server-Definitionen im Format `mcpServers`; vor jedem Schreiben entsteht `servers.json.bak` |
-| `gui-settings.json` | Pfad zur Serverdatei, `passEnvironment` |
-| `usage.json` | Nutzungszähler je Server (Anzahl, letzter Aufruf) |
-| `calls.jsonl` | Aufrufprotokoll, die letzten 5.000 Einträge |
-| `profiles.json` | gespeicherte Profile und das aktive Profil |
-| `clients.json` | Zuordnung Sitzungs-ID → Client, die letzten 300 Sitzungen |
+| `servers.json` | Server definitions in `mcpServers` format; `servers.json.bak` is written before every change |
+| `gui-settings.json` | Path to the server file, `passEnvironment`, `language` |
+| `usage.json` | Usage counter per server (count, last call) |
+| `calls.jsonl` | Call log, the last 5,000 entries |
+| `profiles.json` | Saved profiles and the active profile |
+| `clients.json` | Session ID → client mapping, the last 300 sessions |
 
-Tokens stehen in `servers.json` oder, besser, als Referenz im Schlüsselbund bzw. in 1Password (siehe „Secrets“). `servers.json` gehört nicht ins Repo.
+Tokens either sit in `servers.json` or, better, as a reference to the keychain or 1Password (see “Secrets”). `servers.json` does not belong in a repository.
 
-## Server-Einträge
+## Server entries
 
-Lokale Befehle (stdio):
+Local commands (stdio):
 
 ```json
 "grafana": { "command": "uvx", "args": ["mcp-grafana"], "env": { "GRAFANA_URL": "…" } }
 ```
 
-Entfernte Server per Streamable HTTP oder SSE:
+Remote servers via Streamable HTTP or SSE:
 
 ```json
 "timing-sync-mcp": { "type": "http", "url": "https://…/mcp", "headers": { "Authorization": "Bearer …" } },
 "openbrain": { "type": "sse", "url": "http://…/sse?key=…" }
 ```
 
-Ein Eintrag mit `url` und ohne `type` gilt als Streamable HTTP. Optional:
+An entry with `url` and no `type` is treated as Streamable HTTP. Optional fields:
 
-- `description`: Zweck des Servers, nur für die GUI. Fehlt sie, zeigt die GUI die Beschreibung des Servers oder seine ersten Tools.
-- `enabled: false`: Server bleibt eingetragen, der Hub startet ihn aber nicht.
-- `disabledTools`: Liste von Tool-Namen (ohne Präfix), die der Hub ausblendet und deren Aufruf er ablehnt. Pflege am einfachsten über ⋯ → „Tools auswählen…“: Der Dialog listet alle Tools mit Kurzbeschreibung, lässt sich filtern, und „Alle an“ / „Alle aus“ wirken nur auf die gefilterten Tools (z. B. „incident“ filtern, „Alle aus“). In der Liste zeigt dann ein Chip mit orangefarbener Schrift „6 Tools deaktiviert“, der Tooltip nennt die Tools, ein Klick öffnet die Auswahl. Eine Änderung startet den Server nicht neu.
-- `env` (stdio) bzw. `headers` (HTTP/SSE).
+- `description`: what the server is for, shown in the GUI only. Without it, the GUI shows the server’s own description or its first tools.
+- `enabled: false`: the server stays in the list, but the hub does not start it.
+- `disabledTools`: list of tool names (without prefix) that the hub hides and refuses to call. Easiest to manage via ⋯ → “Choose tools…”: the dialog lists all tools with a short description, can be filtered, and “All on” / “All off” only affect the filtered tools (e.g. filter “incident”, then “All off”). The list then shows a chip in orange text, e.g. “6 tools disabled”; its tooltip names the tools and a click opens the dialog. A change does not restart the server.
+- `env` (stdio) or `headers` (HTTP/SSE).
 
 ### OAuth
 
-Entfernte Server, die eine Anmeldung per OAuth verlangen, braucht man nur mit ihrer URL einzutragen; ein Token im Header ist nicht nötig. Antwortet der Server mit `401`, zeigt die Liste „Anmeldung nötig – anmelden“. Ein Klick öffnet die Anmeldeseite des Anbieters in einem neuen Fenster.
+Remote servers that require OAuth only need their URL; no token in a header is needed. When the server answers `401`, the list shows “Sign-in required – sign in”. A click opens the provider’s sign-in page in a new window.
 
-Der Ablauf folgt der MCP-Spezifikation: Der Hub ermittelt den Anmeldeserver über Protected Resource Metadata (RFC 9728) und Authorization Server Metadata (RFC 8414), registriert sich dort selbst als Client (RFC 7591) und meldet sich per Authorization Code mit PKCE (S256) und `resource`-Parameter an. Der Anbieter leitet zurück auf `http://127.0.0.1:4747/oauth/callback`.
+The flow follows the MCP specification: the hub discovers the authorization server via Protected Resource Metadata (RFC 9728) and Authorization Server Metadata (RFC 8414), registers itself as a client (RFC 7591) and signs in using the authorization code flow with PKCE (S256) and the `resource` parameter. The provider redirects back to `http://127.0.0.1:4747/oauth/callback`.
 
-- Access- und Refresh-Token liegen im macOS-Schlüsselbund unter `mcp-hub/oauth/<server>`, nie in `servers.json`.
-- Läuft ein Token ab, holt der Hub per Refresh-Token ein neues und wiederholt den Aufruf; Clients merken davon nichts.
-- Angemeldete Server tragen den Chip „OAuth“ (Tooltip: Gültigkeit). Über ⋯ → „Abmelden“ wird das Token gelöscht.
-- Steht schon ein `Authorization`-Header im Eintrag, nutzt der Hub diesen und kein OAuth.
+- Access and refresh tokens are stored in the macOS keychain under `mcp-hub/oauth/<server>`, never in `servers.json`.
+- When a token expires, the hub fetches a new one with the refresh token and retries the call; clients never notice.
+- Signed-in servers carry an “OAuth” chip (tooltip: validity). ⋯ → “Sign out” deletes the token.
+- If the entry already has an `Authorization` header, the hub uses it instead of OAuth.
 
-**Anbieter ohne automatische Registrierung** (z. B. GitHub): Dort eine OAuth-App anlegen, als Callback-URL `http://127.0.0.1:4747/oauth/callback` eintragen und Client-ID (und ggf. Secret) im Editor unter „OAuth“ hinterlegen. Das Secret lässt sich per Schloss in den Schlüsselbund verschieben. Bietet der Anbieter keine Discovery an, kommen Autorisierungs- und Token-URL dazu:
+**Providers without automatic registration** (e.g. GitHub): create an OAuth app with the provider, set `http://127.0.0.1:4747/oauth/callback` as its callback URL and enter the client ID (and secret, if required) in the editor under “OAuth”. The lock moves the secret into the keychain. If the provider offers no discovery, add the authorization and token URLs:
 
 ```json
 "github": {
@@ -66,39 +66,40 @@ Der Ablauf folgt der MCP-Spezifikation: Der Hub ermittelt den Anmeldeserver übe
 }
 ```
 
-Mögliche Felder: `clientId`, `clientSecret`, `scopes`, `authorizationUrl`, `tokenUrl` und `tokenAuth` (`client_secret_post`, Standard, oder `client_secret_basic`). Fehlt die Client-ID bei einem Anbieter ohne Registrierung, sagt die Fehlermeldung beim Anmelden, was zu tun ist.
+Available fields: `clientId`, `clientSecret`, `scopes`, `authorizationUrl`, `tokenUrl` and `tokenAuth` (`client_secret_post`, the default, or `client_secret_basic`). If a provider without registration is missing a client ID, the error message on sign-in explains what to do.
 
 ### Secrets
 
-Statt Tokens im Klartext können Werte in `env`, `headers`, `url` und `args` Referenzen enthalten, die der Hub erst beim Start eines Servers auflöst:
+Instead of plain-text tokens, values in `env`, `headers`, `url` and `args` can contain references that the hub only resolves when it starts a server:
 
 ```json
 "glitchtip": { "type": "http", "url": "https://…/mcp", "headers": { "Authorization": "${keychain:glitchtip/Authorization}" } },
 "grafana": { "command": "uvx", "args": ["mcp-grafana"], "env": { "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${op://Private/Grafana/token}" } }
 ```
 
-Welche Quelle gilt, entscheidet allein die Schreibweise, pro Wert. Es gibt keine Einstellung und keinen Fallback: Ist `op` nicht angemeldet, sucht der Hub nicht ersatzweise im Schlüsselbund. Ein Server kann beide Quellen mischen.
+The notation alone decides the source, per value. There is no setting and no fallback: if `op` is not signed in, the hub does not look in the keychain instead. A server may mix both sources.
 
-- `${keychain:name}` liest den macOS-Schlüsselbund (Account `mcp-hub`, Dienst `mcp-hub/<name>`; die Suche nach `mcp-hub` in der Schlüsselbundverwaltung zeigt alle Einträge). Am einfachsten über das Schloss neben einem Wert im Editor: Es legt den Eintrag an und ersetzt den Wert durch die Referenz, gespeichert wird erst mit „Speichern“. Von Hand geht es mit `security add-generic-password -a mcp-hub -s mcp-hub/<name> -w`. Nur druckbare ASCII-Werte, andere gibt `security` als Hex aus.
-- `${op://Tresor/Eintrag/Feld}` liest per 1Password-CLI (`op read`). `op` muss dafür in der Umgebung des Hubs angemeldet sein, z. B. über die Integration mit der 1Password-App. Der Hub legt in 1Password nichts an, das Schloss schreibt immer in den Schlüsselbund. Sinnvoll für Tokens, die ohnehin in 1Password gepflegt, geteilt oder rotiert werden; sonst ist der Schlüsselbund einfacher.
-- Referenzen dürfen in einem längeren Wert stehen, etwa `Bearer ${keychain:…}` oder `?key=${keychain:…}`.
-- Aufgelöste Werte bleiben bis zum Neustart des Hubs im Speicher. Nach einer Änderung im Schlüsselbund oder in 1Passwordden Hub neu starten (z. B. `./autostart.sh restart`); den Server aus- und einzuschalten reicht nicht. Nur das Schloss in der GUI aktualisiert den Speicher für seinen Eintrag sofort.
-- Fehlt ein Eintrag, startet der Server nicht. Der Tooltip am Status-Chip zeigt dann z. B. „Secret: Kein Schlüsselbund-Eintrag …“.
+- `${keychain:name}` reads the macOS keychain (account `mcp-hub`, service `mcp-hub/<name>`; searching for `mcp-hub` in Keychain Access lists all entries). The easiest way is the lock next to a value in the editor: it creates the entry and replaces the value with the reference; nothing is written to the file until you click “Save”. By hand: `security add-generic-password -a mcp-hub -s mcp-hub/<name> -w`. Printable ASCII values only; `security` returns anything else as hex.
+- `${op://vault/item/field}` reads via the 1Password CLI (`op read`). `op` must be signed in within the hub’s environment, e.g. through the 1Password app integration. The hub never writes to 1Password; the lock always writes to the keychain. Useful for tokens that are already maintained, shared or rotated in 1Password; otherwise the keychain is simpler.
+- References may be part of a longer value, such as `Bearer ${keychain:…}` or `?key=${keychain:…}`.
+- Resolved values stay in memory until the hub restarts. After changing a value in the keychain or 1Password, restart the hub (e.g. `./autostart.sh restart`); switching the server off and on is not enough. Only the lock in the GUI refreshes its own entry immediately.
+- If an entry is missing, the server does not start. The tooltip on the status chip then shows e.g. “Secret: No keychain entry …”.
 
-Mit `passEnvironment` (Einstellungen) erben lokale Server die Umgebung des Hubs, sonst nur `env`.
+With `passEnvironment` (Settings), local servers inherit the hub’s environment; otherwise they only get `env`.
 
 ## Hub
 
-Unter `/mcp` bündelt der Hub alle aktivierten Server zu einem MCP-Endpunkt (Streamable HTTP, JSON-Antworten).
+At `/mcp`, the hub bundles all enabled servers into one MCP endpoint (Streamable HTTP, JSON responses).
 
-- **Namen:** Tools und Prompts bekommen den Servernamen als Präfix (`grafana__query_loki_logs`), Resources behalten ihre URI.
-- **Titel:** Jedes Tool bekommt den Titel `server: Name`. Claude Desktop zeigt in den Konnektor-Berechtigungen nur den Titel an, dadurch bleibt erkennbar, von welchem Server ein Tool stammt.
-- **Änderungen:** Speichern in der GUI synchronisiert den Hub sofort. Neu gestartet werden nur Server, deren Befehl, URL, Header oder Umgebung sich geändert hat. Eine reine Änderung der Beschreibung startet nichts neu.
-- **Prozesse:** Lokale Server laufen in einer eigenen Prozessgruppe. Beim Beenden räumt der Hub die ganze Gruppe ab, auch Kindprozesse.
-- **Arbeitsverzeichnis:** Lokale Server laufen im Hub-Ordner. Tools, die einen Projektpfad erwarten, brauchen daher einen absoluten Pfad.
-- **Sicherheit:** Schreibende Anfragen (`POST`, `PUT`) mit fremdem `Origin`-Header werden abgelehnt, für den MCP-Endpunkt wie für die GUI-API (Schutz vor DNS-Rebinding und CSRF).
+- **Names:** tools and prompts get the server name as a prefix (`grafana__query_loki_logs`); resources keep their URI.
+- **Titles:** every tool gets the title `server: Name`. Claude Desktop only shows the title in its connector permissions, so you can still tell which server a tool belongs to.
+- **Changes:** saving in the GUI syncs the hub immediately. Only servers whose command, URL, headers or environment changed are restarted. Changing just the description restarts nothing.
+- **Processes:** local servers run in their own process group. On shutdown, the hub cleans up the whole group, child processes included.
+- **Working directory:** local servers run in the hub folder, so tools that expect a project path need an absolute path.
+- **Security:** write requests (`POST`, `PUT`) with a foreign `Origin` header are rejected, for the MCP endpoint and the GUI API alike (protection against DNS rebinding and CSRF).
+- **Messages:** error messages from the hub and its API are in English, since agents read them too. The GUI translates the common ones when German is selected.
 
-### Clients anbinden
+### Connecting clients
 
 Claude Code:
 
@@ -112,101 +113,103 @@ Copilot / VS Code (`~/.copilot/mcp-config.json`):
 { "mcpServers": { "mcp-hub": { "type": "http", "url": "http://127.0.0.1:4747/mcp", "tools": ["*"] } } }
 ```
 
-Claude Desktop kann nur lokale Befehle starten. Dafür liegt `bridge.py` im Repo: eine Brücke von stdio auf den Hub, ohne Abhängigkeiten (`~/Library/Application Support/Claude/claude_desktop_config.json`, das passende Snippet mit absoluten Pfaden zeigt die GUI unter der Serverliste):
+Claude Desktop can only start local commands. For that, the repository ships `bridge.py`, a dependency-free bridge from stdio to the hub (`~/Library/Application Support/Claude/claude_desktop_config.json`; the GUI shows the matching snippet with absolute paths below the server list):
 
 ```json
-{ "mcpServers": { "mcp-hub": { "command": "/opt/homebrew/bin/python3", "args": ["/pfad/zu/mcp-hub/bridge.py", "http://127.0.0.1:4747/mcp"] } } }
+{ "mcpServers": { "mcp-hub": { "command": "/opt/homebrew/bin/python3", "args": ["/path/to/mcp-hub/bridge.py", "http://127.0.0.1:4747/mcp"] } } }
 ```
 
-Die Brücke reicht Benachrichtigungen des Hubs an Claude Desktop weiter und meldet sich nach einem Neustart des Hubs von selbst neu an. Ist der Hub nicht erreichbar, beantwortet sie Anfragen mit einer Fehlermeldung, statt zu hängen. [mcp-proxy](https://github.com/sparfenyuk/mcp-proxy) funktioniert ebenfalls, leitet aber keine Benachrichtigungen weiter.
+The bridge forwards the hub’s notifications to Claude Desktop and re-initializes on its own after the hub restarts. If the hub is not reachable, it answers requests with an error instead of hanging. [mcp-proxy](https://github.com/sparfenyuk/mcp-proxy) works as well but does not forward notifications.
 
-### Live-Aktualisierung
+### Live updates
 
-Ändert sich die Tool-Liste (Server an/aus, Tools abgewählt, Profil gewechselt, ein Server meldet selbst neue Tools), schickt der Hub `notifications/tools/list_changed` (ebenso für Prompts und Resources). Clients empfangen das über einen offenen SSE-Stream (`GET /mcp` mit `Accept: text/event-stream`), den sie direkt nach `initialize` öffnen.
+When the tool list changes (server on/off, tools deselected, profile switched, a server reports new tools itself), the hub sends `notifications/tools/list_changed` (likewise for prompts and resources). Clients receive it over an open SSE stream (`GET /mcp` with `Accept: text/event-stream`) that they open right after `initialize`.
 
-- **Claude Code und VS Code/Copilot** unterstützen das. Nach dem ersten Update des Hubs einmal neu verbinden (Claude Code: `/mcp` → Reconnect), danach kommen Änderungen ohne Reconnect an.
-- **Anzeige:** Die Kopfzeile der GUI zählt die Clients mit offenem Stream („· 2 Clients“), der Tooltip nennt sie.
-- **Claude Desktop** über `bridge.py`: Die Brücke hält den Stream offen und reicht die Meldungen weiter. Mit mcp-proxy als Brücke gehen sie verloren, dann hilft nur ein Neustart von Claude Desktop.
-- **Neustart des Hubs:** Sitzungen gelten nur bis zum Neustart. Danach beantwortet der Hub alte Sitzungs-IDs mit `404`, und Clients melden sich neu an (so verlangt es die MCP-Spezifikation). `DELETE /mcp` beendet eine Sitzung.
+- **Claude Code and VS Code/Copilot** support this. Changes arrive without reconnecting.
+- **Indicator:** the GUI header counts the clients with an open stream (“· 2 clients”); the tooltip names them.
+- **Claude Desktop** via `bridge.py`: the bridge keeps the stream open and forwards the notifications. With mcp-proxy as the bridge they are lost, and only restarting Claude Desktop helps.
+- **Hub restart:** sessions only last until the hub restarts. Afterwards, the hub answers old session IDs with `404` and clients initialize again (as the MCP specification requires). `DELETE /mcp` ends a session.
 
 ## Autostart
 
-Damit Claude Code, Claude Desktop und Copilot nach einem Neustart des Macs ihre Tools haben, muss der Hub beim Login starten. `autostart.sh` richtet dafür einen LaunchAgent ein (`~/Library/LaunchAgents/de.tpwd.mcp-hub.plist`), der `python3 app.py` startet und nach einem Absturz neu startet:
+For Claude Code, Claude Desktop and Copilot to have their tools after a reboot, the hub needs to start at login. `autostart.sh` sets up a LaunchAgent (`~/Library/LaunchAgents/de.tpwd.mcp-hub.plist`) that runs `python3 app.py` and restarts it after a crash:
 
 ```bash
-./autostart.sh install     # einrichten und sofort starten
-./autostart.sh status      # eingerichtet? läuft der Hub?
-./autostart.sh restart     # Hub neu starten, z. B. nach einer Änderung im Schlüsselbund
-./autostart.sh uninstall   # entfernen und den Hub beenden
+./autostart.sh install     # set up and start right away
+./autostart.sh status      # set up? is the hub running?
+./autostart.sh restart     # restart the hub, e.g. after a keychain change
+./autostart.sh uninstall   # remove and stop the hub
 ```
 
-Log: `~/Library/Logs/mcp-hub.log`. Pfad zu `python3`, `PATH` und `PORT` werden beim Einrichten festgehalten; nach einem Umzug des Repos oder einer neuen Python-Installation erneut `install` ausführen. Läuft beim Einrichten schon ein Hub auf dem Port, bricht das Skript ab, statt einen zweiten zu starten.
+Log: `~/Library/Logs/mcp-hub.log`. The path to `python3`, `PATH` and `PORT` are captured at install time; after moving the repository or installing a new Python, run `install` again. If a hub is already running on the port, the script aborts instead of starting a second one.
 
 ## GUI
 
-Gestaltungsregeln und Komponenten der Oberfläche stehen in [DESIGN.md](DESIGN.md), Zielgruppe, Zweck und Grundsätze des Produkts in [PRODUCT.md](PRODUCT.md).
+Design rules and components of the interface are documented in [DESIGN.md](DESIGN.md); audience, purpose and principles of the product in [PRODUCT.md](PRODUCT.md).
 
-- **Server:** Liste mit An/Aus-Schalter, Hub-Status je Server (Tools, Fehler), Nutzung und Sortierung nach zuletzt verwendet, Name oder Datei. Über das Menü ⋯ lassen sich Server inspizieren, Tools für den Hub an- und abwählen, bearbeiten, duplizieren und löschen. Import nimmt `mcpServers`-JSON aus anderen Konfigurationen an.
-- **Protokoll:** Jeder Aufruf über den Hub mit Zeit, Client, Server, Tool, Argumenten, Ergebnisvorschau, Dauer und Fehlerstatus. Filterbar nach Server, Client und Fehlern.
-- **Inspector:** Verbindet sich direkt mit einem Server (unabhängig vom Hub) und listet Tools, Resources, Templates und Prompts. Alles lässt sich mit Formular- oder JSON-Eingabe aufrufen, stderr und Notifications erscheinen darunter.
-- **Einstellungen:** Pfad zur Serverdatei, `passEnvironment` und darunter die komplette `mcpServers`-Definition als JSON zum direkten Bearbeiten.
+- **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts `mcpServers` JSON from other configurations.
+- **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
+- **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
+- **Settings:** path to the server file, language, `passEnvironment`, and below that the complete `mcpServers` definition as JSON for direct editing.
 
-### Profile
+**Language:** English or German, chosen under Settings → Language. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 
-Ein Profil merkt sich je Server, ob er aktiviert ist und welche Tools abgewählt sind. Es dient dazu, schnell zwischen Setups zu wechseln, etwa „Frontend“ mit nuxt, nuxt-ui und chrome-devtools oder „Ops“ mit grafana und glitchtip.
+### Profiles
 
-- **Speichern:** Server und Tools einstellen, dann oben über ⋯ → „Als neues Profil speichern…“.
-- **Wechseln:** Oben die Profilauswahl öffnen (mit Suchfeld, Pfeiltasten und Enter) und ein Profil wählen. Der Hub schreibt An/Aus und `disabledTools` in `servers.json`, startet oder stoppt die betroffenen Server und blendet Tools aus. Verbundene Clients bekommen die neue Tool-Liste automatisch (siehe „Live-Aktualisierung“).
-- **Geändert:** Weicht der Stand vom aktiven Profil ab, zeigt die Auswahl einen orangefarbenen Punkt (Tooltip: ungespeicherte Änderungen). Über ⋯ → „… aktualisieren“ übernimmt das Profil den aktuellen Stand. Beim Wechsel mit ungespeicherten Änderungen fragt die GUI nach.
-- **Kein Profil:** schaltet alle Server ein und alle Tools frei (entfernt jedes `disabledTools`), auch wenn „Kein Profil“ schon ausgewählt ist. Ein geändertes Profil erneut anzuklicken setzt es auf seinen gespeicherten Stand zurück.
-- **Neue Server:** Server, die ein Profil nicht kennt, lässt der Wechsel unverändert. Mit „aktualisieren“ kommen sie ins Profil.
-- **Verwalten:** Unter ⋯ → „Profile verwalten…“ hat jedes Profil ein eigenes ⋯-Menü: URL kopieren, Aktivieren, Umbenennen und Löschen, ohne es vorher anzuwenden. Ein Klick auf die URL kopiert sie ebenfalls. Server und Tools bleiben dabei, wie sie sind. Namen dürfen kein `/` enthalten.
+A profile remembers, per server, whether it is enabled and which tools are deselected. It lets you switch quickly between setups, such as “Frontend” with nuxt, nuxt-ui and chrome-devtools, or “Ops” with grafana and glitchtip.
 
-Das Profil oben gilt für den ganzen Hub, also für alle Clients am Standard-Endpunkt `/mcp`.
+- **Save:** set up servers and tools, then ⋯ → “Save as new profile…” at the top.
+- **Switch:** open the profile picker at the top (with search field, arrow keys and Enter) and choose a profile. The hub writes on/off and `disabledTools` to `servers.json`, starts or stops the affected servers and hides tools. Connected clients receive the new tool list automatically (see “Live updates”).
+- **Modified:** when the current state differs from the active profile, the picker shows an orange dot (tooltip: unsaved changes). ⋯ → “Update …” stores the current state in the profile. Switching with unsaved changes asks first.
+- **No profile:** turns on all servers and enables all tools (removes every `disabledTools`), even if “No profile” is already selected. Clicking a modified profile again resets it to its saved state.
+- **New servers:** servers a profile does not know are left unchanged by a switch. “Update” adds them to the profile.
+- **Manage:** under ⋯ → “Manage profiles…”, each profile has its own ⋯ menu: copy URL, activate, rename and delete, without applying it first. Clicking the URL copies it as well. Servers and tools stay as they are. Names must not contain `/`.
 
-**Endpunkt pro Profil:** Jedes Profil ist zusätzlich unter `http://127.0.0.1:4747/p/<profil>/mcp` erreichbar (URL zum Kopieren in „Profile verwalten…“). Ein Client dort sieht immer die Server und Tools dieses Profils, egal welches Profil oben aktiv ist. So kann z. B. Copilot fest mit „Frontend“ arbeiten und Claude Code mit allem:
+The profile selected at the top applies to the whole hub, i.e. to all clients on the default endpoint `/mcp`.
+
+**Endpoint per profile:** each profile is also available at `http://127.0.0.1:4747/p/<profile>/mcp` (copy the URL in “Manage profiles…”). A client there always sees that profile’s servers and tools, regardless of which profile is active at the top. That way, Copilot can work with “Frontend” only while Claude Code gets everything:
 
 ```bash
 claude mcp add --scope user --transport http mcp-hub-frontend http://127.0.0.1:4747/p/Frontend/mcp
 ```
 
-Der Profil-Endpunkt filtert nur: Server, die im Hub ausgeschaltet sind, fehlen auch dort. Server, die das Profil nicht kennt, erscheinen mit ihrer aktuellen Einstellung. Im Protokoll steht hinter dem Client das Profil, z. B. `claude-code · Frontend`.
+The profile endpoint only filters: servers switched off in the hub are missing there too. Servers the profile does not know appear with their current setting. The log shows the profile after the client, e.g. `claude-code · Frontend`.
 
-### Statistik
+### Statistics
 
-Über dem Aufrufprotokoll zeigt eine einklappbare Statistik die Kennzahlen (Aufrufe, Fehlerquote, typische Dauer, Clients), die Aufrufe pro Tag der letzten 14 Tage mit Fehleranteil, eine Tabelle je Server (Aufrufe, Fehler, Median, p95, zuletzt; ein Klick filtert das Protokoll) und die fünf langsamsten Tools nach p95. Grundlage sind die letzten 5.000 Aufrufe aus `calls.jsonl`.
+Above the call log, a collapsible statistics panel shows key figures (calls, error rate, typical duration, clients), calls per day for the last 14 days including errors, a table per server (calls, errors, median, p95, last call; a click filters the log) and the five slowest tools by p95. It is based on the last 5,000 calls in `calls.jsonl`.
 
-### Nutzung und Protokoll
+### Usage and call log
 
-Gezählt werden nur echte Aufrufe (`tools/call`, `prompts/get`, `resources/read`), keine Listenabfragen. Im Protokoll sind Argumente auf 4.000 und Ergebnisse auf 600 Zeichen gekürzt.
+Only real calls are counted (`tools/call`, `prompts/get`, `resources/read`), not list requests. In the log, arguments are truncated to 4,000 and results to 600 characters.
 
-Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt dafür eine `Mcp-Session-Id`. Clients, die schon vor einem Hub-Neustart verbunden waren, schicken eine unbekannte Sitzung mit. Sie erscheinen als `<User-Agent> (ohne Sitzung)`, bis sie sich neu verbinden.
+The hub identifies the client from `clientInfo` during `initialize` and assigns it an `Mcp-Session-Id`. Requests without a session ID appear as `<user agent> (no session)`.
 
 ## API
 
-| Methode | Pfad | Zweck |
+| Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/state` | Konfiguration und Einstellungen |
-| `PUT` | `/api/servers` | `{"mcpServers": {…}}` speichern, Hub synchronisieren |
-| `PUT` | `/api/settings` | Einstellungen speichern |
-| `GET` | `/api/hub` | Status je Server (Zustand, Fehler, Anzahl Tools/Prompts/Resources) |
-| `GET` | `/api/hub/tools?name=` | Alle Tools eines Servers mit Status `enabled` |
-| `GET` | `/api/live` | Clients mit offenem Benachrichtigungs-Stream |
-| `GET` | `/api/usage` | Nutzungszähler |
-| `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
-| `GET` | `/api/stats?days=14` | Auswertung der Aufrufe (Kennzahlen, je Tag, je Server, langsamste Tools) |
-| `POST` | `/api/oauth/start` | `{"name"}`: Anmeldung starten, liefert `{"url"}` der Anmeldeseite |
-| `POST` | `/api/oauth/logout` | `{"name"}`: Token löschen |
-| `GET` | `/oauth/callback` | Rückkehr vom Anmeldeserver |
-| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}`; `clear` schaltet alles ein |
-| `POST` | `/api/secrets` | `{"name", "value"}` im Schlüsselbund ablegen, liefert `{"ref"}` |
-| `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |
-| `POST` | `/api/inspect/call` | `{"name", "method", "params"}` an den Server schicken |
-| `POST` | `/api/inspect/disconnect` | Sitzung schließen |
-| `GET` | `/api/inspect/log?name=&since=` | stderr und Notifications der Sitzung |
-| `POST` | `/mcp` | MCP-Endpunkt des Hubs |
-| `GET` | `/mcp` | SSE-Stream für Benachrichtigungen (`Accept: text/event-stream`) |
-| `POST` | `/p/<profil>/mcp` | MCP-Endpunkt mit festem Profil (auch `GET` für den Stream) |
+| `GET` | `/api/state` | Configuration and settings |
+| `PUT` | `/api/servers` | Save `{"mcpServers": {…}}` and sync the hub |
+| `PUT` | `/api/settings` | Save settings |
+| `GET` | `/api/hub` | Status per server (state, error, number of tools/prompts/resources, OAuth status) |
+| `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state |
+| `GET` | `/api/live` | Clients with an open notification stream |
+| `GET` | `/api/usage` | Usage counter |
+| `GET` | `/api/calls?limit=300` | Recent calls (max. 1,000) |
+| `GET` | `/api/stats?days=14` | Call statistics (key figures, per day, per server, slowest tools) |
+| `POST` | `/api/oauth/start` | `{"name"}`: start sign-in, returns the sign-in page `{"url"}` |
+| `POST` | `/api/oauth/logout` | `{"name"}`: delete the token |
+| `GET` | `/oauth/callback` | Return from the authorization server |
+| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}`; `clear` enables everything |
+| `POST` | `/api/secrets` | Store `{"name", "value"}` in the keychain, returns `{"ref"}` |
+| `POST` | `/api/inspect/connect` | Open an inspector session (`{"name": …}`) |
+| `POST` | `/api/inspect/call` | Send `{"name", "method", "params"}` to the server |
+| `POST` | `/api/inspect/disconnect` | Close the session |
+| `GET` | `/api/inspect/log?name=&since=` | stderr and notifications of the session |
+| `POST` | `/mcp` | The hub’s MCP endpoint |
+| `GET` | `/mcp` | SSE stream for notifications (`Accept: text/event-stream`) |
+| `POST` | `/p/<profile>/mcp` | MCP endpoint with a fixed profile (`GET` for the stream as well) |
 
 ## Tests
 
@@ -214,22 +217,20 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 python3 -m unittest discover -s tests -v
 ```
 
-Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz, die Statistik und (nur macOS) die Auflösung aus dem Schlüsselbund sowie der komplette OAuth-Ablauf gegen einen Test-Anbieter (`tests/dummy_oauth_server.py`: Anmeldung, Erneuerung eines abgelaufenen Tokens, Abmelden; einmal mit automatischer Registrierung, einmal mit fester Client-ID und Secret). Die echte Konfiguration bleibt unberührt; die Schlüsselbund-Tests legen `mcp-hub/selftest/hub-tests` und `mcp-hub/oauth/selftest-oauth` an und löschen sie wieder.
+The tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again.
 
-## Fehlersuche
+## Troubleshooting
 
-- **Server zeigt „Fehler“:** Mit der Maus über den Status-Chip fahren, der Tooltip zeigt die Fehlermeldung samt letzter stderr-Zeile. Genauer geht es mit dem Inspector, der denselben Eintrag direkt startet.
-- **Tool fehlt im Client:** Ist der Server aktiviert und im Hub grün? Danach den Client neu verbinden.
-- **Verwaiste Prozesse:** Prozesse, die nach dem Beenden eines Clients übrig bleiben, stammen meist von Clients, die nur den obersten Prozess beenden. Der Hub selbst beendet ganze Prozessgruppen. Prüfen mit `ps -axo pid,ppid,command | grep <server>`.
-- **Port belegt:** `lsof -iTCP:4747 -sTCP:LISTEN`. Einen anderen Port per `PORT=…` setzen, dann aber auch die Client-URLs anpassen.
+- **Server shows “error”:** hover over the status chip; the tooltip shows the error message including the last stderr line. For more detail, use the inspector, which starts the same entry directly.
+- **Tool missing in the client:** is the server enabled and green in the hub? Then reconnect the client.
+- **Orphaned processes:** processes left over after a client quits usually come from clients that only end the top-level process. The hub itself ends whole process groups. Check with `ps -axo pid,ppid,command | grep <server>`.
+- **Port in use:** `lsof -iTCP:4747 -sTCP:LISTEN`. Set a different port with `PORT=…`, but then update the client URLs too.
 
-## Ideen und nächste Schritte
+## Roadmap
 
-1. **Remote und Backup:** Den Code in ein privates Git-Repo pushen und `servers.json` verschlüsselt sichern, etwa per Time Machine oder als 1Password-Dokument.
-2. **Tokens aus der JSON holen:** Erledigt, siehe „Secrets“.
-3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
-4. **Änderungen an Clients melden:** Erledigt, siehe „Live-Aktualisierung“.
-5. **Statistik im Protokoll:** Erledigt, siehe „Statistik“.
-6. **OAuth für entfernte Server:** Erledigt, siehe „OAuth“, auch mit fester Client-ID.
-7. **Alte Reste entfernen:** Erledigt.
-8. **Tests:** Erledigt, siehe „Tests“.
+- **Linux and Windows:** secrets, OAuth tokens and autostart currently rely on the macOS keychain and LaunchAgents.
+- **Profile endpoint starts servers on demand:** a server switched off in the hub is currently missing from profile endpoints as well.
+
+## License
+
+[MIT](LICENSE)
