@@ -2,6 +2,11 @@
 
 A local hub for MCP servers: manage all your servers in one place, test them, and serve them bundled behind a single endpoint to Claude Code, Claude Desktop, Copilot and other clients.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img alt="MCP Hub server list with profiles, tool counts, usage and an OAuth sign-in prompt" src="docs/screenshot-light.png">
+</picture>
+
 ```bash
 python3 app.py   # GUI: http://127.0.0.1:4747, hub: http://127.0.0.1:4747/mcp
 ```
