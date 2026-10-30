@@ -404,6 +404,12 @@ class HubTest(unittest.TestCase):
         status, body = self.request("PUT", "/api/servers", {"mcpServers": twins})
         self.assertEqual((status, body["error"]), (400, "my server and my_server would share the tool prefix my_server"))
 
+    def test_gui_assets_are_served(self):
+        for path, kind in (("/app.css", "text/css"), ("/i18n.js", "text/javascript")):
+            with urllib.request.urlopen(self.base + path) as response:
+                self.assertTrue(response.headers["Content-Type"].startswith(kind))
+                self.assertGreater(len(response.read()), 1000)
+
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
 

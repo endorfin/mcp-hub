@@ -31,7 +31,7 @@ Please add or extend a test for every behavior change. `tests/dummy_server.py` i
 These come from [PRODUCT.md](PRODUCT.md) and keep the project small:
 
 - **No dependencies.** Standard library only, no build step, one process. A feature that needs a package probably belongs elsewhere.
-- **One file for the interface.** `index.html` holds markup, styles and script; it is served as is.
+- **No build step for the interface.** `index.html` holds markup and script, `app.css` the styles and `i18n.js` the translations; `app.py` serves them as they are. A new asset needs an entry in `STATIC` in `app.py`.
 - **No secrets in plain text.** New features that handle credentials store them in the keychain, never in `servers.json`.
 - **Changes take effect immediately.** Saving syncs the hub; clients are notified via `list_changed`.
 
@@ -39,13 +39,13 @@ These come from [PRODUCT.md](PRODUCT.md) and keep the project small:
 
 - Match the surrounding code: naming, structure, idioms.
 - Comments are the exception. Add one only when it prevents a concrete, likely mistake; explanations of *why* a change was made belong in the commit message.
-- No comments in `index.html` – it is shipped to the browser.
+- No comments in `index.html`, `app.css` or `i18n.js` – they are shipped to the browser.
 - Messages from the hub, its API and the bridge are in English; agents read them too.
 
 ## Interface
 
 - **Design:** follow [DESIGN.md](DESIGN.md) – tokens on `:root` for light and dark, custom listboxes instead of native selects, one control height, color only with meaning.
-- **Translations:** the interface is available in German and English. Every visible string goes into the `I18N` dictionary in `index.html` with both languages: static markup via `data-i18n` / `data-i18n-placeholder` / `data-i18n-title` / `data-i18n-aria`, dynamic text via `t("key", { vars })`. If a new backend message is shown in the interface, add a German pattern to `BACKEND_DE`.
+- **Translations:** the interface is available in German and English. Every visible string goes into the `I18N` dictionary in `i18n.js` with both languages: static markup via `data-i18n` / `data-i18n-placeholder` / `data-i18n-title` / `data-i18n-aria`, dynamic text via `t("key", { vars })`. If a new backend message is shown in the interface, add a German pattern to `BACKEND_DE`.
 - Check your change in the browser in both color schemes and both languages (Settings → Language).
 
 ## Commits and pull requests
@@ -55,7 +55,7 @@ These come from [PRODUCT.md](PRODUCT.md) and keep the project small:
 
 ## Releases
 
-The version lives in one place: `VERSION` in `inspector.py`. It appears in the GUI header and in the hub’s `serverInfo`. For a release, bump it, commit, and tag the commit as `v<version>`.
+The version lives in one place: `VERSION` in `version.py`. It appears in the GUI header and in the hub’s `serverInfo`. For a release, bump it, commit, and tag the commit as `v<version>`.
 
 ## License
 

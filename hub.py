@@ -13,7 +13,8 @@ from pathlib import Path
 import compact
 from fsutil import append_private, atomic_write
 import oauth
-from inspector import PROTOCOL_VERSION, VERSION, AuthRequired, RpcError, SessionExpired, open_session
+from sessions import PROTOCOL_VERSION, AuthRequired, RpcError, SessionExpired, open_session
+from version import VERSION
 
 SEPARATOR = "__"
 SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
