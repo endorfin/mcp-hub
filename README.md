@@ -165,6 +165,14 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `GET` | `/mcp` | SSE-Stream für Benachrichtigungen (`Accept: text/event-stream`) |
 | `POST` | `/p/<profil>/mcp` | MCP-Endpunkt mit festem Profil (auch `GET` für den Stream) |
 
+## Tests
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz und (nur macOS) die Auflösung aus dem Schlüsselbund. Die echte Konfiguration bleibt unberührt; der Schlüsselbund-Test legt `mcp-hub/selftest/hub-tests` an und löscht ihn wieder.
+
 ## Fehlersuche
 
 - **Server zeigt „Fehler“:** Mit der Maus über den Status-Chip fahren, der Tooltip zeigt die Fehlermeldung samt letzter stderr-Zeile. Genauer geht es mit dem Inspector, der denselben Eintrag direkt startet.
@@ -181,4 +189,4 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 5. **Statistik im Protokoll:** Aufrufe pro Tag, langsamste Tools und Fehlerquote je Server, berechnet aus `calls.jsonl`.
 6. **OAuth für entfernte Server:** Für gehostete MCPs, die nur OAuth anbieten.
 7. **Alte Reste entfernen:** Erledigt.
-8. **Tests:** Ein Smoke-Test, der den Hub mit einem Dummy-Server startet und `tools/list` sowie `tools/call` prüft.
+8. **Tests:** Erledigt, siehe „Tests“.
