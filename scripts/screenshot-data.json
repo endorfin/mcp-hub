@@ -1,0 +1,30 @@
+{
+  "servers": {
+    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/Projects"], "description": "Read and write files in ~/Projects", "tags": ["files"] },
+    "playwright": { "command": "npx", "args": ["@playwright/mcp@latest"], "description": "Browser automation: navigate, click, screenshot", "tags": ["frontend", "testing"] },
+    "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp", "description": "Issues, stack traces and releases", "tags": ["monitoring"] },
+    "grafana": { "command": "uvx", "args": ["mcp-grafana"], "env": { "GRAFANA_URL": "http://localhost:3000" }, "description": "Dashboards, Prometheus and Loki queries, alerts", "tags": ["monitoring"] },
+    "postgres": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/app"], "description": "Query the local app database", "tags": ["database"], "disabledTools": ["write_query"] },
+    "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"], "description": "Knowledge graph that persists across sessions", "tags": ["knowledge"] },
+    "linear": { "type": "http", "url": "https://mcp.linear.app/mcp", "description": "Issues, projects and cycles", "tags": ["devops"] }
+  },
+  "hub": {
+    "filesystem": { "state": "running", "tools": 8, "toolsTotal": 8 },
+    "playwright": { "state": "running", "tools": 7, "toolsTotal": 7 },
+    "sentry": { "state": "running", "tools": 12, "toolsTotal": 12, "oauth": { "signedIn": true } },
+    "grafana": { "state": "running", "tools": 10, "toolsTotal": 10 },
+    "postgres": { "state": "running", "tools": 3, "toolsTotal": 4 },
+    "memory": { "state": "running", "tools": 6, "toolsTotal": 6 },
+    "linear": { "state": "auth", "tools": 0, "toolsTotal": 0, "oauth": { "signedIn": false } }
+  },
+  "usedSecondsAgo": {
+    "filesystem": [128, 180],
+    "playwright": [41, 3600],
+    "sentry": [17, 18000],
+    "grafana": [23, 93600],
+    "postgres": [12, 172800],
+    "memory": [5, 345600]
+  },
+  "liveClients": ["claude-code", "codex", "copilot-cli"],
+  "profile": "Frontend"
+}
