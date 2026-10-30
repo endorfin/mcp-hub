@@ -126,7 +126,7 @@ Ein Profil merkt sich je Server, ob er aktiviert ist und welche Tools abgewählt
 - **Wechseln:** In der Auswahl oben ein Profil wählen. Der Hub schreibt An/Aus und `disabledTools` in `servers.json`, startet oder stoppt die betroffenen Server und blendet Tools aus. Clients sehen die neue Tool-Liste nach einem Reconnect.
 - **Geändert:** Weicht der Stand vom aktiven Profil ab, steht „geändert“ neben der Auswahl. Über ⋯ → „… aktualisieren“ übernimmt das Profil den aktuellen Stand. Beim Wechsel mit ungespeicherten Änderungen fragt die GUI nach.
 - **Neue Server:** Server, die ein Profil nicht kennt, lässt der Wechsel unverändert. Mit „aktualisieren“ kommen sie ins Profil.
-- **Löschen:** über ⋯ → „… löschen“ für das aktive Profil. Server und Tools bleiben dabei, wie sie sind.
+- **Verwalten:** Unter ⋯ → „Profile verwalten…“ lassen sich Profile umbenennen und löschen, ohne sie vorher anzuwenden. Server und Tools bleiben dabei, wie sie sind. Namen dürfen kein `/` enthalten.
 
 Das Profil oben gilt für den ganzen Hub, also für alle Clients am Standard-Endpunkt `/mcp`.
 
@@ -155,7 +155,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `GET` | `/api/hub/tools?name=` | Alle Tools eines Servers mit Status `enabled` |
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
-| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "delete" \| "clear", "name"}` |
+| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}` |
 | `POST` | `/api/secrets` | `{"name", "value"}` im Schlüsselbund ablegen, liefert `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |
 | `POST` | `/api/inspect/call` | `{"name", "method", "params"}` an den Server schicken |

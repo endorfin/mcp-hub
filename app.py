@@ -92,7 +92,7 @@ def profile_snapshot(servers):
             for name, entry in servers.items()}
 
 
-def update_profiles(action, name):
+def update_profiles(action, name, new_name=None):
     data = load_profiles()
     profiles = data["profiles"]
     if action == "clear":
@@ -118,6 +118,17 @@ def update_profiles(action, name):
         write_json(config_path(), config)
         sync_hub_in_background()
         data["active"] = name
+    elif action == "rename":
+        new_name = (new_name or "").strip()
+        if name not in profiles:
+            return f"Unbekanntes Profil: {name}"
+        if not new_name or "/" in new_name:
+            return "Ungültiger neuer Name"
+        if new_name != name and new_name in profiles:
+            return f"Profil „{new_name}“ gibt es schon"
+        profiles[new_name] = profiles.pop(name)
+        if data["active"] == name:
+            data["active"] = new_name
     elif action == "delete":
         profiles.pop(name, None)
         if data["active"] == name:
@@ -230,7 +241,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.mcp(unquote(match.group(1)) if match.group(1) else None)
         if self.path == "/api/profiles":
             data = self.body()
-            if error := update_profiles(data.get("action"), data.get("name")):
+            if error := update_profiles(data.get("action"), data.get("name"), data.get("newName")):
                 return self.send({"error": error}, HTTPStatus.BAD_REQUEST)
             return self.send(self.state())
         if self.path == "/api/secrets":

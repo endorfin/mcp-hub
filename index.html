@@ -110,6 +110,15 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .tool small { display: block; color: var(--muted); font-size: 12.5px; }
 .tool-bar { display: flex; gap: 8px; align-items: center; }
 .tool-bar input { flex: 1; }
+.prof-list { display: grid; border: 1px solid var(--line); border-radius: 9px; }
+.prof { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); }
+.prof:first-child { border-top: 0; }
+.prof-main { display: grid; gap: 3px; min-width: 0; }
+.prof-main small { color: var(--muted); font-size: 12.5px; }
+.prof-url { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.prof-url code { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
+.prof-actions { display: flex; gap: 6px; }
+@media (max-width: 640px) { .prof { grid-template-columns: 1fr; } }
 .call { border-top: 1px solid var(--line); }
 .call:first-child { border-top: 0; }
 .call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
@@ -189,7 +198,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         <button role="menuitem" id="profileSave">Als neues Profil speichern…</button>
         <button role="menuitem" id="profileUpdate">Profil aktualisieren</button>
         <hr>
-        <button role="menuitem" class="danger" id="profileDelete">Profil löschen</button>
+        <button role="menuitem" id="profileManage">Profile verwalten…</button>
       </div>
     </div>
     <nav id="tabs">
@@ -346,6 +355,15 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   </form>
 </dialog>
 
+<dialog id="profilesDialog">
+  <div class="dhead">Profile</div>
+  <div class="dbody">
+    <span class="hint">Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, fehlen allerdings auch dort.</span>
+    <div class="prof-list" id="profileList"></div>
+  </div>
+  <div class="dfoot"><button type="button" class="btn" id="profilesClose">Schließen</button></div>
+</dialog>
+
 <dialog id="toolsDialog">
   <form method="dialog" id="toolsForm">
     <div class="dhead" id="toolsTitle">Tools</div>
@@ -448,14 +466,14 @@ function renderProfiles() {
   $("#profileDirty").hidden = !dirty;
   $("#profileUpdate").hidden = !sel.value;
   $("#profileUpdate").textContent = `„${sel.value}“ aktualisieren`;
-  $("#profileDelete").hidden = !sel.value;
-  $("#profileDelete").textContent = `„${sel.value}“ löschen`;
-  $("#profileDelete").previousElementSibling.hidden = !sel.value;
+  $("#profileManage").hidden = !names.length;
+  $("#profileManage").previousElementSibling.hidden = !names.length;
+  if ($("#profilesDialog").open) renderProfileList();
 }
 
-async function profileAction(action, name, message) {
+async function profileAction(action, name, message, extra = {}) {
   try {
-    state = await api("POST", "/api/profiles", { action, name });
+    state = await api("POST", "/api/profiles", { action, name, ...extra });
     syncJson();
     render();
     if (message) toast(message);
@@ -485,10 +503,41 @@ $("#profileSave").onclick = () => {
   profileAction("save", name, `Profil „${name}“ gespeichert`);
 };
 $("#profileUpdate").onclick = () => profileAction("save", state.profiles.active, `Profil „${state.profiles.active}“ aktualisiert`);
-$("#profileDelete").onclick = () => {
-  const name = state.profiles.active;
-  if (confirm(`Profil „${name}“ löschen? Server und Tools bleiben, wie sie gerade sind.`)) profileAction("delete", name, `Profil „${name}“ gelöscht`);
-};
+const profileUrl = name => `http://127.0.0.1:${location.port}/p/${encodeURIComponent(name)}/mcp`;
+
+function renderProfileList() {
+  const { active, profiles } = state.profiles;
+  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const list = $("#profileList");
+  list.replaceChildren();
+  if (!names.length) return list.append(el("div", { className: "empty", textContent: "Keine Profile." }));
+  for (const name of names) {
+    const saved = Object.values(profiles[name].servers);
+    const on = saved.filter(x => x.enabled).length;
+    const off = saved.filter(x => x.enabled).reduce((n, x) => n + x.disabledTools.length, 0);
+    const url = profileUrl(name);
+    const rename = el("button", { type: "button", className: "btn", textContent: "Umbenennen" });
+    const remove = el("button", { type: "button", className: "btn danger", textContent: "Löschen" });
+    const copy = el("button", { type: "button", className: "btn ghost", textContent: "Kopieren" });
+    rename.onclick = () => {
+      const next = prompt("Neuer Name:", name)?.trim();
+      if (next && next !== name) profileAction("rename", name, `Profil heißt jetzt „${next}“`, { newName: next });
+    };
+    remove.onclick = () => {
+      if (confirm(`Profil „${name}“ löschen? Server und Tools bleiben, wie sie gerade sind.`)) profileAction("delete", name, `Profil „${name}“ gelöscht`);
+    };
+    copy.onclick = async () => { await navigator.clipboard.writeText(url); toast("URL kopiert"); };
+    list.append(el("div", { className: "prof" },
+      el("div", { className: "prof-main" },
+        el("div", {}, el("b", { textContent: name }), name === active ? el("span", { className: "chip ok", textContent: "aktiv", style: "margin-left:8px;cursor:default" }) : null),
+        el("small", { textContent: `${on} von ${saved.length} Servern an` + (off ? ` · ${off} ${off === 1 ? "Tool" : "Tools"} deaktiviert` : "") }),
+        el("div", { className: "prof-url" }, el("code", { textContent: url }), copy)),
+      el("div", { className: "prof-actions" }, rename, remove)));
+  }
+}
+
+$("#profileManage").onclick = () => { renderProfileList(); $("#profilesDialog").showModal(); };
+$("#profilesClose").onclick = () => $("#profilesDialog").close();
 
 function render() {
   renderHubStatus();
