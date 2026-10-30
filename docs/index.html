@@ -399,9 +399,14 @@ section.block { padding: 120px 0 0; }
 .steps .tabs + .code { margin-top: 10px; }
 
 .close { margin: 120px 0 64px; }
-.close .wrap { display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap; width: calc(100% - 48px); max-width: 1192px; padding: 64px 56px; border-radius: 28px; border: 1px solid var(--line); background: radial-gradient(40rem 22rem at 0% 0%, var(--glow), transparent 70%), radial-gradient(34rem 22rem at 100% 100%, var(--glow-warm), transparent 70%), var(--panel); }
 .close h2 { font-size: clamp(1.8rem, 1.1rem + 2vw, 2.9rem); letter-spacing: -.032em; line-height: 1.08; font-weight: 600; font-stretch: 105%; max-width: 16em; }
 .close .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.close-panel { position: relative; overflow: hidden; width: calc(100% - 48px); max-width: 1192px; margin: 0 auto; padding: 72px 56px; border-radius: 28px; border: 1px solid var(--line); background: radial-gradient(40rem 22rem at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), var(--panel); }
+.close-panel > :not(svg) { position: relative; }
+.close-panel .actions { margin-top: 28px; }
+.close-mark { position: absolute; right: -90px; top: 50%; width: 440px; height: 440px; transform: translateY(-50%) rotate(-12deg); color: var(--ink); opacity: .07; }
+.close .sub { margin-top: 14px; color: var(--muted); font-size: 17px; max-width: 34em; }
+
 footer { border-top: 1px solid var(--line); padding: 22px 0 40px; color: var(--muted); font-size: 13px; }
 footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; }
 footer nav { display: flex; gap: 18px; flex-wrap: wrap; margin-left: auto; }
@@ -421,8 +426,9 @@ footer a:hover { color: var(--ink); }
 }
 @media (max-width: 720px) {
   .wrap { padding: 0 16px; }
+  .close-panel { width: calc(100% - 32px); padding: 40px 22px; border-radius: 22px; }
+  .close-mark { width: 280px; height: 280px; right: -100px; }
   .hero { padding-top: 48px; }
-  .close .wrap { width: calc(100% - 32px); padding: 36px 22px; border-radius: 22px; }
   .board { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .board > svg { display: none; }
   .clients ul { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -698,11 +704,13 @@ cd mcp-hub &amp;&amp; python3 app.py</pre><button class="copy" type="button" dat
   </section>
 
   <section class="close">
-    <div class="wrap">
+    <div class="close-panel">
+      <svg class="close-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M8 10h6M8 16h6M8 22h6M18 16h6" stroke="var(--panel)" stroke-width="2.4" stroke-linecap="round"/><path d="M14 10c3 0 2 6 4 6M14 22c3 0 2-6 4-6" stroke="var(--panel)" stroke-width="2" fill="none"/></svg>
       <h2 data-i18n="close.title">One entry per client. Everything else lives in the hub.</h2>
+      <p class="sub" data-i18n="close.sub">Open source under the MIT license. Clone it, read the code, open an issue.</p>
       <div class="actions">
-        <a class="btn primary" href="https://github.com/endorfin/mcp-hub" data-i18n="close.gh">View on GitHub</a>
-        <a class="btn" href="https://github.com/endorfin/mcp-hub#readme" data-i18n="close.docs">Read the docs</a>
+          <a class="btn primary" href="https://github.com/endorfin/mcp-hub" data-i18n="close.gh">View on GitHub</a>
+          <a class="btn" href="https://github.com/endorfin/mcp-hub#readme" data-i18n="close.docs">Read the docs</a>
       </div>
     </div>
   </section>
@@ -790,7 +798,7 @@ const I18N = {
     "s2.title": "Add servers", "s2.text": "Click + → “Import…” and pick an installed client to take over its servers, or paste an existing configuration. “Add server…” creates one by hand.",
     "s3.title": "Connect your clients", "s3.text": "Settings → Clients → “Connect clients”, or add the one entry by hand:",
     "s4.title": "Start at login", "s4.text": "Stop the hub from step 1 and register it, so your clients find it after a reboot.",
-    "close.title": "One entry per client. Everything else lives in the hub.", "close.gh": "View on GitHub", "close.docs": "Read the docs",
+    "close.title": "One entry per client. Everything else lives in the hub.", "close.sub": "Open source under the MIT license. Clone it, read the code, open an issue.", "close.gh": "View on GitHub", "close.docs": "Read the docs",
     "footer.license": "MCP Hub is open source under the MIT license.", "footer.releases": "Releases", "footer.issue": "Report an issue", "footer.security": "Security",
     "copy": "Copy", "copied": "Copied to the clipboard"
   },
@@ -861,7 +869,7 @@ const I18N = {
     "s2.title": "Server hinzufügen", "s2.text": "Auf + → „Importieren…“ klicken und einen installierten Client wählen, um seine Server zu übernehmen, oder eine vorhandene Konfiguration einfügen. „Server hinzufügen…“ legt einen von Hand an.",
     "s3.title": "Clients verbinden", "s3.text": "Einstellungen → Clients → „Clients verbinden“, oder den einen Eintrag von Hand anlegen:",
     "s4.title": "Beim Login starten", "s4.text": "Den Hub aus Schritt 1 beenden und registrieren, damit deine Clients ihn nach einem Neustart finden.",
-    "close.title": "Ein Eintrag pro Client. Alles andere lebt im Hub.", "close.gh": "Auf GitHub ansehen", "close.docs": "Dokumentation lesen",
+    "close.title": "Ein Eintrag pro Client. Alles andere lebt im Hub.", "close.sub": "Open Source unter MIT-Lizenz. Klonen, Code lesen, Issue aufmachen.", "close.gh": "Auf GitHub ansehen", "close.docs": "Dokumentation lesen",
     "footer.license": "MCP Hub ist Open Source unter der MIT-Lizenz.", "footer.releases": "Releases", "footer.issue": "Problem melden", "footer.security": "Sicherheit",
     "copy": "Kopieren", "copied": "In die Zwischenablage kopiert"
   }
