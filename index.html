@@ -270,6 +270,14 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 @media (max-width: 760px) { .call summary { grid-template-columns: 70px 1fr auto; } .call .who, .call .ms { display: none; } }
 .hubhead { display: flex; gap: 14px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
 .compact-row { display: grid; gap: 4px; margin-top: 14px; }
+.int-title { margin: 20px 0 4px; font-size: 13px; }
+.int-list { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; }
+.int-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); }
+.int-row:first-child { border-top: 0; }
+.int-name { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.int-path { font: 12px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.int-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.imp-sources { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .snip-tabs { margin: 10px 0 14px; box-shadow: inset 0 -1px var(--line); }
 .hubsnips pre + .hubsnip-head { margin-top: 14px; }
 .hubsnip-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; font-size: 13px; }
@@ -460,6 +468,10 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         <label class="check"><input type="checkbox" id="hubCompact"> <span data-i18n="s.compactMode">Kompakt-Modus</span></label>
         <span class="hint" id="compactHint"></span>
       </div>
+      <div class="int-title"><b data-i18n="s.connectClients">Clients verbinden</b></div>
+      <span class="hint" data-i18n="s.connectHint">Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vorher wird eine Sicherung *.mcp-hub.bak angelegt.</span>
+      <div class="int-list" id="integrations"></div>
+      <div class="int-title"><b data-i18n="s.manualSetup">Von Hand einrichten</b></div>
       <nav class="line-tabs snip-tabs" id="hubTabs">
         <button data-snip="code" class="active">Claude Code</button>
         <button data-snip="desktop">Claude Desktop</button>
@@ -567,8 +579,10 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
     <div class="dhead" data-i18n="s.importTitle">Server importieren</div>
     <div class="dbody">
       <span class="hint" data-i18n="s.importHint">JSON, TOML oder <code>mcp add</code>-Befehle aus Claude, Codex, VS Code, Cursor &amp; Co. einfügen – das Format wird automatisch erkannt. Bestehende Einträge gleichen Namens werden überschrieben.</span>
+      <div class="imp-sources" id="importSources" hidden></div>
       <textarea id="importText" rows="10" spellcheck="false" placeholder='{ "mcpServers": { "fetch": { "command": "uvx", "args": ["mcp-server-fetch"] } } }&#10;&#10;[mcp_servers.context7]&#10;command = "npx"&#10;args = ["-y", "@upstash/context7-mcp"]&#10;&#10;claude mcp add --transport http github https://api.githubcopilot.com/mcp/'></textarea>
       <div class="import-preview" id="importPreview" hidden></div>
+      <label class="check" id="importMoveRow" hidden><input type="checkbox" id="importMove"> <span id="importMoveLabel"></span></label>
       <p class="error" id="importError"></p>
     </div>
     <div class="dfoot">
@@ -634,6 +648,9 @@ const I18N = {
   "s.tabServers": ["Server", "Servers"],
   "s.tabLog": ["Protokoll", "Log"],
   "s.compactMode": ["Kompakt-Modus", "Compact mode"],
+  "s.connectClients": ["Clients verbinden", "Connect clients"],
+  "s.connectHint": ["Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vorher wird eine Sicherung *.mcp-hub.bak angelegt.", "Adds the hub to the client’s configuration, with the compact URL in compact mode. A backup *.mcp-hub.bak is written first."],
+  "s.manualSetup": ["Von Hand einrichten", "Set up by hand"],
   "s.restartNeeded": ["Neustart nötig", "Restart needed"],
   "s.checkUpdates": ["Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)", "Check GitHub for new versions (when the interface opens, at most every 12 hours)"],
   "s.updateCheck": ["Jetzt prüfen", "Check now"],
@@ -887,6 +904,22 @@ const I18N = {
   compactOffSize: ["Clients laden alle Tool-Definitionen, rund {full} Tokens pro Anfrage. Im Kompakt-Modus wären es rund {small}.", "Clients load every tool definition, about {full} tokens per request. Compact mode would need about {small}."],
   compactOnSize: ["Clients bekommen nur search_tools, describe_tool und call_tool: rund {small} statt {full} Tokens pro Anfrage.", "Clients only receive search_tools, describe_tool and call_tool: about {small} instead of {full} tokens per request."],
   clientCompact: ["kompakt", "compact"],
+  intNotFound: ["nicht gefunden", "not found"],
+  intConnectedChip: ["verbunden", "connected"],
+  intConnectedCompact: ["verbunden · kompakt", "connected · compact"],
+  intError: ["Konfiguration nicht lesbar", "configuration unreadable"],
+  intImportable: [v => pl(v.n, "1 eigener Server", "{n} eigene Server"), v => pl(v.n, "1 own server", "{n} own servers")],
+  intConnect: ["Verbinden", "Connect"],
+  intDisconnect: ["Trennen", "Disconnect"],
+  intToCompact: ["Auf kompakt umstellen", "Switch to compact"],
+  intToFull: ["Auf alle Tools umstellen", "Switch to all tools"],
+  intConnected: ["{name} ist mit dem Hub verbunden.", "{name} is connected to the hub."],
+  intDisconnected: ["{name} ist vom Hub getrennt.", "{name} is disconnected from the hub."],
+  intRestart: ["Bitte {name} neu starten.", "Please restart {name}."],
+  intConfirmDisconnect: ["Den Hub aus der Konfiguration von {name} entfernen?", "Remove the hub from the {name} configuration?"],
+  importFrom: ["Aus installierten Clients:", "From installed clients:"],
+  importMove: ["Übernommene Server danach aus {name} entfernen", "Remove the imported servers from {name} afterwards"],
+  importMoved: [v => pl(v.n, "1 Server aus {name} entfernt.", "{n} Server aus {name} entfernt.").replace("{name}", v.name), v => pl(v.n, "Removed 1 server from {name}.", "Removed {n} servers from {name}.").replace("{name}", v.name)],
   restartNeededTitle: ["Die Oberfläche ist neuer als der laufende Hub. Bitte den Hub neu starten: ./autostart.sh restart (Windows: .\\autostart.ps1 restart), oder im Terminal beenden und python3 app.py neu starten.", "The interface is newer than the running hub. Please restart the hub: ./autostart.sh restart (Windows: .\\autostart.ps1 restart), or stop it in the terminal and run python3 app.py again."],
   noClients: ["Seit dem Hub-Start hat sich noch kein Client verbunden.", "No client has connected since the hub started."],
   clientLive: ["Live-Stream", "live stream"],
@@ -926,6 +959,15 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^Unknown client: (.*)$/, "Unbekannter Client: $1"],
+  [/^claude CLI not found$/, "claude-Befehl nicht gefunden"],
+  [/^claude mcp (\S+) failed: (.*)$/, "claude mcp $1 fehlgeschlagen: $2"],
+  [/^(.*) is not plain JSON \(comments\?\) – edit it by hand: (.*)$/, "$1 ist kein reines JSON (Kommentare?) – bitte von Hand bearbeiten: $2"],
+  [/^(.*) does not contain a JSON object$/, "$1 enthält kein JSON-Objekt"],
+  [/^(.*) is not valid TOML: (.*)$/, "$1 ist kein gültiges TOML: $2"],
+  [/^Could not remove the entries from config.toml cleanly – edit it by hand$/, "Die Einträge ließen sich nicht sauber aus config.toml entfernen – bitte von Hand bearbeiten"],
+  [/^Could not add the hub to config.toml cleanly – edit it by hand$/, "Der Hub ließ sich nicht sauber in config.toml eintragen – bitte von Hand bearbeiten"],
+  [/^Could not write the client configuration: (.*)$/, "Die Client-Konfiguration ließ sich nicht schreiben: $1"],
   [/^secret-tool not found – install libsecret-tools$/, "secret-tool nicht gefunden – bitte libsecret-tools installieren"],
   [/^The keychain is only available on macOS, Linux and Windows$/, "Der Schlüsselbund ist nur unter macOS, Linux und Windows verfügbar"],
   [/^Server stopped unexpectedly – (.*)$/, "Server unerwartet beendet – $1"],
@@ -1351,6 +1393,7 @@ function render() {
   const hubUrl = `http://127.0.0.1:${location.port}/mcp${$("#hubCompact").checked ? "/compact" : ""}`;
   $("#hubUrl").textContent = hubUrl;
   renderCompactHint();
+  renderIntegrations();
   $("#hubCode").textContent = `claude mcp add --scope user --transport http mcp-hub ${hubUrl}`;
   $("#hubCodex").textContent = `codex mcp add mcp-hub --url ${hubUrl}`;
   $("#hubCodexToml").textContent = `[mcp_servers.mcp-hub]\nurl = "${hubUrl}"`;
@@ -1734,6 +1777,46 @@ $("#toolsForm").onsubmit = async e => {
 };
 
 let importResult = null;
+let importSource = null;
+let integrationList = [];
+
+async function refreshIntegrations() {
+  integrationList = await api("GET", "/api/integrations").catch(() => integrationList);
+  renderIntegrations();
+}
+
+function renderIntegrations() {
+  const compact = $("#hubCompact").checked;
+  $("#integrations").replaceChildren(...integrationList.map(c => {
+    const chips = [];
+    if (c.error) chips.push(el("span", { className: "chip bad", textContent: t("intError"), title: fromBackend(c.error), style: "cursor:default" }));
+    else if (!c.installed) chips.push(el("span", { className: "chip", textContent: t("intNotFound"), style: "cursor:default" }));
+    else if (c.connected) chips.push(el("span", { className: "chip ok", textContent: t(c.compact ? "intConnectedCompact" : "intConnectedChip"), style: "cursor:default" }));
+    if (c.importable.length && !c.error) {
+      chips.push(el("button", { type: "button", className: "chip", textContent: t("intImportable", { n: c.importable.length }), title: c.importable.join("\n"), onclick: () => openImport(c.id) }));
+    }
+    const actions = [];
+    if (c.installed && !c.error) {
+      if (!c.connected) actions.push(el("button", { type: "button", className: "btn", textContent: t("intConnect"), onclick: () => integrationAction(c, "connect") }));
+      else {
+        if (c.compact !== compact) actions.push(el("button", { type: "button", className: "btn", textContent: t(compact ? "intToCompact" : "intToFull"), onclick: () => integrationAction(c, "connect") }));
+        actions.push(el("button", { type: "button", className: "btn", textContent: t("intDisconnect"), onclick: () => confirm(t("intConfirmDisconnect", { name: c.name })) && integrationAction(c, "disconnect") }));
+      }
+    }
+    return el("div", { className: "int-row" },
+      el("div", {}, el("div", { className: "int-name" }, el("b", { textContent: c.name }), ...chips),
+        el("div", { className: "int-path", textContent: c.display, title: c.path })),
+      el("div", { className: "int-actions" }, ...actions));
+  }));
+}
+
+async function integrationAction(client, action) {
+  try {
+    integrationList = await api("POST", `/api/integrations/${action}`, { id: client.id, compact: $("#hubCompact").checked });
+    renderIntegrations();
+    toast(t(action === "connect" ? "intConnected" : "intDisconnected", { name: client.name }) + (client.restart ? " " + t("intRestart", { name: client.name }) : ""));
+  } catch (err) { toast(err.message, true); }
+}
 
 function resetImport() {
   importResult = null;
@@ -1782,18 +1865,61 @@ async function previewImport() {
 }
 
 $("#importText").addEventListener("input", () => {
+  setImportSource(null);
   clearTimeout(previewImport.timer);
   previewImport.timer = setTimeout(previewImport, 250);
 });
-$("#importBtn").onclick = () => { $("#importText").value = ""; resetImport(); $("#importer").showModal(); $("#importText").focus(); };
+function setImportSource(client) {
+  importSource = client;
+  $("#importMoveRow").hidden = !client;
+  $("#importMove").checked = false;
+  if (client) $("#importMoveLabel").textContent = t("importMove", { name: client.name });
+}
+
+async function loadImportSource(client) {
+  try {
+    const exported = await api("POST", "/api/integrations/export", { id: client.id });
+    $("#importText").value = exported.text;
+    setImportSource({ ...client, servers: exported.servers });
+    previewImport();
+  } catch (err) { $("#importError").textContent = err.message; }
+}
+
+async function openImport(clientId) {
+  $("#importText").value = "";
+  resetImport();
+  setImportSource(null);
+  $("#importSources").hidden = true;
+  $("#importer").showModal();
+  $("#importText").focus();
+  await refreshIntegrations();
+  const sources = integrationList.filter(c => c.importable.length && !c.error);
+  $("#importSources").replaceChildren(el("span", { className: "hint", textContent: t("importFrom") }),
+    ...sources.map(c => el("button", { type: "button", className: "chip", textContent: `${c.name} · ${c.importable.length}`, onclick: () => loadImportSource(c) })));
+  $("#importSources").hidden = !sources.length;
+  const wanted = sources.find(c => c.id === clientId);
+  if (wanted) loadImportSource(wanted);
+}
+
+$("#importBtn").onclick = () => openImport();
 $("#importCancel").onclick = () => $("#importer").close();
 $("#importForm").onsubmit = async e => {
   e.preventDefault();
   if (!importResult) return;
   const picked = importResult.servers, skipped = importResult.skipped;
   if (await saveServers({ ...servers(), ...picked })) {
+    const source = importSource, move = $("#importMove").checked;
     $("#importer").close();
-    toast(t("imported", { n: Object.keys(picked).length }) + (skipped.length ? t("skipped", { list: skipped.join(", ") }) : ""));
+    let message = t("imported", { n: Object.keys(picked).length }) + (skipped.length ? t("skipped", { list: skipped.join(", ") }) : "");
+    if (source && move) {
+      const names = Object.keys(picked).filter(name => source.servers.includes(name));
+      try {
+        integrationList = await api("POST", "/api/integrations/remove", { id: source.id, names });
+        renderIntegrations();
+        message += " " + t("importMoved", { name: source.name, n: names.length });
+      } catch (err) { return toast(err.message, true); }
+    }
+    toast(message);
   }
 };
 
@@ -1836,6 +1962,7 @@ function showTab(name) {
   if (name === "inspector") fillInspServers();
   if (name === "calls") refreshCalls();
   if (name === "clients") refreshClients();
+  if (name === "settings") refreshIntegrations();
 }
 $("#tabs").onclick = e => {
   const b = e.target.closest("button");

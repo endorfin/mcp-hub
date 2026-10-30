@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import hub as hub_module
 import importer
+import integrations
 import inspector
 import oauth
 import secrets_store
@@ -175,6 +176,11 @@ def sync_hub_in_background():
     threading.Thread(target=hub.sync, daemon=True).start()
 
 
+def bridge_info():
+    python = sys.executable if sys.platform == "win32" else shutil.which("python3") or sys.executable
+    return {"python": python, "script": str(ROOT / "bridge.py")}
+
+
 def restart():
     time.sleep(0.5)
     inspector.disconnect_all()
@@ -223,7 +229,7 @@ class Handler(BaseHTTPRequestHandler):
             "config": load_config(),
             "settings": load_settings(),
             "profiles": load_profiles(),
-            "bridge": {"python": shutil.which("python3") or sys.executable, "script": str(ROOT / "bridge.py")},
+            "bridge": bridge_info(),
         }
 
     def do_GET(self):
@@ -237,6 +243,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(hub.live_clients())
         if self.path == "/api/clients":
             return self.send(hub.clients.snapshot())
+        if self.path == "/api/integrations":
+            return self.send(integrations.status(self.server.server_address[1]))
         if self.path == "/api/compact":
             full = json.dumps(hub.handle("tools/list", {})["tools"], ensure_ascii=False)
             small = json.dumps(hub.handle("tools/list", {}, mode="compact")["tools"], ensure_ascii=False)
@@ -307,6 +315,26 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
         if match := MCP_PATH.match(self.path):
             return self.mcp(unquote(match.group(1)) if match.group(1) else None, match.group(2))
+        if self.path.startswith("/api/integrations/"):
+            data, port = self.body(), self.server.server_address[1]
+            action = self.path.removeprefix("/api/integrations/")
+            try:
+                if action == "connect":
+                    url = f"http://127.0.0.1:{port}/mcp" + ("/compact" if data.get("compact") else "")
+                    integrations.connect(data.get("id", ""), url, port, bridge_info())
+                elif action == "disconnect":
+                    integrations.disconnect(data.get("id", ""), port)
+                elif action == "remove":
+                    integrations.remove(data.get("id", ""), data.get("names") or [])
+                elif action == "export":
+                    return self.send(integrations.export(data.get("id", ""), port))
+                else:
+                    return self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
+            except integrations.IntegrationError as e:
+                return self.send({"error": str(e)}, HTTPStatus.CONFLICT)
+            except OSError as e:
+                return self.send({"error": f"Could not write the client configuration: {e}"}, HTTPStatus.CONFLICT)
+            return self.send(integrations.status(port))
         if self.path == "/api/hub/restart":
             name = self.body().get("name", "")
             if name not in hub.upstreams:

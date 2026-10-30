@@ -94,6 +94,8 @@ An entry with `url` and no `type` is treated as Streamable HTTP. Optional fields
 
 “Import…” detects the format by itself; you only paste. A preview shows the detected format, the servers, which existing entries will be replaced and what cannot be carried over.
 
+**From installed clients:** the dialog also lists the clients from “Connect clients” that have servers of their own (“Codex · 7”); a click loads them into the preview, without the client’s other settings. With “Remove the imported servers from … afterwards” the hub deletes the imported entries from that client after importing them (with a backup), so the move to the hub is a single step. The “own servers” chip in Settings opens the same view.
+
 | Paste | Source |
 | --- | --- |
 | `{ "mcpServers": { … } }` | Claude Desktop, Claude Code (`~/.claude.json`), Cursor, Copilot |
@@ -176,6 +178,19 @@ The search is a weighted keyword search over tool names, titles, descriptions, p
 In the GUI, the “Compact mode” switch in the hub endpoint card (Settings) changes all connect snippets to the compact URL and shows the estimated tool definition size for both modes. Each client decides by its URL, so you can connect one client compactly and another with every tool.
 
 ### Connecting clients
+
+**By click:** Settings → “Connect clients” lists Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot CLI with the configuration file the hub found for each, and whether the hub is already in it. “Connect” adds the hub (with the compact URL when the compact switch is on), “Disconnect” removes it, and a connected client can be switched between compact and all tools. Before every change the hub writes a backup next to the file (`*.mcp-hub.bak`). Claude Code is changed through `claude mcp add/remove --scope user`, so the `claude` command must be on the hub’s `PATH`; Claude Desktop gets the `bridge.py` entry and needs a restart afterwards. JSON files with comments are left alone; edit those by hand.
+
+| Client | File |
+| --- | --- |
+| Claude Code | `~/.claude.json` (via the `claude` CLI) |
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json`, `%APPDATA%\Claude\…`, `~/.config/Claude/…` |
+| Codex | `~/.codex/config.toml` (or `$CODEX_HOME`) |
+| Cursor | `~/.cursor/mcp.json` |
+| VS Code | `…/Code/User/mcp.json` in the same application support folder as Claude Desktop |
+| Copilot CLI | `~/.copilot/mcp-config.json` |
+
+**By hand:**
 
 Claude Code:
 
@@ -303,6 +318,10 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state |
 | `GET` | `/api/live` | Clients with an open notification stream |
 | `POST` | `/api/hub/restart` | `{"name"}`: restart a server in the hub right away and reset its restart counter |
+| `GET` | `/api/integrations` | Known clients with configuration file, `installed`, `connected`, `compact` and their own servers (`importable`) |
+| `POST` | `/api/integrations/connect`, `/disconnect` | `{"id", "compact"}`: add the hub to a client or remove it |
+| `POST` | `/api/integrations/export` | `{"id"}`: the client’s own servers as text for the import parser |
+| `POST` | `/api/integrations/remove` | `{"id", "names"}`: delete these servers from the client |
 | `GET` | `/api/compact` | Size of the tool definitions as JSON characters, `fullChars` and `compactChars` |
 | `GET` | `/api/clients` | Sessions since the hub start: name, version, profile, `since`, `lastSeen`, `requests`, `calls`, `streams` |
 | `GET` | `/api/update` | Installed and latest version, release notes, install method; checks GitHub in the background when the last check is older than 12 hours |
@@ -332,7 +351,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), restarting a crashed server and the restart delays, the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. Without a usable keychain (no Secret Service on Linux, for example) those tests are skipped. GitHub Actions runs the suite on macOS, Ubuntu and Windows with Python 3.11 and 3.13, with a temporary keychain on macOS, GNOME Keyring on Ubuntu and the Credential Manager on Windows, so the keychain and OAuth tests run everywhere; on Windows it also registers and removes the scheduled task.
+`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_integrations.py` covers connecting, switching and disconnecting clients in a temporary home folder (JSON clients, the Codex TOML with subtables and quoted names, refusing files with comments or inline tables), plus exporting and removing their servers. `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), restarting a crashed server and the restart delays, the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. Without a usable keychain (no Secret Service on Linux, for example) those tests are skipped. GitHub Actions runs the suite on macOS, Ubuntu and Windows with Python 3.11 and 3.13, with a temporary keychain on macOS, GNOME Keyring on Ubuntu and the Credential Manager on Windows, so the keychain and OAuth tests run everywhere; on Windows it also registers and removes the scheduled task.
 
 ## Troubleshooting
 
