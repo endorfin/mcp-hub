@@ -33,7 +33,7 @@ class HubTest(unittest.TestCase):
             "beta": {"command": DUMMY[0], "args": DUMMY[1:]},
         }}
         Path(cls.home.name, "servers.json").write_text(json.dumps(servers))
-        env = {**os.environ, "MCP_PROXY_GUI_HOME": cls.home.name, "PORT": str(cls.port)}
+        env = {**os.environ, "MCP_HUB_HOME": cls.home.name, "PORT": str(cls.port)}
         cls.proc = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.wait_for(lambda: len(cls.get("/api/hub")) == 2 and all(
@@ -272,7 +272,7 @@ class BridgeTest(unittest.TestCase):
         self.home.cleanup()
 
     def start_hub(self):
-        env = {**os.environ, "MCP_PROXY_GUI_HOME": self.home.name, "PORT": str(self.port)}
+        env = {**os.environ, "MCP_HUB_HOME": self.home.name, "PORT": str(self.port)}
         self.hub = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         HubTest.wait_for(lambda: fetch(self.base + "/api/hub").get("alpha", {}).get("state") == "running")
@@ -317,6 +317,27 @@ class BridgeTest(unittest.TestCase):
         self.send({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "alpha__echo", "arguments": {"text": "zurück"}}})
         self.assertEqual(self.reply(3)["result"]["content"][0]["text"], "zurück")
         HubTest.wait_for(lambda: self.live() == ["desktop-test"])
+
+
+class MigrationTest(unittest.TestCase):
+    def test_legacy_config_dir_is_moved(self):
+        with tempfile.TemporaryDirectory() as home:
+            legacy = Path(home, ".config", "mcp-proxy")
+            legacy.mkdir(parents=True)
+            Path(legacy, "servers.json").write_text(json.dumps({"mcpServers": {}}))
+            Path(legacy, "usage.json").write_text(json.dumps({"alpha": {"count": 3, "last": 1}}))
+            port = free_port()
+            env = {k: v for k, v in os.environ.items() if k not in ("MCP_HUB_HOME", "MCP_PROXY_GUI_HOME")}
+            proc = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env={**env, "HOME": home, "PORT": str(port)},
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                HubTest.wait_for(lambda: fetch(f"http://127.0.0.1:{port}/api/usage") == {"alpha": {"count": 3, "last": 1}})
+                state = fetch(f"http://127.0.0.1:{port}/api/state")
+                self.assertEqual(state["configPath"], str(Path(home, ".config", "mcp-hub", "servers.json")))
+                self.assertFalse(legacy.exists())
+            finally:
+                proc.terminate()
+                proc.wait(10)
 
 
 if __name__ == "__main__":

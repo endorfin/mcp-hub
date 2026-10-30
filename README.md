@@ -10,7 +10,7 @@ Keine Abhängigkeiten außer Python 3.11+. Der Server lauscht nur auf `127.0.0.1
 
 ## Dateien
 
-Alles liegt in `~/.config/mcp-proxy/` (änderbar per `MCP_PROXY_GUI_HOME`), nicht im Repo:
+Alles liegt in `~/.config/mcp-hub/` (änderbar per `MCP_HUB_HOME`), nicht im Repo. Ein alter Ordner `~/.config/mcp-proxy/` wird beim ersten Start dorthin umgezogen; `MCP_PROXY_GUI_HOME` funktioniert weiter.
 
 | Datei | Inhalt |
 | --- | --- |

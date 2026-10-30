@@ -18,7 +18,23 @@ import inspector
 import secrets_store
 
 ROOT = Path(__file__).resolve().parent
-STATE_DIR = Path(os.environ.get("MCP_PROXY_GUI_HOME", Path.home() / ".config" / "mcp-proxy"))
+LEGACY_STATE_DIR = Path.home() / ".config" / "mcp-proxy"
+
+
+def state_dir():
+    configured = os.environ.get("MCP_HUB_HOME") or os.environ.get("MCP_PROXY_GUI_HOME")
+    if configured:
+        return Path(configured)
+    path = Path.home() / ".config" / "mcp-hub"
+    if not path.exists() and (LEGACY_STATE_DIR / "servers.json").exists():
+        LEGACY_STATE_DIR.rename(path)
+        settings = path / "gui-settings.json"
+        if settings.exists():
+            settings.write_text(settings.read_text().replace(str(LEGACY_STATE_DIR), str(path)))
+    return path
+
+
+STATE_DIR = state_dir()
 SETTINGS_FILE = STATE_DIR / "gui-settings.json"
 PROFILES_FILE = STATE_DIR / "profiles.json"
 
