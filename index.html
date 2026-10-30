@@ -785,6 +785,11 @@ const I18N = {
   hubTools: [v => `Hub: ${pl(v.n, "1 Tool", "{n} Tools")}`, v => `Hub: ${pl(v.n, "1 tool", "{n} tools")}`],
   hubError: ["Hub: Fehler", "Hub: error"],
   hubStarting: ["Hub: startet…", "Hub: starting…"],
+  hubRetrying: ["Hub: abgestürzt, Neustart folgt…", "Hub: crashed, restarting soon…"],
+  hubGaveUp: ["Hub: Fehler, 5 Neustarts gescheitert", "Hub: error, 5 restarts failed"],
+  hubRestarted: [v => pl(v.n, "1× neu gestartet", "{n}× neu gestartet"), v => pl(v.n, "restarted once", "restarted {n}×")],
+  hubRetry: ["Erneut versuchen", "Try again"],
+  hubRetryStarted: ["„{name}“ wird neu gestartet", "Restarting “{name}”"],
   clickToEdit: ["Klicken zum Bearbeiten", "Click to edit"],
   usedTimes: ["{n}× genutzt · {ago}", "used {n}× · {ago}"],
   neverUsed: ["noch nie genutzt", "never used"],
@@ -921,6 +926,9 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^Server stopped unexpectedly – (.*)$/, "Server unerwartet beendet – $1"],
+  [/^Server stopped unexpectedly$/, "Server unerwartet beendet"],
+  [/^Unknown server: (.*)$/, "Unbekannter Server: $1"],
   [/^Update check failed: (.*)$/, "Update-Prüfung fehlgeschlagen: $1"],
   [/^No newer version available$/, "Keine neuere Version verfügbar"],
   [/^An update is already running$/, "Es läuft bereits ein Update"],
@@ -1425,9 +1433,16 @@ function renderList() {
     if (on && h?.state === "auth") {
       meta.append(el("button", { className: "chip warn", textContent: t("signInRequired"), title: t("signInTitle"), onclick: () => startOAuth(name) }));
     } else if (on && h) {
+      const retrying = h.state === "error" && h.retryAt;
       const text = h.state === "running" ? t("hubTools", { n: h.tools }) + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
-        : t(h.state === "error" ? "hubError" : "hubStarting");
-      meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: fromBackend(h.error) || "", style: "cursor:default" }));
+        : t(retrying ? "hubRetrying" : h.state === "error" ? (h.gaveUp ? "hubGaveUp" : "hubError") : "hubStarting");
+      meta.append(el("span", { className: "chip " + (retrying ? "wait" : { running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: fromBackend(h.error) || "", style: "cursor:default" }));
+      if (h.state === "running" && h.restarts) {
+        meta.append(el("span", { className: "chip warn", textContent: t("hubRestarted", { n: h.restarts }), title: fromBackend(h.lastError) || "", style: "cursor:default" }));
+      }
+      if (h.state === "error" && h.gaveUp) {
+        meta.append(el("button", { className: "chip", textContent: t("hubRetry"), onclick: () => api("POST", "/api/hub/restart", { name }).then(() => toast(t("hubRetryStarted", { name }))).catch(err => toast(err.message, true)) }));
+      }
     }
     const hidden = s.disabledTools || [];
     const hiddenCount = h?.state === "running" ? h.toolsTotal - h.tools : hidden.length;

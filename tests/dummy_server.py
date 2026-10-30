@@ -40,6 +40,8 @@ for line in sys.stdin:
             reply(message_id, text(os.environ.get("DUMMY_SECRET", "")))
         elif name == "where":
             reply(message_id, text(os.getcwd()))
+        elif name == "fail" and args.get("exit"):
+            os._exit(1)
         else:
             reply(message_id, error={"code": -32000, "message": "failed on purpose"})
     elif method == "ping":
