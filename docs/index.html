@@ -126,7 +126,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); }
   --floating: 0 10px 28px rgb(0 0 0 / .14), 0 2px 6px rgb(0 0 0 / .08);
   --ease: cubic-bezier(.16, 1, .3, 1);
 }
-html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adjust: 100%; }
+html { overflow-x: clip; scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adjust: 100%; }
 body { font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; background: radial-gradient(64rem 40rem at 8% -8%, var(--glow), transparent 70%) no-repeat, radial-gradient(52rem 36rem at 100% 2%, var(--glow-warm), transparent 70%) no-repeat, var(--bg); transition: background-color .3s var(--ease), color .3s var(--ease); }
 ::selection { background: color-mix(in srgb, var(--accent) 26%, transparent); }
 a { color: inherit; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 3px; }
@@ -192,7 +192,7 @@ img { max-width: 100%; display: block; }
 .code .copy.done { color: var(--ok); }
 .card .code, .demo .code { background: var(--field); }
 
-.card { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, var(--panel)), var(--panel) 120px); border: 1px solid var(--line); border-radius: 18px; }
+.card { background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 3%, var(--panel)), var(--panel) 120px); border: 1px solid var(--line); border-radius: 18px; }
 
 .hero { padding: 88px 0 24px; }
 .hero .text { max-width: 58rem; margin: 0 auto; text-align: center; }
@@ -223,7 +223,7 @@ img { max-width: 100%; display: block; }
 .hub .endpoint { font: 12px/1.5 var(--mono); background: var(--field); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hub .endpoint em { font-style: normal; color: var(--active); }
 .hub .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; }
-.kpi { background: radial-gradient(18rem 8rem at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), var(--field); border-radius: 14px; padding: 13px 15px; }
+.kpi { background: radial-gradient(18rem 8rem at 0% 0%, color-mix(in srgb, var(--ink) 6%, transparent), transparent 70%), var(--field); border-radius: 14px; padding: 13px 15px; }
 .kpi .k { font-size: 12px; color: var(--muted); }
 .kpi .v { font-size: 32px; font-weight: 450; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.25; margin-top: 2px; white-space: nowrap; }
 .kpi .n { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -430,12 +430,13 @@ footer a:hover { color: var(--ink); }
   .close-panel { width: calc(100% - 32px); padding: 40px 22px; border-radius: 22px; }
   .close-mark { width: 280px; height: 280px; right: -100px; }
   .hero { padding-top: 48px; }
-  .board { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-  .board > svg { display: none; }
-  .clients ul { display: flex; flex-wrap: wrap; gap: 6px; }
-  .clients.card { background: none; border: 0; }
-  .clients li { border: 0; height: auto; padding: 2px 8px; background: var(--chip); border-radius: 99px; font-size: 12.5px; }
-  .log { margin-top: 8px; }
+  .board { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .board .col:has(.servers) .label { display: none; }
+  .board > .col { justify-self: center; width: 100%; }
+  .board > .col:has(.clients) { max-width: 290px; }
+  .board > .col:has(#hub) { max-width: 360px; }
+  .board > .col:has(.servers) { max-width: 395px; }
+  .log { margin-top: 0; }
   .log li { grid-template-columns: 0 0 minmax(0, 1fr) 56px; gap: 0 8px; }
   .log li .t, .log li .c { visibility: hidden; }
   .import { grid-template-columns: minmax(0, 1fr); }
@@ -980,20 +981,29 @@ function renderBoard() { renderServers(); renderHub(); renderProfileList(); requ
 const wires = { clients: {}, servers: {} };
 function drawWires() {
   const svg = $("#wires");
-  if (getComputedStyle(svg).display === "none") return;
   const b = $("#board").getBoundingClientRect(), h = $("#hub").getBoundingClientRect();
-  const hy = h.top - b.top + h.height / 2;
-  const curve = (x1, y1, x2, y2) => { const dx = (x2 - x1) * .55; return `M${x1} ${y1}C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}`; };
+  const at = (r, fx, fy) => [r.left - b.left + r.width * fx, r.top - b.top + r.height * fy];
+  const spread = (i, n, from, span) => from + (span * i) / Math.max(1, n - 1);
+  const vertical = matchMedia("(max-width: 720px)").matches;
+  const curve = ([x1, y1], [x2, y2]) => {
+    if (vertical) { const dy = (y2 - y1) * .55; return `M${x1} ${y1}C${x1} ${y1 + dy} ${x2} ${y2 - dy} ${x2} ${y2}`; }
+    const dx = (x2 - x1) * .55; return `M${x1} ${y1}C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}`;
+  };
+  const c = $(".clients.card").getBoundingClientRect(), sv = $(".servers.card").getBoundingClientRect();
   let out = "";
   $$("#clientList li").forEach((li, i, all) => {
     const r = li.getBoundingClientRect();
-    const ty = hy - 24 + (48 * i) / Math.max(1, all.length - 1);
-    out += `<path data-c="${li.dataset.id}" d="${curve(r.right - b.left, r.top - b.top + r.height / 2, h.left - b.left, ty)}"/>`;
+    const [from, to] = vertical
+      ? [at(c, spread(i, all.length, .12, .76), 1), [h.left - b.left + h.width * spread(i, all.length, .38, .24), h.top - b.top]]
+      : [at(r, 1, .5), [h.left - b.left, h.top - b.top + h.height / 2 - 24 + spread(i, all.length, 0, 48)]];
+    out += `<path data-c="${li.dataset.id}" d="${curve(from, to)}"/>`;
   });
   $$("#serverList li").forEach((li, i, all) => {
     const r = li.getBoundingClientRect();
-    const ty = hy - 30 + (60 * i) / Math.max(1, all.length - 1);
-    out += `<path data-s="${li.dataset.id}" class="${state.on.has(li.dataset.id) ? "" : "off"}" d="${curve(h.right - b.left, ty, r.left - b.left, r.top - b.top + r.height / 2)}"/>`;
+    const [from, to] = vertical
+      ? [[h.left - b.left + h.width * spread(i, all.length, .38, .24), h.bottom - b.top], at(sv, spread(i, all.length, .12, .76), 0)]
+      : [[h.right - b.left, h.top - b.top + h.height / 2 - 30 + spread(i, all.length, 0, 60)], at(r, 0, .5)];
+    out += `<path data-s="${li.dataset.id}" class="${state.on.has(li.dataset.id) ? "" : "off"}" d="${curve(from, to)}"/>`;
   });
   svg.innerHTML = out;
   $$("path", svg).forEach(p => { if (p.dataset.c) wires.clients[p.dataset.c] = p; else wires.servers[p.dataset.s] = p; });
@@ -1001,7 +1011,7 @@ function drawWires() {
 
 function travel(path, dur) {
   return new Promise(res => {
-    if (!path || reduced || getComputedStyle($("#wires")).display === "none") return res();
+    if (!path || reduced) return res();
     const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     dot.setAttribute("r", 3.5);
     $("#wires").appendChild(dot);
