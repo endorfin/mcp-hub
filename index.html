@@ -319,7 +319,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 <body>
 <header>
   <div class="bar">
-    <h1>MCP Hub <span class="version" id="version"></span><button class="chip ok update-chip" id="updateChip" hidden></button></h1>
+    <h1>MCP Hub <span class="version" id="version"></span><button class="chip ok update-chip" id="updateChip" hidden></button><span class="chip warn update-chip" id="restartChip" hidden data-i18n="s.restartNeeded">Neustart nötig</span></h1>
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
     <nav class="line-tabs" id="tabs">
       <button data-tab="servers" class="active" data-i18n="s.tabServers">Server</button>
@@ -635,6 +635,7 @@ const I18N = {
   "s.tabServers": ["Server", "Servers"],
   "s.tabLog": ["Protokoll", "Log"],
   "s.compactMode": ["Kompakt-Modus", "Compact mode"],
+  "s.restartNeeded": ["Neustart nötig", "Restart needed"],
   "s.checkUpdates": ["Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)", "Check GitHub for new versions (when the interface opens, at most every 12 hours)"],
   "s.updateCheck": ["Jetzt prüfen", "Check now"],
   "s.updateOnGithub": ["Release auf GitHub ansehen", "View release on GitHub"],
@@ -882,6 +883,7 @@ const I18N = {
   compactOffSize: ["Clients laden alle Tool-Definitionen, rund {full} Tokens pro Anfrage. Im Kompakt-Modus wären es rund {small}.", "Clients load every tool definition, about {full} tokens per request. Compact mode would need about {small}."],
   compactOnSize: ["Clients bekommen nur search_tools, describe_tool und call_tool: rund {small} statt {full} Tokens pro Anfrage.", "Clients only receive search_tools, describe_tool and call_tool: about {small} instead of {full} tokens per request."],
   clientCompact: ["kompakt", "compact"],
+  restartNeededTitle: ["Die Oberfläche ist neuer als der laufende Hub. Bitte den Hub neu starten: ./autostart.sh restart, oder im Terminal beenden und python3 app.py neu starten.", "The interface is newer than the running hub. Please restart the hub: ./autostart.sh restart, or stop it in the terminal and run python3 app.py again."],
   noClients: ["Seit dem Hub-Start hat sich noch kein Client verbunden.", "No client has connected since the hub started."],
   clientLive: ["Live-Stream", "live stream"],
   clientIdle: ["inaktiv", "idle"],
@@ -1334,7 +1336,9 @@ function render() {
   renderHubStatus();
   renderProfiles();
   $("#cfgPath").textContent = state.configPath;
-  if (state.version) $("#version").textContent = `v${state.version}`;
+  $("#version").textContent = state.version ? `v${state.version}` : "";
+  $("#restartChip").hidden = !!state.version;
+  $("#restartChip").title = t("restartNeededTitle");
   const hubUrl = `http://127.0.0.1:${location.port}/mcp${$("#hubCompact").checked ? "/compact" : ""}`;
   $("#hubUrl").textContent = hubUrl;
   renderCompactHint();
