@@ -53,6 +53,10 @@ These come from [PRODUCT.md](PRODUCT.md) and keep the project small:
 - One concern per commit, imperative subject line under 72 characters. The history uses a gitmoji prefix and a type, e.g. `✨ feat: …`, `🐛 fix: …`, `📝 docs: …`.
 - Describe what changed and why in the pull request, and mention how you tested it.
 
+## Releases
+
+The version lives in one place: `VERSION` in `inspector.py`. It appears in the GUI header and in the hub’s `serverInfo`. For a release, bump it, commit, and tag the commit as `v<version>`.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).

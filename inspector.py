@@ -14,6 +14,7 @@ import oauth
 from secrets_store import SecretError, resolve_entry
 
 PROTOCOL_VERSION = "2025-06-18"
+VERSION = "0.1.0"
 DEFAULT_ENV_KEYS = ("HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER", "LANG", "TMPDIR")
 USER_AGENT = "mcp-hub/1.0"
 
@@ -124,7 +125,7 @@ class BaseSession:
         self.initialize_result = self.request("initialize", {
             "protocolVersion": PROTOCOL_VERSION,
             "capabilities": {"roots": {"listChanged": False}},
-            "clientInfo": {"name": self.client_name, "version": "1.0"},
+            "clientInfo": {"name": self.client_name, "version": VERSION},
         }, timeout=120)
         self.notify("notifications/initialized")
         return self.initialize_result

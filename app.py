@@ -199,6 +199,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def state(self):
         return {
+            "version": inspector.VERSION,
             "configPath": str(config_path()),
             "config": load_config(),
             "settings": load_settings(),

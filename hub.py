@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 import oauth
-from inspector import PROTOCOL_VERSION, AuthRequired, RpcError, open_session
+from inspector import PROTOCOL_VERSION, VERSION, AuthRequired, RpcError, open_session
 
 SEPARATOR = "__"
 SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
@@ -449,7 +449,7 @@ class Hub:
                 "protocolVersion": requested if requested in SUPPORTED_VERSIONS else PROTOCOL_VERSION,
                 "capabilities": {"tools": {"listChanged": True}, "resources": {"listChanged": True},
                                  "prompts": {"listChanged": True}, "logging": {}},
-                "serverInfo": {"name": "mcp-hub", "version": "1.0"},
+                "serverInfo": {"name": "mcp-hub", "version": VERSION},
                 "instructions": "Bundles several MCP servers. Tool and prompt names carry the server name as a prefix (server__tool).",
             }
         if method in ("ping", "logging/setLevel"):

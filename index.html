@@ -20,7 +20,8 @@
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, system-ui, sans-serif; }
 header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
 .bar { max-width: 1040px; margin: 0 auto; padding: 14px 20px 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px 16px; align-items: center; }
-h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+h1 .version { margin-left: 4px; font-size: 12.5px; font-weight: 400; letter-spacing: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
 .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
@@ -308,7 +309,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 <body>
 <header>
   <div class="bar">
-    <h1>MCP Hub</h1>
+    <h1>MCP Hub <span class="version" id="version"></span></h1>
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
     <nav class="line-tabs" id="tabs">
       <button data-tab="servers" class="active" data-i18n="s.tabServers">Server</button>
@@ -1270,6 +1271,7 @@ function render() {
   renderHubStatus();
   renderProfiles();
   $("#cfgPath").textContent = state.configPath;
+  if (state.version) $("#version").textContent = `v${state.version}`;
   const hubUrl = `http://127.0.0.1:${location.port}/mcp`;
   $("#hubUrl").textContent = hubUrl;
   $("#hubCode").textContent = `claude mcp add --scope user --transport http mcp-hub ${hubUrl}`;
