@@ -212,6 +212,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if not local_origin(self.headers.get("Origin")):
                 return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
+            if not hub.clients.valid(self.headers.get("Mcp-Session-Id")):
+                return self.send({"error": "Unbekannte Sitzung"}, HTTPStatus.NOT_FOUND)
             return self.event_stream(unquote(match.group(1)) if match.group(1) else None)
         url = urlparse(self.path)
         if url.path == "/api/inspect/log":
@@ -296,6 +298,10 @@ class Handler(BaseHTTPRequestHandler):
         reply = {"jsonrpc": "2.0", "id": message["id"]}
         user_agent = self.headers.get("User-Agent", "")
         headers = {}
+        if message["method"] != "initialize" and not hub.clients.valid(self.headers.get("Mcp-Session-Id")):
+            return self.send({"jsonrpc": "2.0", "id": message["id"],
+                              "error": {"code": -32001, "message": "Unbekannte Sitzung, bitte neu initialisieren"}},
+                             HTTPStatus.NOT_FOUND)
         if message["method"] == "initialize":
             client_info = (message.get("params") or {}).get("clientInfo")
             headers["Mcp-Session-Id"] = hub.clients.register(client_info, user_agent)
@@ -314,6 +320,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         if MCP_PATH.match(self.path):
+            hub.clients.end(self.headers.get("Mcp-Session-Id"))
             self.send_response(HTTPStatus.NO_CONTENT)
             self.end_headers()
             return

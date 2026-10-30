@@ -161,6 +161,7 @@ class Clients:
         self.path = Path(path)
         self.keep = keep
         self.lock = threading.Lock()
+        self.active = set()
         try:
             self.sessions = json.loads(self.path.read_text())
         except (FileNotFoundError, json.JSONDecodeError):
@@ -174,11 +175,18 @@ class Clients:
                 "version": (client_info or {}).get("version"),
                 "since": time.time(),
             }
+            self.active.add(session_id)
             while len(self.sessions) > self.keep:
                 self.sessions.pop(next(iter(self.sessions)))
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.write_text(json.dumps(self.sessions))
         return session_id
+
+    def valid(self, session_id):
+        return not session_id or session_id in self.active
+
+    def end(self, session_id):
+        self.active.discard(session_id)
 
     def lookup(self, session_id, user_agent):
         session = self.sessions.get(session_id or "")

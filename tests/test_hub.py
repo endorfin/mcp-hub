@@ -220,6 +220,20 @@ class HubTest(unittest.TestCase):
         finally:
             self.request("POST", "/api/profiles", {"action": "delete", "name": "schmal"})
 
+    def test_unknown_and_ended_sessions_get_404(self):
+        status, body = self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+                                    {"Mcp-Session-Id": "gibt-es-nicht"})
+        self.assertEqual(status, 404, body)
+        req = urllib.request.Request(self.base + "/mcp", json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}}).encode(),
+            {"Content-Type": "application/json"})
+        with urllib.request.urlopen(req) as response:
+            session_id = response.headers["Mcp-Session-Id"]
+        headers = {"Mcp-Session-Id": session_id}
+        self.assertEqual(self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, headers)[0], 200)
+        self.request("DELETE", "/mcp", None, headers)
+        self.assertEqual(self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 3, "method": "tools/list"}, headers)[0], 404)
+
     def test_cross_origin_writes_are_rejected(self):
         status, _ = self.request("PUT", "/api/servers", {"mcpServers": {}}, {"Origin": "https://example.com"})
         self.assertEqual(status, 403)
