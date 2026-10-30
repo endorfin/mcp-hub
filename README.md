@@ -26,7 +26,7 @@ MCP Hub turns that around: servers live in one place, secrets stay in the keycha
 - **One endpoint for every client:** stdio, Streamable HTTP and SSE servers bundled at `http://127.0.0.1:4747/mcp`, tool names prefixed `server__tool`.
 - **Connect and import with a click:** add the hub to Claude Code, Claude Desktop, Codex, Cursor, VS Code or Copilot CLI, and move their existing servers over (JSON, Codex TOML, `mcp add` commands).
 - **Compact mode:** clients get `search_tools`, `describe_tool` and `call_tool` instead of every definition, about 300 instead of 60,000 tokens with 200 tools.
-- **Profiles:** switch between setups in one click, or give each client its own profile endpoint.
+- **Profiles and tags:** switch between setups in one click, give each client its own profile endpoint, and tag servers by topic to filter the list.
 - **Secrets without plain text:** `${keychain:…}`, `${op://…}` (1Password) and `${env:…}` references, plus OAuth for remote servers with tokens in the keychain.
 - **Inspector, call log and statistics:** call any tool by hand, see every call with client, duration and result.
 - **Runs itself:** crashed servers restart with growing delays, live `list_changed` notifications, updates with one click, autostart at login.
@@ -56,7 +56,7 @@ Then open the GUI at http://127.0.0.1:4747. The hub endpoint for your clients is
 
 **2. Add servers** – click **+** → “Import…” and pick an installed client to take over its servers, or paste an existing configuration: JSON from Claude Desktop, Claude Code, Cursor or VS Code, TOML from Codex, or `claude mcp add` / `codex mcp add` commands (see [Importing](#importing)). “Add server…” creates one by hand.
 
-**3. Connect your clients** – Settings → “Connect clients” adds the hub to each installed client with one click. By hand, each client only needs this one entry, see [Connecting clients](#connecting-clients):
+**3. Connect your clients** – Settings → Clients → “Connect clients” adds the hub to each installed client with one click. By hand, each client only needs this one entry, see [Connecting clients](#connecting-clients):
 
 ```bash
 claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp
@@ -170,7 +170,7 @@ The notation alone decides the source, per value. There is no setting and no fal
 - `${keychain:name}` reads the keychain: on macOS the login keychain (account `mcp-hub`, service `mcp-hub/<name>`; searching for `mcp-hub` in Keychain Access lists all entries), on Linux the Secret Service with the attributes `service mcp-hub/<name>` and `account mcp-hub` (visible in Seahorse or KWallet). The easiest way is the lock next to a value in the editor: it creates the entry and replaces the value with the reference; nothing is written to the file until you click “Save”. By hand on macOS: `security add-generic-password -a mcp-hub -s mcp-hub/<name> -w` (printable ASCII values only; `security` returns anything else as hex). On Linux: `secret-tool store --label="MCP Hub: <name>" service mcp-hub/<name> account mcp-hub`. On Windows the entries are generic credentials named `mcp-hub/<name>` in the Credential Manager (“Windows Credentials”); values over 2 KB are split into `mcp-hub/<name>#1`, `#2` and so on.
 - `${op://vault/item/field}` reads via the 1Password CLI (`op read`). `op` must be signed in within the hub’s environment, e.g. through the 1Password app integration. The hub never writes to 1Password; the lock always writes to the keychain. Useful for tokens that are already maintained, shared or rotated in 1Password; otherwise the keychain is simpler.
 - References may be part of a longer value, such as `Bearer ${keychain:…}` or `?key=${keychain:…}`.
-- Resolved values stay in memory until the hub restarts. After changing a value in the keychain or 1Password, restart the hub (e.g. `./autostart.sh restart`); switching the server off and on is not enough. Only the lock in the GUI refreshes its own entry immediately.
+- Resolved values stay in memory until the hub restarts. After changing a value in the keychain or 1Password, restart the hub (Settings → Server → “Restart hub”, or `./autostart.sh restart`); switching the server off and on is not enough. Only the lock in the GUI refreshes its own entry immediately.
 - If an entry is missing, the server does not start. The tooltip on the status chip then shows e.g. “Secret: No keychain entry …”.
 
 With `passEnvironment` (Settings), local servers inherit the hub’s environment; otherwise they only get `env`.
@@ -204,7 +204,7 @@ In the GUI, the “Compact mode” switch in the hub endpoint card (Settings) ch
 
 ### Connecting clients
 
-**By click:** Settings → “Connect clients” lists Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot CLI with the configuration file the hub found for each, and whether the hub is already in it. “Connect” adds the hub (with the compact URL when the compact switch is on), “Disconnect” removes it, and a connected client can be switched between compact and all tools. Before every change the hub writes a backup next to the file (`<file>.mcp-hub-<date>-<time>.bak`, the last five are kept). Claude Code is changed through `claude mcp add/remove --scope user`, so the `claude` command must be on the hub’s `PATH`; Claude Desktop gets the `bridge.py` entry and needs a restart afterwards. JSON files with comments are left alone; edit those by hand.
+**By click:** Settings → Clients → “Connect clients” lists Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot CLI with the configuration file the hub found for each, and whether the hub is already in it. “Connect” adds the hub (with the compact URL when the compact switch is on), “Disconnect” removes it, and a connected client can be switched between compact and all tools. Before every change the hub writes a backup next to the file (`<file>.mcp-hub-<date>-<time>.bak`, the last five are kept). Claude Code is changed through `claude mcp add/remove --scope user`, so the `claude` command must be on the hub’s `PATH`; Claude Desktop gets the `bridge.py` entry and needs a restart afterwards. JSON files with comments are left alone; edit those by hand.
 
 | Client | File |
 | --- | --- |
@@ -287,7 +287,7 @@ When the GUI opens, the hub asks GitHub for the latest release of `endorfin/mcp-
 
 Afterwards the hub stops its servers and restarts itself in the same process, so prun, launchd or a terminal session keep running it. Connected clients initialize again on their own; the GUI reloads once the new version answers.
 
-The check is the only request the hub sends on its own. Turn it off in the settings (“Check GitHub for new versions”); “Check now” runs it manually.
+The check is the only request the hub sends on its own. Turn it off in the settings (“Check GitHub for new versions”); “Check now” runs it manually and turns into “Update” when a newer version is available, opening the same dialog as the chip.
 
 ## GUI
 
@@ -299,7 +299,7 @@ Design rules and components of the interface are documented in [DESIGN.md](DESIG
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
 - **Settings:** grouped by topic with a list on the left. *Clients* has three cards: the hub endpoint with the compact switch, “Connect clients”, and “Set up by hand” with snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code. *Server* holds the path to the server file, `passEnvironment` and “Restart hub” (for example after a manual `git pull`), *Updates* the update check, *Interface* the language and the appearance (system, light or dark).
 
-**Language:** English or German, chosen under Settings → Language. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
+**Language:** English or German, chosen under Settings → Interface. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 
 ### Profiles
 
@@ -378,7 +378,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_integrations.py` covers connecting, switching and disconnecting clients in a temporary home folder (JSON clients, the Codex TOML with subtables and quoted names, refusing files with comments or inline tables), plus exporting and removing their servers. `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), restarting a crashed server and the restart delays, starting switched-off servers on demand for a profile endpoint, the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. Without a usable keychain (no Secret Service on Linux, for example) those tests are skipped. GitHub Actions runs the suite on macOS, Ubuntu and Windows with Python 3.11 and 3.13, with a temporary keychain on macOS, GNOME Keyring on Ubuntu and the Credential Manager on Windows, so the keychain and OAuth tests run everywhere; on Windows it also registers and removes the scheduled task.
+`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_integrations.py` covers connecting, switching and disconnecting clients in a temporary home folder (JSON clients, the Codex TOML with subtables and quoted names, refusing files with comments or inline tables), plus exporting and removing their servers. `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, validating server entries (including tags) and that changing tags or the description restarts nothing, sessions (404 after ending), restarting a crashed server and the restart delays, starting switched-off servers on demand for a profile endpoint, the bridge including a hub restart, restarting the hub through `/api/restart` (not on Windows), routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. Without a usable keychain (no Secret Service on Linux, for example) those tests are skipped. GitHub Actions runs the suite on macOS, Ubuntu and Windows with Python 3.11 and 3.13, with a temporary keychain on macOS, GNOME Keyring on Ubuntu and the Credential Manager on Windows, so the keychain and OAuth tests run everywhere; on Windows it also registers and removes the scheduled task.
 
 ## Troubleshooting
 
