@@ -469,7 +469,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         <span class="hint" id="compactHint"></span>
       </div>
       <div class="int-title"><b data-i18n="s.connectClients">Clients verbinden</b></div>
-      <span class="hint" data-i18n="s.connectHint">Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vorher wird eine Sicherung *.mcp-hub.bak angelegt.</span>
+      <span class="hint" data-i18n="s.connectHint">Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vor jeder Änderung entsteht daneben eine Sicherung mit Zeitstempel (*.mcp-hub-…bak), die letzten fünf bleiben erhalten.</span>
       <div class="int-list" id="integrations"></div>
       <div class="int-title"><b data-i18n="s.manualSetup">Von Hand einrichten</b></div>
       <nav class="line-tabs snip-tabs" id="hubTabs">
@@ -649,7 +649,7 @@ const I18N = {
   "s.tabLog": ["Protokoll", "Log"],
   "s.compactMode": ["Kompakt-Modus", "Compact mode"],
   "s.connectClients": ["Clients verbinden", "Connect clients"],
-  "s.connectHint": ["Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vorher wird eine Sicherung *.mcp-hub.bak angelegt.", "Adds the hub to the client’s configuration, with the compact URL in compact mode. A backup *.mcp-hub.bak is written first."],
+  "s.connectHint": ["Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vor jeder Änderung entsteht daneben eine Sicherung mit Zeitstempel (*.mcp-hub-…bak), die letzten fünf bleiben erhalten.", "Adds the hub to the client’s configuration, with the compact URL in compact mode. Every change first writes a timestamped backup next to it (*.mcp-hub-…bak); the last five are kept."],
   "s.manualSetup": ["Von Hand einrichten", "Set up by hand"],
   "s.restartNeeded": ["Neustart nötig", "Restart needed"],
   "s.checkUpdates": ["Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)", "Check GitHub for new versions (when the interface opens, at most every 12 hours)"],

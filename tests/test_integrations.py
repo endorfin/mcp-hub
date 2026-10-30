@@ -50,7 +50,7 @@ class IntegrationsTest(unittest.TestCase):
         self.assertEqual(data["mcpServers"], {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]},
                                               "mcp-hub": {"url": URL + "/compact"}})
         self.assertEqual(data["other"], 1)
-        self.assertTrue(path.with_name("mcp.json.mcp-hub.bak").exists())
+        self.assertEqual(len(list(path.parent.glob("mcp.json.mcp-hub-*.bak"))), 1)
         self.assertTrue(self.row("cursor")["compact"])
         integrations.disconnect("cursor", PORT)
         self.assertEqual(list(json.loads(path.read_text())["mcpServers"]), ["fetch"])
@@ -121,6 +121,18 @@ model = "o4-mini"
         self.assertEqual((sorted(data["mcp_servers"]), data["model"]), (["mcp-hub"], "o4"))
         integrations.disconnect("codex", PORT)
         self.assertNotIn("mcp_servers", tomllib.loads(path.read_text()))
+
+    def test_every_change_keeps_its_own_backup(self):
+        path = self.write("cursor", json.dumps({"mcpServers": {"a": {"command": "x"}, "b": {"command": "y"}}}))
+        original = path.read_text()
+        integrations.remove("cursor", ["a"])
+        integrations.connect("cursor", URL, PORT, BRIDGE)
+        backups = sorted(path.parent.glob("mcp.json.mcp-hub-*.bak"), key=lambda p: p.stat().st_mtime_ns)
+        self.assertEqual(len(backups), 2)
+        self.assertEqual(backups[0].read_text(), original)
+        for _ in range(integrations.KEEP_BACKUPS + 2):
+            integrations.connect("cursor", URL, PORT, BRIDGE)
+        self.assertEqual(len(list(path.parent.glob("mcp.json.mcp-hub-*.bak"))), integrations.KEEP_BACKUPS)
 
     def test_codex_connect_creates_the_file(self):
         self.paths["codex"].parent.mkdir(parents=True)

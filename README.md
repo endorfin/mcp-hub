@@ -203,7 +203,7 @@ In the GUI, the “Compact mode” switch in the hub endpoint card (Settings) ch
 
 ### Connecting clients
 
-**By click:** Settings → “Connect clients” lists Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot CLI with the configuration file the hub found for each, and whether the hub is already in it. “Connect” adds the hub (with the compact URL when the compact switch is on), “Disconnect” removes it, and a connected client can be switched between compact and all tools. Before every change the hub writes a backup next to the file (`*.mcp-hub.bak`). Claude Code is changed through `claude mcp add/remove --scope user`, so the `claude` command must be on the hub’s `PATH`; Claude Desktop gets the `bridge.py` entry and needs a restart afterwards. JSON files with comments are left alone; edit those by hand.
+**By click:** Settings → “Connect clients” lists Claude Code, Claude Desktop, Codex, Cursor, VS Code and Copilot CLI with the configuration file the hub found for each, and whether the hub is already in it. “Connect” adds the hub (with the compact URL when the compact switch is on), “Disconnect” removes it, and a connected client can be switched between compact and all tools. Before every change the hub writes a backup next to the file (`<file>.mcp-hub-<date>-<time>.bak`, the last five are kept). Claude Code is changed through `claude mcp add/remove --scope user`, so the `claude` command must be on the hub’s `PATH`; Claude Desktop gets the `bridge.py` entry and needs a restart afterwards. JSON files with comments are left alone; edit those by hand.
 
 | Client | File |
 | --- | --- |

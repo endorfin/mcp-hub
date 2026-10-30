@@ -4,12 +4,14 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
 import importer
 
 NAME = "mcp-hub"
+KEEP_BACKUPS = 5
 
 
 class IntegrationError(Exception):
@@ -113,8 +115,17 @@ def status(port):
 
 
 def _backup(path):
-    if path.exists():
-        shutil.copy2(path, path.with_name(path.name + ".mcp-hub.bak"))
+    if not path.exists():
+        return
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    target, n = path.with_name(f"{path.name}.mcp-hub-{stamp}.bak"), 1
+    while target.exists():
+        n += 1
+        target = path.with_name(f"{path.name}.mcp-hub-{stamp}-{n}.bak")
+    shutil.copy2(path, target)
+    backups = sorted(path.parent.glob(f"{path.name}.mcp-hub-*.bak"), key=lambda p: p.stat().st_mtime_ns)
+    for old in backups[:-KEEP_BACKUPS]:
+        old.unlink()
 
 
 def _write_json(path, data):
