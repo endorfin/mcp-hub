@@ -35,7 +35,7 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .picker svg { color: var(--muted); flex: none; }
 .lb { position: relative; display: flex; min-width: 0; }
 .toolbar .lb { min-width: 180px; }
-.lb-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; text-align: left; cursor: pointer; }
+.lb-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; font: inherit; font-size: 14px; line-height: 20px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; text-align: left; cursor: pointer; }
 .lb-trigger:hover { border-color: var(--muted); }
 .lb-trigger:focus-visible, .lb-trigger[aria-expanded="true"] { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
 .lb-trigger svg { color: var(--muted); flex: none; }
@@ -53,7 +53,7 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .opt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .opt.hi { background: var(--chip); }
 .opt.none span { color: var(--muted); }
-.opt svg { color: var(--accent); }
+.opt svg { color: var(--ink); }
 
 .profile .group-btn { display: grid; place-items: center; flex: none; width: 34px; padding: 0; border: 0; border-left: 1px solid var(--line); border-radius: 0 6px 6px 0; background: none; color: var(--muted); }
 .profile .group-btn:hover, .profile .group-btn[aria-expanded="true"] { color: var(--ink); background: var(--chip); }
@@ -62,7 +62,7 @@ nav { display: flex; gap: 2px; background: var(--chip); padding: 3px; border-rad
 nav button { border: 0; background: none; padding: 5px 12px; border-radius: 6px; color: var(--muted); font: inherit; cursor: pointer; }
 nav button.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
 main { max-width: 1040px; margin: 0 auto; padding: 20px; }
-button.btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+button.btn { font: inherit; line-height: 20px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 7px 12px; border-radius: 7px; cursor: pointer; }
 button.btn:hover { border-color: var(--muted); }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 550; }
 button.primary:hover { filter: brightness(1.08); }
@@ -85,7 +85,7 @@ button.ghost:hover { color: var(--ink); background: var(--chip); }
 .fgroup > button:focus-visible { background-color: var(--chip); }
 .toolbar > .actions { align-self: stretch; display: flex; }
 button.btn.add { display: grid; place-items: center; width: 38px; padding: 0; }
-input, textarea, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; }
+input, textarea, select { font: inherit; font-size: 14px; line-height: 20px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; }
 :is(dialog, .card, .insp, .lb-pop) :is(input:not([type=checkbox]), textarea, .lb-trigger) { background-color: var(--field); }
 input:focus, textarea:focus, select:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
 textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
