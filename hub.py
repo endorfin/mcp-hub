@@ -13,7 +13,7 @@ SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
 
 
 def runtime_key(entry, pass_environment):
-    relevant = {k: v for k, v in (entry or {}).items() if k != "description"}
+    relevant = {k: v for k, v in (entry or {}).items() if k not in ("description", "disabledTools")}
     return json.dumps([relevant, pass_environment], sort_keys=True)
 
 
@@ -78,6 +78,10 @@ class Upstream:
                     self.catalog[key] = self.session.list_all(method, key)
                 except RpcError:
                     self.catalog[key] = []
+
+    def tools(self):
+        disabled = set(self.entry.get("disabledTools") or [])
+        return [t for t in self.catalog["tools"] if t["name"] not in disabled]
 
     def alive(self):
         return self.session is not None and self.session.alive()
@@ -215,7 +219,9 @@ class Hub:
                     del self.upstreams[name]
             starting = []
             for name, entry in wanted.items():
-                if name not in self.upstreams:
+                if name in self.upstreams:
+                    self.upstreams[name].entry = entry
+                else:
                     upstream = Upstream(name, entry, runtime_key(entry, pass_environment))
                     self.upstreams[name] = upstream
                     thread = threading.Thread(target=upstream.start, args=(pass_environment,), daemon=True)
@@ -242,9 +248,21 @@ class Hub:
                 "summary": u.server_info.get("description") or u.instructions.strip().split("\n")[0][:300]
                 or ", ".join(t["name"] for t in u.catalog["tools"][:6]) + (" …" if len(u.catalog["tools"]) > 6 else ""),
                 **{k: len(v) for k, v in u.catalog.items()},
+                "tools": len(u.tools()),
+                "toolsTotal": len(u.catalog["tools"]),
             }
             for name, u in self.upstreams.items()
         }
+
+    def tools(self, name):
+        upstream = self.upstreams.get(name)
+        if not upstream:
+            return None
+        disabled = set(upstream.entry.get("disabledTools") or [])
+        return [{"name": t["name"], "title": t.get("title") or (t.get("annotations") or {}).get("title"),
+                 "description": (t.get("description") or "").strip().split("\n")[0][:240],
+                 "enabled": t["name"] not in disabled}
+                for t in upstream.catalog["tools"]]
 
     def _route(self, running, prefixed):
         for upstream in sorted(running, key=lambda u: -len(u.prefix)):
@@ -267,7 +285,7 @@ class Hub:
 
         running = self.sync()
         if method == "tools/list":
-            return {"tools": [labelled(u, t) for u in running for t in u.catalog["tools"]]}
+            return {"tools": [labelled(u, t) for u in running for t in u.tools()]}
         if method == "prompts/list":
             return {"prompts": [labelled(u, p) for u in running for p in u.catalog["prompts"]]}
         if method == "resources/list":
@@ -276,6 +294,8 @@ class Hub:
             return {"resourceTemplates": [t for u in running for t in u.catalog["resourceTemplates"]]}
         if method == "tools/call":
             upstream, name = self._route(running, params.get("name", ""))
+            if name in (upstream.entry.get("disabledTools") or []):
+                raise JsonRpcError(-32602, f"Tool im Hub deaktiviert: {params.get('name')}")
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)
         if method == "prompts/get":
             upstream, name = self._route(running, params.get("name", ""))

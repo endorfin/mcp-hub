@@ -71,6 +71,8 @@ def validate_servers(servers):
             return f"{name}: headers muss ein Objekt sein"
         if not isinstance(entry.get("args", []), list):
             return f"{name}: args muss eine Liste sein"
+        if not isinstance(entry.get("disabledTools", []), list):
+            return f"{name}: disabledTools muss eine Liste sein"
         if not isinstance(entry.get("env", {}), dict):
             return f"{name}: env muss ein Objekt sein"
     return None
@@ -122,6 +124,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(hub.status())
         if self.path == "/api/usage":
             return self.send(hub.usage.snapshot())
+        if self.path.startswith("/api/hub/tools"):
+            tools = hub.tools(parse_qs(urlparse(self.path).query).get("name", [""])[0])
+            if tools is None:
+                return self.send({"error": "Server läuft nicht im Hub"}, HTTPStatus.NOT_FOUND)
+            return self.send(tools)
         if self.path.startswith("/api/calls"):
             limit = int(parse_qs(urlparse(self.path).query).get("limit", ["300"])[0])
             return self.send(hub.calls.recent(min(limit, 1000)))

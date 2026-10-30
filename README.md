@@ -41,6 +41,7 @@ Ein Eintrag mit `url` und ohne `type` gilt als Streamable HTTP. Optional:
 
 - `description`: Zweck des Servers, nur für die GUI. Fehlt sie, zeigt die GUI die Beschreibung des Servers oder seine ersten Tools.
 - `enabled: false`: Server bleibt eingetragen, der Hub startet ihn aber nicht.
+- `disabledTools`: Liste von Tool-Namen (ohne Präfix), die der Hub ausblendet und deren Aufruf er ablehnt. Pflege am einfachsten über ⋯ → „Tools auswählen…“. Eine Änderung startet den Server nicht neu.
 - `env` (stdio) bzw. `headers` (HTTP/SSE).
 
 Mit `passEnvironment` (Einstellungen) erben lokale Server die Umgebung des Hubs, sonst nur `env`.
@@ -88,7 +89,7 @@ prun restart mcp-hub
 
 ## GUI
 
-- **Server:** Liste mit An/Aus-Schalter, Hub-Status je Server (Tools, Fehler), Nutzung und Sortierung nach zuletzt verwendet, Name oder Datei. Über das Menü ⋯ lassen sich Server inspizieren, bearbeiten, duplizieren und löschen. Import nimmt `mcpServers`-JSON aus anderen Konfigurationen an.
+- **Server:** Liste mit An/Aus-Schalter, Hub-Status je Server (Tools, Fehler), Nutzung und Sortierung nach zuletzt verwendet, Name oder Datei. Über das Menü ⋯ lassen sich Server inspizieren, Tools für den Hub an- und abwählen, bearbeiten, duplizieren und löschen. Import nimmt `mcpServers`-JSON aus anderen Konfigurationen an.
 - **Protokoll:** Jeder Aufruf über den Hub mit Zeit, Client, Server, Tool, Argumenten, Ergebnisvorschau, Dauer und Fehlerstatus. Filterbar nach Server, Client und Fehlern.
 - **Inspector:** Verbindet sich direkt mit einem Server (unabhängig vom Hub) und listet Tools, Resources, Templates und Prompts. Alles lässt sich mit Formular- oder JSON-Eingabe aufrufen, stderr und Notifications erscheinen darunter.
 - **JSON:** Die Serverdatei direkt bearbeiten.
@@ -108,6 +109,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `PUT` | `/api/servers` | `{"mcpServers": {…}}` speichern, Hub synchronisieren |
 | `PUT` | `/api/settings` | Einstellungen speichern |
 | `GET` | `/api/hub` | Status je Server (Zustand, Fehler, Anzahl Tools/Prompts/Resources) |
+| `GET` | `/api/hub/tools?name=` | Alle Tools eines Servers mit Status `enabled` |
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
 | `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |

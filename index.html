@@ -96,6 +96,14 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 #toast.err { background: var(--bad); color: #fff; }
 .dirty { color: var(--warn); font-size: 12.5px; }
 [hidden] { display: none !important; }
+.tool-list { display: grid; border: 1px solid var(--line); border-radius: 9px; max-height: 50vh; overflow: auto; }
+.tool { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 8px 12px; border-top: 1px solid var(--line); cursor: pointer; }
+.tool:first-child { border-top: 0; }
+.tool input { width: auto; margin: 3px 0 0; accent-color: var(--accent); }
+.tool b { font: 500 12.5px var(--mono); }
+.tool small { display: block; color: var(--muted); font-size: 12.5px; }
+.tool-bar { display: flex; gap: 8px; align-items: center; }
+.tool-bar input { flex: 1; }
 .call { border-top: 1px solid var(--line); }
 .call:first-child { border-top: 0; }
 .call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
@@ -318,6 +326,27 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   </form>
 </dialog>
 
+<dialog id="toolsDialog">
+  <form method="dialog" id="toolsForm">
+    <div class="dhead" id="toolsTitle">Tools</div>
+    <div class="dbody">
+      <span class="hint">Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Clients sehen die Änderung nach einem Reconnect.</span>
+      <div class="tool-bar">
+        <input type="search" id="toolsFilter" placeholder="Tools filtern…" aria-label="Tools filtern">
+        <button type="button" class="btn" id="toolsAll">Alle an</button>
+        <button type="button" class="btn" id="toolsNone">Alle aus</button>
+      </div>
+      <div class="tool-list" id="toolsList"></div>
+      <p class="error" id="toolsError"></p>
+    </div>
+    <div class="dfoot">
+      <span class="hint" id="toolsCount" style="margin-right:auto;align-self:center"></span>
+      <button type="button" class="btn" id="toolsCancel">Abbrechen</button>
+      <button class="btn primary">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast"></div>
 
 <script>
@@ -432,6 +461,7 @@ function renderList() {
         </button>
         <div class="menu" role="menu" hidden>
           <button role="menuitem" data-act="inspect">Inspizieren</button>
+          <button role="menuitem" data-act="tools">Tools auswählen…</button>
           <button role="menuitem" data-act="edit">Bearbeiten</button>
           <button role="menuitem" data-act="dup">Duplizieren</button>
           <hr>
@@ -451,7 +481,9 @@ function renderList() {
     const meta = $(".meta", row);
     const h = hubStatus[name];
     if (on && h) {
-      const text = h.state === "running" ? `Hub: ${h.tools} Tools` + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
+      const unit = h.toolsTotal === 1 ? "Tool" : "Tools";
+      const tools = h.tools === h.toolsTotal ? `${h.tools} ${unit}` : `${h.tools} von ${h.toolsTotal} ${unit}`;
+      const text = h.state === "running" ? `Hub: ${tools}` + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
         : h.state === "error" ? "Hub: Fehler" : "Hub: startet…";
       meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: h.error || "", style: "cursor:default" }));
     }
@@ -468,6 +500,8 @@ function renderList() {
     $("input", row).onchange = e => saveServers({ ...servers(), [name]: { ...s, enabled: e.target.checked } });
     $(".dots", row).onclick = e => { e.stopPropagation(); toggleMenu(row); };
     $("[data-act=inspect]", row).onclick =() => { showTab("inspector"); $("#inspServer").value = name; inspConnect(); };
+    $("[data-act=tools]", row).hidden = !(on && h?.state === "running" && h.toolsTotal);
+    $("[data-act=tools]", row).onclick = () => openTools(name);
     $("[data-act=edit]", row).onclick = () => openEditor(name);
     $("[data-act=dup]", row).onclick = () => openEditor(name, true);
     $("[data-act=del]", row).onclick = () => {
@@ -602,6 +636,53 @@ $("#editCancel").onclick = () => $("#editor").close();
 $("#addEnv").onclick = () => envRow();
 $("#addHeader").onclick = () => headerRow();
 $("#addBtn").onclick = () => openEditor(null);
+
+let toolsServer = null;
+
+function renderToolsCount() {
+  const boxes = [...$("#toolsList").querySelectorAll("input")];
+  $("#toolsCount").textContent = `${boxes.filter(b => b.checked).length} von ${boxes.length} aktiv`;
+}
+
+async function openTools(name) {
+  let tools;
+  try { tools = await api("GET", `/api/hub/tools?name=${encodeURIComponent(name)}`); }
+  catch (e) { return toast(e.message, true); }
+  toolsServer = name;
+  $("#toolsTitle").textContent = `Tools von „${name}“`;
+  $("#toolsFilter").value = "";
+  $("#toolsError").textContent = "";
+  $("#toolsList").replaceChildren(...tools.map(t => {
+    const row = el("label", { className: "tool", title: t.description });
+    row.dataset.search = `${t.name} ${t.title || ""} ${t.description}`.toLowerCase();
+    const box = el("input", { type: "checkbox", checked: t.enabled, value: t.name });
+    box.onchange = renderToolsCount;
+    row.append(box, el("span", {}, el("b", { textContent: t.name }), el("small", { textContent: t.description })));
+    return row;
+  }));
+  renderToolsCount();
+  $("#toolsDialog").showModal();
+  $("#toolsFilter").focus();
+}
+
+$("#toolsFilter").oninput = e => {
+  const q = e.target.value.trim().toLowerCase();
+  for (const row of $("#toolsList").children) row.hidden = q && !row.dataset.search.includes(q);
+};
+const setVisibleTools = on => {
+  for (const row of $("#toolsList").children) if (!row.hidden) $("input", row).checked = on;
+  renderToolsCount();
+};
+$("#toolsAll").onclick = () => setVisibleTools(true);
+$("#toolsNone").onclick = () => setVisibleTools(false);
+$("#toolsCancel").onclick = () => $("#toolsDialog").close();
+$("#toolsForm").onsubmit = async e => {
+  e.preventDefault();
+  const disabled = [...$("#toolsList").querySelectorAll("input:not(:checked)")].map(b => b.value);
+  const entry = { ...servers()[toolsServer] };
+  if (disabled.length) entry.disabledTools = disabled; else delete entry.disabledTools;
+  if (await saveServers({ ...servers(), [toolsServer]: entry })) $("#toolsDialog").close();
+};
 
 $("#importBtn").onclick = () => { $("#importText").value = ""; $("#importError").textContent = ""; $("#importer").showModal(); };
 $("#importCancel").onclick = () => $("#importer").close();
