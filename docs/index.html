@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..125,300..800&display=swap">
+<script>document.documentElement.classList.add("js")</script>
 <style>
 :root { --mono: ui-monospace, "SF Mono", Menlo, monospace; }
 :root, [data-palette="default"] {
@@ -445,6 +446,11 @@ footer a:hover { color: var(--ink); }
   section.block { padding-top: 64px; }
   .top .wrap { gap: 12px; }
 }
+.js .reveal { opacity: 0; transform: translateY(28px); filter: blur(6px); transition: opacity .9s var(--ease), transform .9s var(--ease), filter .9s var(--ease); transition-delay: var(--d, 0ms); }
+.js .reveal.from-left { transform: translateX(-36px); }
+.js .reveal.from-right { transform: translateX(36px) scale(.98); }
+.js .reveal.fade { transform: none; filter: none; transition-duration: 1.2s; }
+.js .reveal.in { opacity: 1; transform: none; filter: none; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -1242,6 +1248,33 @@ function renderMock() {
     </div>`;
 }
 
+function setupReveal() {
+  const groups = [
+    [".hero .text > *", "", 110],
+    [".board", "fade", 0, 450],
+    [".intro", ""],
+    [".feature .text", "from-left"],
+    [".feature .demo", "from-right", 0, 120],
+    [".mock", ""],
+    [".facts > div", "", 70],
+    [".steps > li", "", 110],
+    [".close-panel", ""]
+  ];
+  const els = [];
+  groups.forEach(([sel, cls, step = 0, base = 0]) => $$(sel).forEach((el, i) => {
+    el.classList.add("reveal");
+    if (cls) el.classList.add(cls);
+    el.style.setProperty("--d", `${base + i * step}ms`);
+    els.push(el);
+  }));
+  if (!("IntersectionObserver" in window)) return els.forEach(el => el.classList.add("in"));
+  const io = new IntersectionObserver(entries => entries.forEach(en => {
+    if (!en.isIntersecting) return;
+    en.target.classList.add("in");
+    io.unobserve(en.target);
+  }), { rootMargin: "0px 0px -8% 0px" });
+  els.forEach(el => io.observe(el));
+}
 function applyLang(l) {
   lang = I18N[l] ? l : "en";
   document.documentElement.lang = lang;
@@ -1261,6 +1294,7 @@ setupImport();
 setupSecrets();
 setupAutostart();
 setupCopy();
+setupReveal();
 $("#lang").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { store.set("lang", b.dataset.lang); applyLang(b.dataset.lang); } });
 applyLang(store.get("lang") || ((navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en"));
 </script>
