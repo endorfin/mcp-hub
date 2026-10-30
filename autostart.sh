@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-LABEL="de.tpwd.mcp-hub"
+LABEL="io.github.endorfin.mcp-hub"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG="$HOME/Library/Logs/mcp-hub.log"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -9,12 +9,12 @@ DOMAIN="gui/$(id -u)"
 URL="http://127.0.0.1:${PORT:-4747}"
 
 usage() {
-  echo "Verwendung: $0 install | uninstall | restart | status"
+  echo "Usage: $0 install | uninstall | restart | status"
   echo
-  echo "  install    Hub beim Login starten (und jetzt sofort)."
-  echo "  uninstall  Autostart entfernen und den so gestarteten Hub beenden."
-  echo "  restart    Den per Autostart laufenden Hub neu starten."
-  echo "  status     Zeigt, ob der Autostart eingerichtet ist und der Hub läuft."
+  echo "  install    Start the hub at login (and right now)."
+  echo "  uninstall  Remove the autostart and stop the hub it started."
+  echo "  restart    Restart the hub started by the autostart."
+  echo "  status     Show whether the autostart is set up and the hub is running."
 }
 
 xml() {
@@ -28,11 +28,11 @@ hub_running() {
 install() {
   python_bin="$(command -v python3 || true)"
   if [ -z "$python_bin" ]; then
-    echo "python3 nicht gefunden." >&2
+    echo "python3 not found." >&2
     exit 1
   fi
   if [ ! -f "$PLIST" ] && hub_running; then
-    echo "Auf $URL läuft schon ein Hub. Erst beenden, dann einrichten." >&2
+    echo "A hub is already running at $URL. Stop it first, then install." >&2
     exit 1
   fi
   launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
@@ -70,35 +70,35 @@ install() {
 </plist>
 EOF
   launchctl bootstrap "$DOMAIN" "$PLIST"
-  echo "Autostart eingerichtet: $PLIST"
+  echo "Autostart installed: $PLIST"
   echo "Hub: $URL  ·  Log: $LOG"
 }
 
 uninstall() {
   launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
   rm -f "$PLIST"
-  echo "Autostart entfernt."
+  echo "Autostart removed."
 }
 
 restart() {
   if [ ! -f "$PLIST" ]; then
-    echo "Autostart ist nicht eingerichtet." >&2
+    echo "Autostart is not set up." >&2
     exit 1
   fi
   launchctl kickstart -k "$DOMAIN/$LABEL"
-  echo "Hub neu gestartet."
+  echo "Hub restarted."
 }
 
 status() {
   if [ -f "$PLIST" ]; then
-    echo "Autostart: eingerichtet, $PLIST"
+    echo "Autostart: installed, $PLIST"
   else
-    echo "Autostart: nicht eingerichtet"
+    echo "Autostart: not set up"
   fi
   if hub_running; then
-    echo "Hub: läuft auf $URL"
+    echo "Hub: running at $URL"
   else
-    echo "Hub: nicht erreichbar"
+    echo "Hub: not reachable"
   fi
 }
 

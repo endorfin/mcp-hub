@@ -132,7 +132,7 @@ When the tool list changes (server on/off, tools deselected, profile switched, a
 
 ## Autostart
 
-For Claude Code, Claude Desktop and Copilot to have their tools after a reboot, the hub needs to start at login. `autostart.sh` sets up a LaunchAgent (`~/Library/LaunchAgents/de.tpwd.mcp-hub.plist`) that runs `python3 app.py` and restarts it after a crash:
+For Claude Code, Claude Desktop and Copilot to have their tools after a reboot, the hub needs to start at login. `autostart.sh` sets up a LaunchAgent (`~/Library/LaunchAgents/io.github.endorfin.mcp-hub.plist`) that runs `python3 app.py` and restarts it after a crash:
 
 ```bash
 ./autostart.sh install     # set up and start right away
