@@ -55,7 +55,15 @@ These come from [PRODUCT.md](PRODUCT.md) and keep the project small:
 
 ## Releases
 
-The version lives in one place: `VERSION` in `version.py`. It appears in the GUI header and in the hub’s `serverInfo`. For a release, bump it, commit, and tag the commit as `v<version>`.
+The version lives in one place: `VERSION` in `version.py`. It appears in the GUI header, in the hub’s `serverInfo`, and on the landing page, where the Pages workflow stamps it at deploy time.
+
+For a release:
+
+1. Bump `VERSION` in `version.py`.
+2. Run `uv run scripts/screenshots.py`. It renders the README screenshots, the color scheme image and the social preview in `docs/` from the example data in `scripts/screenshot-data.json`, without starting any MCP server. It uses the installed Google Chrome, or Playwright’s Chromium if there is none (`uvx playwright install chromium`).
+3. Look at the images, then commit everything as `🔖 release: v<version>` and tag the commit as `v<version>`.
+4. Push the commit and the tag, and publish the GitHub release with notes. Pushing `version.py` redeploys the landing page with the new version.
+5. Upload `docs/social-preview.png` under Settings → General → Social preview; GitHub has no API for it.
 
 ## License
 
