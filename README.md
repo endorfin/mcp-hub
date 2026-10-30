@@ -146,7 +146,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 ## Ideen und nächste Schritte
 
 1. **Remote und Backup:** Den Code in ein privates Git-Repo pushen und `servers.json` verschlüsselt sichern, etwa per Time Machine oder als 1Password-Dokument.
-2. **Tokens aus der JSON holen:** Erledigt, siehe „Secrets“. Offen ist noch, die vorhandenen Tokens umzuziehen.
+2. **Tokens aus der JSON holen:** Erledigt, siehe „Secrets“.
 3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
 4. **Änderungen an Clients melden:** `notifications/tools/list_changed` per SSE an verbundene Clients schicken, damit neue Server ohne Reconnect erscheinen.
 5. **Statistik im Protokoll:** Aufrufe pro Tag, langsamste Tools und Fehlerquote je Server, berechnet aus `calls.jsonl`.
