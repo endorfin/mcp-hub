@@ -97,6 +97,16 @@ def validate_servers(servers):
             return f"{name}: disabledTools must be a list"
         if not isinstance(entry.get("env", {}), dict):
             return f"{name}: env must be an object"
+        for key in ("args", "env", "headers"):
+            values = entry.get(key) or ([] if key == "args" else {})
+            if not all(isinstance(v, str) for v in (values if key == "args" else values.values())):
+                return f"{name}: values in {key} must be strings"
+    prefixes = {}
+    for name in servers:
+        prefix = hub_module.prefix_of(name)
+        if prefix in prefixes:
+            return f"{prefixes[prefix]} and {name} would share the tool prefix {prefix}"
+        prefixes[prefix] = name
     return None
 
 
@@ -499,7 +509,7 @@ class Handler(BaseHTTPRequestHandler):
         except hub_module.JsonRpcError as e:
             reply["error"] = {"code": e.code, "message": str(e)}
         except Exception as e:
-            reply["error"] = {"code": -32603, "message": f"Interner Fehler: {e}"}
+            reply["error"] = {"code": -32603, "message": f"Internal error: {e}"}
         self.send(reply, headers=headers)
 
     def delete(self):
