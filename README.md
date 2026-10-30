@@ -133,5 +133,5 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 4. **Änderungen an Clients melden:** `notifications/tools/list_changed` per SSE an verbundene Clients schicken, damit neue Server ohne Reconnect erscheinen.
 5. **Statistik im Protokoll:** Aufrufe pro Tag, langsamste Tools und Fehlerquote je Server, berechnet aus `calls.jsonl`.
 6. **OAuth für entfernte Server:** Für gehostete MCPs, die nur OAuth anbieten.
-7. **Alte Reste entfernen:** `proxy.log` und `proxy.pid` in `~/.config/mcp-proxy` sowie die alten `.bak-*`-Dateien von `~/.claude.json`.
+7. **Alte Reste entfernen:** Erledigt.
 8. **Tests:** Ein Smoke-Test, der den Hub mit einem Dummy-Server startet und `tools/list` sowie `tools/call` prüft.
