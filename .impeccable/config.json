@@ -1,1 +1,21 @@
-{ "buildPath": "code" }
+{
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "mona sans",
+        "createdAt": "2026-10-30T21:20:28.276Z",
+        "reason": "landing page only: user asked for more visual punch with a reference image; the app keeps the system font"
+      },
+      {
+        "rule": "overused-font",
+        "value": "mona sans",
+        "createdAt": "2026-10-30T21:21:14.667Z",
+        "reason": "landing page on GitHub Pages uses GitHub's own Mona Sans on purpose, after the user asked for more visual punch"
+      }
+    ]
+  }
+}
