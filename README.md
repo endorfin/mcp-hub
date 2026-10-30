@@ -126,6 +126,7 @@ Ein Profil merkt sich je Server, ob er aktiviert ist und welche Tools abgewählt
 - **Speichern:** Server und Tools einstellen, dann oben über ⋯ → „Als neues Profil speichern…“.
 - **Wechseln:** Oben die Profilauswahl öffnen (mit Suchfeld, Pfeiltasten und Enter) und ein Profil wählen. Der Hub schreibt An/Aus und `disabledTools` in `servers.json`, startet oder stoppt die betroffenen Server und blendet Tools aus. Verbundene Clients bekommen die neue Tool-Liste automatisch (siehe „Live-Aktualisierung“).
 - **Geändert:** Weicht der Stand vom aktiven Profil ab, zeigt die Auswahl einen orangefarbenen Punkt (Tooltip: ungespeicherte Änderungen). Über ⋯ → „… aktualisieren“ übernimmt das Profil den aktuellen Stand. Beim Wechsel mit ungespeicherten Änderungen fragt die GUI nach.
+- **Kein Profil:** schaltet alle Server ein und alle Tools frei (entfernt jedes `disabledTools`), auch wenn „Kein Profil“ schon ausgewählt ist. Ein geändertes Profil erneut anzuklicken setzt es auf seinen gespeicherten Stand zurück.
 - **Neue Server:** Server, die ein Profil nicht kennt, lässt der Wechsel unverändert. Mit „aktualisieren“ kommen sie ins Profil.
 - **Verwalten:** Unter ⋯ → „Profile verwalten…“ lassen sich Profile umbenennen und löschen, ohne sie vorher anzuwenden. Server und Tools bleiben dabei, wie sie sind. Namen dürfen kein `/` enthalten.
 
@@ -157,7 +158,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `GET` | `/api/live` | Clients mit offenem Benachrichtigungs-Stream |
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
-| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}` |
+| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}`; `clear` schaltet alles ein |
 | `POST` | `/api/secrets` | `{"name", "value"}` im Schlüsselbund ablegen, liefert `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |
 | `POST` | `/api/inspect/call` | `{"name", "method", "params"}` an den Server schicken |

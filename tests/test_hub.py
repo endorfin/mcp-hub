@@ -148,6 +148,18 @@ class HubTest(unittest.TestCase):
             self.wait_for(lambda: "beta__echo" in self.tool_names())
         self.assertEqual(self.get("/api/state")["profiles"], {"active": None, "profiles": {}})
 
+    def test_no_profile_enables_everything(self):
+        servers = self.servers()
+        servers["alpha"]["disabledTools"] = ["fail"]
+        servers["beta"]["enabled"] = False
+        self.save_servers(servers)
+        self.wait_for(lambda: "beta__echo" not in self.tool_names())
+        self.request("POST", "/api/profiles", {"action": "clear"})
+        self.wait_for(lambda: "beta__echo" in self.tool_names() and "alpha__fail" in self.tool_names())
+        servers = self.servers()
+        self.assertNotIn("disabledTools", servers["alpha"])
+        self.assertTrue(servers["beta"]["enabled"])
+
     @unittest.skipUnless(sys.platform == "darwin", "Schlüsselbund nur auf macOS")
     def test_keychain_secret_is_resolved(self):
         status, body = self.request("POST", "/api/secrets", {"name": KEYCHAIN_NAME, "value": "aus-dem-schluesselbund"})

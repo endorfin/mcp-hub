@@ -532,6 +532,7 @@ function renderPickerOptions() {
     option.setAttribute("aria-selected", String(item.value === current));
     option.innerHTML = item.value === current ? CHECK_ICON : "<i></i>";
     option.append(el("span", { textContent: item.label }));
+    if (!item.value) option.title = "Schaltet alle Server und Tools ein";
     option.onmouseenter = () => { pickerIndex = i; highlightPicker(); };
     option.onclick = () => chooseProfile(item.value);
     return option;
@@ -570,9 +571,9 @@ function closePicker(focus = false) {
 function chooseProfile(name) {
   closePicker(true);
   const current = state.profiles.profiles[state.profiles.active] ? state.profiles.active : "";
-  if (name === current) return;
-  if (profileDirty() && !confirm(`Die Änderungen an „${state.profiles.active}“ sind nicht gespeichert und gehen verloren. Trotzdem wechseln?`)) return;
-  if (!name) return profileAction("clear", null);
+  if (name && name === current && !profileDirty()) return;
+  if (profileDirty() && !confirm(`Die Änderungen an „${state.profiles.active}“ sind nicht gespeichert und gehen verloren. Trotzdem fortfahren?`)) return;
+  if (!name) return profileAction("clear", null, "Kein Profil – alle Server und Tools aktiv");
   profileAction("apply", name, `Profil „${name}“ aktiv`);
 }
 

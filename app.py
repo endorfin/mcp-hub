@@ -96,6 +96,12 @@ def update_profiles(action, name, new_name=None):
     data = load_profiles()
     profiles = data["profiles"]
     if action == "clear":
+        config = load_config()
+        for entry in config["mcpServers"].values():
+            entry["enabled"] = True
+            entry.pop("disabledTools", None)
+        write_json(config_path(), config)
+        sync_hub_in_background()
         data["active"] = None
     elif not name or not name.strip() or "/" in name:
         return "Profilname fehlt oder enthält „/“"
