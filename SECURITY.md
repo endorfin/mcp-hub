@@ -18,6 +18,7 @@ In scope, for example:
 - Bypassing the origin check or reaching the hub from outside `127.0.0.1`
 - Weaknesses in the OAuth flow (state, PKCE, token storage, redirect handling)
 - Anything that lets a web page or another local user trigger actions in the hub
+- The update mechanism: installing code from anywhere other than the releases of `endorfin/mcp-hub`, or writing outside the program folder
 
 Out of scope: vulnerabilities in the MCP servers you connect to the hub, and attacks that already require full control of your user account.
 

@@ -10,6 +10,7 @@ import signal
 import socketserver
 import sys
 import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +21,7 @@ import importer
 import inspector
 import oauth
 import secrets_store
+import updater as updater_module
 
 ROOT = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("MCP_HUB_HOME") or Path.home() / ".config" / "mcp-hub")
@@ -30,6 +32,7 @@ DEFAULT_SETTINGS = {
     "configPath": str(STATE_DIR / "servers.json"),
     "passEnvironment": True,
     "language": "auto",
+    "checkUpdates": True,
 }
 CALLBACK_TEXT = {
     "en": {"ok": "Signed in", "fail": "Sign-in failed", "connected": "“{server}” is connected.", "back": "Back to MCP Hub"},
@@ -163,8 +166,19 @@ hub = hub_module.Hub(load_config, load_settings, STATE_DIR, load_profiles)
 MCP_PATH = re.compile(r"^/(?:p/([^/]+)/)?mcp$")
 
 
+updater = updater_module.Updater(ROOT, STATE_DIR, inspector.VERSION)
+
+
 def sync_hub_in_background():
     threading.Thread(target=hub.sync, daemon=True).start()
+
+
+def restart():
+    time.sleep(0.5)
+    inspector.disconnect_all()
+    hub.close()
+    sys.stdout.flush()
+    os.execv(sys.executable, [sys.executable, *sys.argv])
 
 
 def local_origin(origin):
@@ -218,6 +232,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(hub.live_clients())
         if self.path == "/api/clients":
             return self.send(hub.clients.snapshot())
+        if self.path == "/api/update":
+            enabled = load_settings()["checkUpdates"]
+            if enabled and updater.stale():
+                updater.check_in_background()
+            return self.send({**updater.status(), "enabled": enabled})
         if self.path == "/api/usage":
             return self.send(hub.usage.snapshot())
         if self.path.startswith("/api/hub/tools"):
@@ -279,6 +298,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
         if match := MCP_PATH.match(self.path):
             return self.mcp(unquote(match.group(1)) if match.group(1) else None)
+        if self.path == "/api/update/check":
+            return self.send({**updater.check(), "enabled": load_settings()["checkUpdates"]})
+        if self.path == "/api/update/apply":
+            if updater.applying:
+                return self.send({"error": "An update is already running"}, HTTPStatus.CONFLICT)
+            try:
+                version = updater.apply()
+            except updater_module.UpdateError as e:
+                return self.send({"error": str(e)}, HTTPStatus.CONFLICT)
+            threading.Thread(target=restart, daemon=True).start()
+            return self.send({"ok": True, "version": version})
         if self.path == "/api/profiles":
             data = self.body()
             if error := update_profiles(data.get("action"), data.get("name"), data.get("newName")):

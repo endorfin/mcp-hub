@@ -33,7 +33,8 @@ class HubTest(unittest.TestCase):
             "beta": {"command": DUMMY[0], "args": DUMMY[1:]},
         }}
         Path(cls.home.name, "servers.json").write_text(json.dumps(servers))
-        env = {**os.environ, "MCP_HUB_HOME": cls.home.name, "PORT": str(cls.port), "MCP_HUB_TEST_VALUE": "from-env"}
+        env = {**os.environ, "MCP_HUB_HOME": cls.home.name, "PORT": str(cls.port), "MCP_HUB_TEST_VALUE": "from-env",
+               "MCP_HUB_UPDATE_API": "http://127.0.0.1:9"}
         cls.proc = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.wait_for(lambda: len(cls.get("/api/hub")) == 2 and all(
@@ -261,6 +262,14 @@ class HubTest(unittest.TestCase):
                          ("tester", "1.2", 1, 2, 0, None))
         self.request("DELETE", "/mcp", None, headers)
         self.assertFalse(any(c["id"] == session_id[:8] for c in self.get("/api/clients")))
+
+    def test_update_check_failure_is_reported_not_fatal(self):
+        status, body = self.request("POST", "/api/update/check", {})
+        self.assertEqual(status, 200, body)
+        self.assertIn("Update check failed", body["error"])
+        self.assertEqual((body["available"], body["method"]), (False, "git" if (ROOT / ".git").exists() else "archive"))
+        status, body = self.request("POST", "/api/update/apply", {})
+        self.assertEqual((status, body["error"]), (409, "No newer version available"))
 
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]

@@ -53,11 +53,12 @@ Everything lives in `~/.config/mcp-hub/` (override with `MCP_HUB_HOME`), not in 
 | File | Contents |
 | --- | --- |
 | `servers.json` | Server definitions in `mcpServers` format; `servers.json.bak` is written before every change |
-| `gui-settings.json` | Path to the server file, `passEnvironment`, `language` |
+| `gui-settings.json` | Path to the server file, `passEnvironment`, `language`, `checkUpdates` |
 | `usage.json` | Usage counter per server (count, last call) |
 | `calls.jsonl` | Call log, the last 5,000 entries |
 | `profiles.json` | Saved profiles and the active profile |
 | `clients.json` | Session ID → client mapping, the last 300 sessions |
+| `update.json` | Result of the last update check |
 
 Tokens either sit in `servers.json` or, better, as a reference to the keychain or 1Password (see “Secrets”). `servers.json` does not belong in a repository.
 
@@ -212,6 +213,17 @@ For Claude Code, Claude Desktop and Copilot to have their tools after a reboot, 
 
 Log: `~/Library/Logs/mcp-hub.log`. The path to `python3`, `PATH` and `PORT` are captured at install time; after moving the repository or installing a new Python, run `install` again. If a hub is already running on the port, the script aborts instead of starting a second one.
 
+## Updates
+
+When the GUI opens, the hub asks GitHub for the latest release of `endorfin/mcp-hub` (at most every 12 hours; the result is cached in `update.json`). If it is newer than the installed version, a green chip appears next to the version number in the header. A click shows the release notes and offers “Update now”:
+
+- **Git clone:** `git fetch --tags`, then a fast-forward to the release tag. If the checkout has local changes or commits that are not part of the release, the hub stops and leaves the update to you.
+- **Release archive:** the hub downloads the release archive from GitHub and unpacks it over the program folder. Your configuration lives in `~/.config/mcp-hub/` and is not touched.
+
+Afterwards the hub stops its servers and restarts itself in the same process, so prun, launchd or a terminal session keep running it. Connected clients initialize again on their own; the GUI reloads once the new version answers.
+
+The check is the only request the hub sends on its own. Turn it off in the settings (“Check GitHub for new versions”); “Check now” runs it manually.
+
 ## GUI
 
 Design rules and components of the interface are documented in [DESIGN.md](DESIGN.md); audience, purpose and principles of the product in [PRODUCT.md](PRODUCT.md).
@@ -220,7 +232,7 @@ Design rules and components of the interface are documented in [DESIGN.md](DESIG
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
 - **Clients:** every session since the last hub start with client name and version, profile endpoint, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
-- **Settings:** path to the server file, language, `passEnvironment`, and below that the complete `mcpServers` definition as JSON for direct editing.
+- **Settings:** path to the server file, language, `passEnvironment`, the update check, and below that the complete `mcpServers` definition as JSON for direct editing.
 
 **Language:** English or German, chosen under Settings → Language. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 
@@ -266,6 +278,9 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state |
 | `GET` | `/api/live` | Clients with an open notification stream |
 | `GET` | `/api/clients` | Sessions since the hub start: name, version, profile, `since`, `lastSeen`, `requests`, `calls`, `streams` |
+| `GET` | `/api/update` | Installed and latest version, release notes, install method; checks GitHub in the background when the last check is older than 12 hours |
+| `POST` | `/api/update/check` | Check GitHub now |
+| `POST` | `/api/update/apply` | Install the latest release and restart the hub |
 | `GET` | `/api/usage` | Usage counter |
 | `GET` | `/api/calls?limit=300` | Recent calls (max. 1,000) |
 | `GET` | `/api/stats?days=14` | Call statistics (key figures, per day, per server, slowest tools) |
@@ -289,7 +304,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
+`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
 
 ## Troubleshooting
 

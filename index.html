@@ -21,6 +21,12 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -app
 header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
 .bar { max-width: 1040px; margin: 0 auto; padding: 14px 20px 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px 16px; align-items: center; }
 h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+h1 .update-chip { margin-left: 8px; vertical-align: 2px; font-weight: 500; letter-spacing: 0; }
+.update-notes { margin: 0; max-height: 40vh; overflow: auto; background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.update-line { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+#updateState.err { color: var(--bad); }
+#updateLink { justify-self: start; color: var(--ink); font-size: 13px; text-underline-offset: 3px; }
+#updateLink:hover { color: var(--accent); }
 h1 .version { margin-left: 4px; font-size: 12.5px; font-weight: 400; letter-spacing: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
 .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
@@ -29,6 +35,9 @@ h1 .version { margin-left: 4px; font-size: 12.5px; font-weight: 400; letter-spac
 .bar .profile { grid-row: 1; grid-column: 3; }
 #tabs { grid-row: 2; grid-column: 1 / -1; margin-bottom: -1px; }
 @media (max-width: 600px) {
+  h1 { grid-column: 1 / 3; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 4px; }
+  h1 .update-chip { vertical-align: 0; }
+  .bar .profile .picker { min-width: 130px; }
   .status { grid-row: 2; grid-column: 1 / -1; }
   #tabs { grid-row: 3; }
   nav.line-tabs { gap: 18px; }
@@ -309,7 +318,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 <body>
 <header>
   <div class="bar">
-    <h1>MCP Hub <span class="version" id="version"></span></h1>
+    <h1>MCP Hub <span class="version" id="version"></span><button class="chip ok update-chip" id="updateChip" hidden></button></h1>
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
     <nav class="line-tabs" id="tabs">
       <button data-tab="servers" class="active" data-i18n="s.tabServers">Server</button>
@@ -470,6 +479,8 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         </select>
       </label>
       <label class="check"><input type="checkbox" name="passEnvironment"> <span data-i18n="s.passEnv">Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</span></label>
+      <label class="check"><input type="checkbox" name="checkUpdates"> <span data-i18n="s.checkUpdates">Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)</span></label>
+      <div class="update-line"><span class="hint" id="updateInfo"></span><button type="button" class="btn" id="updateCheck" data-i18n="s.updateCheck">Jetzt prüfen</button></div>
       <div><button class="btn primary" data-i18n="s.save">Speichern</button></div>
     </form>
     <div class="card">
@@ -563,6 +574,20 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   </form>
 </dialog>
 
+<dialog id="updateDialog">
+  <div class="dhead" id="updateTitle"></div>
+  <div class="dbody">
+    <span class="hint" id="updateSub"></span>
+    <pre class="update-notes" id="updateNotes"></pre>
+    <a id="updateLink" target="_blank" rel="noopener" data-i18n="s.updateOnGithub">Release auf GitHub ansehen</a>
+    <span class="hint" id="updateState"></span>
+  </div>
+  <div class="dfoot">
+    <button type="button" class="btn" id="updateClose" data-i18n="s.close">Schließen</button>
+    <button type="button" class="btn primary" id="updateApply" data-i18n="s.updateNow">Jetzt aktualisieren</button>
+  </div>
+</dialog>
+
 <dialog id="profilesDialog">
   <div class="dhead" data-i18n="s.profiles">Profile</div>
   <div class="dbody">
@@ -604,6 +629,10 @@ const I18N = {
   "s.manageProfiles": ["Profile verwalten…", "Manage profiles…"],
   "s.tabServers": ["Server", "Servers"],
   "s.tabLog": ["Protokoll", "Log"],
+  "s.checkUpdates": ["Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)", "Check GitHub for new versions (when the interface opens, at most every 12 hours)"],
+  "s.updateCheck": ["Jetzt prüfen", "Check now"],
+  "s.updateOnGithub": ["Release auf GitHub ansehen", "View release on GitHub"],
+  "s.updateNow": ["Jetzt aktualisieren", "Update now"],
   "s.clientsHint": ["Sitzungen seit dem letzten Hub-Start. Clients ohne Live-Stream melden sich nicht immer ab und bleiben dann bis zum Neustart stehen.", "Sessions since the last hub start. Clients without a live stream do not always sign off and then stay listed until the restart."],
   "s.tabSettings": ["Einstellungen", "Settings"],
   "s.filter": ["Filtern…", "Filter…"],
@@ -828,6 +857,20 @@ const I18N = {
   noCallsYetDot: ["Noch keine Aufrufe.", "No calls yet."],
   callCount: ["{n} von {total} Aufrufen", "{n} of {total} calls"],
   noHubCalls: ["Noch keine Aufrufe über den Hub.", "No calls through the hub yet."],
+  updateAvailable: ["{v} verfügbar", "{v} available"],
+  updateTitle: ["Version {v} ist verfügbar", "Version {v} is available"],
+  updateSub: ["Installiert: v{cur} · Aktualisierung per {method}", "Installed: v{cur} · update via {method}"],
+  updateMethodGit: ["git (Fast-forward auf das Release)", "git (fast-forward to the release)"],
+  updateMethodArchive: ["Download des Release-Archivs", "download of the release archive"],
+  updateNoNotes: ["Keine Release-Notes.", "No release notes."],
+  updateInstalling: ["Wird installiert …", "Installing …"],
+  updateRestarting: ["Installiert, der Hub startet neu …", "Installed, the hub is restarting …"],
+  updateTimeout: ["Der Hub hat nach dem Update nicht mit der neuen Version geantwortet. Bitte die Seite neu laden.", "The hub did not come back with the new version. Please reload the page."],
+  updateChecking: ["Suche nach Updates …", "Checking for updates …"],
+  updateCurrent: ["Aktuell", "Up to date"],
+  updateNewer: ["{v} verfügbar", "{v} available"],
+  updateChecked: ["geprüft {when}", "checked {when}"],
+  updateNever: ["Noch nicht geprüft", "Not checked yet"],
   noClients: ["Seit dem Hub-Start hat sich noch kein Client verbunden.", "No client has connected since the hub started."],
   clientLive: ["Live-Stream", "live stream"],
   clientIdle: ["inaktiv", "idle"],
@@ -866,6 +909,15 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^Update check failed: (.*)$/, "Update-Prüfung fehlgeschlagen: $1"],
+  [/^No newer version available$/, "Keine neuere Version verfügbar"],
+  [/^An update is already running$/, "Es läuft bereits ein Update"],
+  [/^The checkout has local changes; update it yourself with git$/, "Der Checkout hat lokale Änderungen – bitte selbst mit git aktualisieren"],
+  [/^The checkout has commits that are not part of (.*); update it yourself with git$/, "Der Checkout enthält Commits, die nicht in $1 sind – bitte selbst mit git aktualisieren"],
+  [/^git (\S+) failed: (.*)$/, "git $1 fehlgeschlagen: $2"],
+  [/^Download failed: (.*)$/, "Download fehlgeschlagen: $1"],
+  [/^Unexpected entry in the archive: (.*)$/, "Unerwarteter Eintrag im Archiv: $1"],
+  [/^The archive does not contain MCP Hub$/, "Das Archiv enthält keinen MCP Hub"],
   [/^Origin not allowed$/, "Herkunft (Origin) nicht erlaubt"],
   [/^Invalid name: (.*)$/, "Ungültiger Name: $1"],
   [/^(.*): entry must be an object$/, "$1: Eintrag muss ein Objekt sein"],
@@ -1738,7 +1790,7 @@ $("#settingsForm").onsubmit = async e => {
   try {
     state = await api("PUT", "/api/settings", body);
     if (rememberLanguage(state.settings.language)) return;
-    fillSettings(); syncJson(); render();
+    fillSettings(); syncJson(); render(); refreshUpdate();
     toast(t("settingsSaved"));
   } catch (err) { toast(err.message, true); }
 };
@@ -2306,11 +2358,72 @@ function rememberLanguage(setting = "auto") {
   return true;
 }
 
+let update = null;
+
+async function refreshUpdate() {
+  clearTimeout(refreshUpdate.timer);
+  update = await api("GET", "/api/update").catch(() => update);
+  renderUpdate();
+  if (update?.checking) refreshUpdate.timer = setTimeout(refreshUpdate, 1500);
+}
+
+function renderUpdate() {
+  const chip = $("#updateChip");
+  chip.hidden = !update?.available;
+  if (update?.available) chip.textContent = t("updateAvailable", { v: update.latest });
+  $("#updateInfo").textContent = !update ? ""
+    : update.checking ? t("updateChecking")
+    : update.error ? fromBackend(update.error)
+    : !update.checkedAt ? t("updateNever")
+    : `${update.available ? t("updateNewer", { v: update.latest }) : t("updateCurrent")} · ${t("updateChecked", { when: ago(update.checkedAt) })}`;
+}
+
+$("#updateCheck").onclick = async () => {
+  $("#updateInfo").textContent = t("updateChecking");
+  update = await api("POST", "/api/update/check").catch(err => { toast(err.message, true); return update; });
+  renderUpdate();
+};
+
+$("#updateChip").onclick = () => {
+  $("#updateTitle").textContent = t("updateTitle", { v: update.latest });
+  $("#updateSub").textContent = t("updateSub", { cur: update.current, method: t(update.method === "git" ? "updateMethodGit" : "updateMethodArchive") });
+  $("#updateNotes").textContent = update.notes.trim() || t("updateNoNotes");
+  $("#updateLink").hidden = !update.url;
+  if (update.url) $("#updateLink").href = update.url;
+  $("#updateState").textContent = "";
+  $("#updateState").className = "hint";
+  $("#updateApply").disabled = false;
+  $("#updateDialog").showModal();
+};
+$("#updateClose").onclick = () => $("#updateDialog").close();
+
+$("#updateApply").onclick = async () => {
+  const status = $("#updateState");
+  const fail = msg => { status.textContent = msg; status.className = "hint err"; $("#updateApply").disabled = false; };
+  $("#updateApply").disabled = true;
+  status.className = "hint";
+  status.textContent = t("updateInstalling");
+  let target;
+  try {
+    target = (await api("POST", "/api/update/apply")).version.replace(/^v/, "");
+  } catch (err) { return fail(err.message); }
+  status.textContent = t("updateRestarting");
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 1000));
+    const fresh = await api("GET", "/api/state").catch(() => null);
+    if (fresh?.version === target) return location.reload();
+  }
+  fail(t("updateTimeout"));
+};
+
 (async () => {
   [state, hubStatus, usage] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/hub"), api("GET", "/api/usage")]);
   if (rememberLanguage(state.settings.language)) return;
   syncJson(); fillSettings(); render();
   setInterval(poll, 2000);
+  refreshUpdate();
+  setInterval(refreshUpdate, 30 * 60000);
 })();
 </script>
 </body>
