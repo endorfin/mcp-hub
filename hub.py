@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import compact
+from fsutil import append_private, atomic_write
 import oauth
 from inspector import PROTOCOL_VERSION, VERSION, AuthRequired, RpcError, open_session
 
@@ -161,10 +162,7 @@ class Usage:
             entry = self.data.setdefault(server, {"count": 0, "last": None})
             entry["count"] += 1
             entry["last"] = time.time()
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self.path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(self.data, indent=2))
-            tmp.replace(self.path)
+            atomic_write(self.path, json.dumps(self.data, indent=2))
 
     def snapshot(self):
         with self.lock:
@@ -189,13 +187,11 @@ class CallLog:
     def record(self, entry):
         with self.lock:
             self.entries.append(entry)
-            self.path.parent.mkdir(parents=True, exist_ok=True)
             self.appended += 1
             if self.appended % 500 == 0:
-                self.path.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in self.entries))
+                atomic_write(self.path, "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in self.entries))
             else:
-                with self.path.open("a") as f:
-                    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                append_private(self.path, json.dumps(entry, ensure_ascii=False) + "\n")
 
     def recent(self, limit):
         with self.lock:
@@ -264,8 +260,7 @@ class Clients:
             self.active[session_id] = {"profile": profile, "mode": mode, "lastSeen": now, "requests": 1, "calls": 0, "streams": 0}
             while len(self.sessions) > self.keep:
                 self.sessions.pop(next(iter(self.sessions)))
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.path.write_text(json.dumps(self.sessions))
+            atomic_write(self.path, json.dumps(self.sessions))
         return session_id
 
     def valid(self, session_id):

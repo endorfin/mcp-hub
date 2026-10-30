@@ -9,6 +9,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import net
 import secrets_store
 
 USER_AGENT = "mcp-hub/1.0"
@@ -37,7 +38,7 @@ def _request(url, data=None, headers=None, method=None):
         headers.setdefault("Content-Type", "application/x-www-form-urlencoded")
     request = urllib.request.Request(url, body, headers, method=method or ("POST" if body else "GET"))
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with net.opener.open(request, timeout=30) as response:
             return json.loads(response.read() or b"{}")
     except urllib.error.HTTPError as e:
         with e:
@@ -85,6 +86,10 @@ def discover(server_url, challenge=None, settings=None):
         meta["authorization_endpoint"] = settings["authorizationUrl"]
     if settings.get("tokenUrl"):
         meta["token_endpoint"] = settings["tokenUrl"]
+    for key, label in (("authorization_endpoint", "The authorization endpoint"), ("token_endpoint", "The token endpoint"),
+                       ("registration_endpoint", "The registration endpoint")):
+        if meta.get(key) and not net.secure_url(meta[key]):
+            raise OAuthError(f"{label} must use https: {meta[key]}")
     if "S256" not in meta.get("code_challenge_methods_supported", ["S256"]):
         raise OAuthError("The authorization server does not support PKCE (S256)")
     scope = settings.get("scopes") or _challenge_param(challenge, "scope") or " ".join((resource or {}).get("scopes_supported") or [])

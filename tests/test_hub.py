@@ -363,6 +363,22 @@ class HubTest(unittest.TestCase):
             self.wait_for(lambda: "beta__echo" in self.tool_names())
             self.assertNotIn("onDemand", self.get("/api/hub")["beta"])
 
+    def test_requests_need_the_hub_host_and_origin(self):
+        self.assertEqual(self.request("GET", "/api/state", headers={"Host": f"attacker.example:{self.port}"})[0], 403)
+        self.assertEqual(self.request("GET", "/api/state", headers={"Origin": "http://localhost:3000"})[0], 403)
+        self.assertEqual(self.request("GET", "/api/state", headers={"Origin": f"http://localhost:{self.port}"})[0], 200)
+        req = urllib.request.Request(self.base + "/api/settings", b"{}", {"Content-Type": "text/plain"}, method="PUT")
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(req)
+        self.assertEqual(caught.exception.code, 415)
+        caught.exception.close()
+        req = urllib.request.Request(self.base + "/api/import/parse", b"{oops", {"Content-Type": "application/json"}, method="POST")
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(req)
+        self.assertEqual(caught.exception.code, 400)
+        caught.exception.close()
+        self.assertEqual(self.request("GET", "/api/stats?days=abc")[0], 200)
+
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
 

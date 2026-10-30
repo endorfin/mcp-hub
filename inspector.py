@@ -12,6 +12,7 @@ import urllib.request
 from collections import deque
 from urllib.parse import urljoin
 
+import net
 import oauth
 from secrets_store import SecretError, resolve_entry
 
@@ -266,7 +267,7 @@ class HttpSession(BaseSession):
             raise RpcError("Connection is closed")
         request = urllib.request.Request(self.url, json.dumps(message).encode(), self._headers(), method="POST")
         try:
-            response = urllib.request.urlopen(request, timeout=300)
+            response = net.opener.open(request, timeout=300)
         except urllib.error.HTTPError as e:
             if e.code == 401:
                 with e:
@@ -312,7 +313,7 @@ class HttpSession(BaseSession):
         if self.session_id:
             request = urllib.request.Request(self.url, headers=self._headers(), method="DELETE")
             try:
-                urllib.request.urlopen(request, timeout=5).close()
+                net.opener.open(request, timeout=5).close()
             except OSError:
                 pass
         self._release_pending()
@@ -334,10 +335,14 @@ class SseSession(BaseSession):
         request = urllib.request.Request(self.url, headers={
             "Accept": "text/event-stream", "User-Agent": USER_AGENT, **self.headers})
         try:
-            self.stream = urllib.request.urlopen(request, timeout=600)
+            self.stream = net.opener.open(request, timeout=600)
             for event, data in read_events(self.stream):
                 if event == "endpoint":
-                    self.endpoint = urljoin(self.url, data)
+                    endpoint = urljoin(self.url, data)
+                    if not net.same_origin(endpoint, self.url):
+                        self._record("error", f"The SSE endpoint must be on the same server: {endpoint}")
+                        break
+                    self.endpoint = endpoint
                     self.endpoint_ready.set()
                     continue
                 try:
@@ -368,7 +373,7 @@ class SseSession(BaseSession):
         request = urllib.request.Request(self.endpoint, json.dumps(message).encode(), {
             "Content-Type": "application/json", "User-Agent": USER_AGENT, **self.headers}, method="POST")
         try:
-            urllib.request.urlopen(request, timeout=60).close()
+            net.opener.open(request, timeout=60).close()
         except urllib.error.HTTPError as e:
             raise http_error(e)
 

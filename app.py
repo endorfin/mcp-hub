@@ -23,6 +23,7 @@ import inspector
 import oauth
 import secrets_store
 import updater as updater_module
+from fsutil import atomic_write
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_HOME = Path(os.environ["APPDATA"]) / "mcp-hub" if sys.platform == "win32" and os.environ.get("APPDATA") \
@@ -52,12 +53,9 @@ def read_json(path, default):
 
 def write_json(path, data):
     path = Path(path).expanduser()
-    path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         shutil.copy2(path, path.with_suffix(path.suffix + ".bak"))
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    tmp.replace(path)
+    atomic_write(path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
 
 def load_settings():
@@ -189,9 +187,6 @@ def restart():
     os.execv(sys.executable, [sys.executable, *sys.argv])
 
 
-def local_origin(origin):
-    return not origin or urlparse(origin).hostname in ("localhost", "127.0.0.1", "::1")
-
 
 class Server(ThreadingHTTPServer):
     # SO_REUSEADDR on Windows lets a second hub bind a port that is already in use.
@@ -222,6 +217,50 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         return json.loads(self.rfile.read(length) or b"{}")
 
+    def query(self, name, default, cast=str):
+        try:
+            return cast(parse_qs(urlparse(self.path).query).get(name, [default])[0])
+        except ValueError:
+            return cast(default)
+
+    def rejected(self, write=False):
+        port = self.server.server_address[1]
+        hosts = (f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}")
+        if self.headers.get("Host") not in hosts:
+            return HTTPStatus.FORBIDDEN, "Host not allowed"
+        origin = self.headers.get("Origin")
+        if origin and origin not in tuple(f"http://{host}" for host in hosts):
+            return HTTPStatus.FORBIDDEN, "Origin not allowed"
+        if write and self.path.startswith("/api/") and self.headers.get_content_type() != "application/json":
+            return HTTPStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type must be application/json"
+        return None
+
+    def do_GET(self):
+        if rejection := self.rejected():
+            return self.send({"error": rejection[1]}, rejection[0])
+        return self.get()
+
+    def do_PUT(self):
+        if rejection := self.rejected(write=True):
+            return self.send({"error": rejection[1]}, rejection[0])
+        try:
+            return self.put()
+        except json.JSONDecodeError as e:
+            return self.send({"error": f"Invalid JSON: {e}"}, HTTPStatus.BAD_REQUEST)
+
+    def do_POST(self):
+        if rejection := self.rejected(write=True):
+            return self.send({"error": rejection[1]}, rejection[0])
+        try:
+            return self.post()
+        except json.JSONDecodeError as e:
+            return self.send({"error": f"Invalid JSON: {e}"}, HTTPStatus.BAD_REQUEST)
+
+    def do_DELETE(self):
+        if rejection := self.rejected():
+            return self.send({"error": rejection[1]}, rejection[0])
+        return self.delete()
+
     def state(self):
         return {
             "version": inspector.VERSION,
@@ -232,7 +271,7 @@ class Handler(BaseHTTPRequestHandler):
             "bridge": bridge_info(),
         }
 
-    def do_GET(self):
+    def get(self):
         if self.path.split("?")[0] in ("/", "/index.html"):
             return self.send((ROOT / "index.html").read_bytes(), content_type="text/html; charset=utf-8")
         if self.path == "/api/state":
@@ -262,10 +301,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({"error": "Server is not running in the hub"}, HTTPStatus.NOT_FOUND)
             return self.send(tools)
         if self.path.startswith("/api/stats"):
-            days = int(parse_qs(urlparse(self.path).query).get("days", ["14"])[0])
+            days = self.query("days", "14", int)
             return self.send(hub.calls.stats(max(1, min(days, 90))))
         if self.path.startswith("/api/calls"):
-            limit = int(parse_qs(urlparse(self.path).query).get("limit", ["300"])[0])
+            limit = self.query("limit", "300", int)
             return self.send(hub.calls.recent(min(limit, 1000)))
         if match := MCP_PATH.match(self.path):
             if "text/event-stream" not in self.headers.get("Accept", ""):
@@ -274,8 +313,6 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
-            if not local_origin(self.headers.get("Origin")):
-                return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
             if not hub.clients.valid(self.headers.get("Mcp-Session-Id")):
                 return self.send({"error": "Unknown session"}, HTTPStatus.NOT_FOUND)
             return self.event_stream(unquote(match.group(1)) if match.group(1) else None)
@@ -283,17 +320,11 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/oauth/callback":
             return self.oauth_callback(parse_qs(url.query))
         if url.path == "/api/inspect/log":
-            query = parse_qs(url.query)
-            return self.send(inspector.log(query.get("name", [""])[0], float(query.get("since", ["0"])[0])))
+            return self.send(inspector.log(self.query("name", ""), self.query("since", "0", float)))
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
-    def do_PUT(self):
-        if not local_origin(self.headers.get("Origin")):
-            return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
-        try:
-            data = self.body()
-        except json.JSONDecodeError as e:
-            return self.send({"error": f"Invalid JSON: {e}"}, HTTPStatus.BAD_REQUEST)
+    def put(self):
+        data = self.body()
         if self.path == "/api/servers":
             servers = data.get("mcpServers")
             if error := validate_servers(servers):
@@ -310,9 +341,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(self.state())
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
-    def do_POST(self):
-        if not local_origin(self.headers.get("Origin")):
-            return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
+    def post(self):
         if match := MCP_PATH.match(self.path):
             return self.mcp(unquote(match.group(1)) if match.group(1) else None, match.group(2))
         if self.path.startswith("/api/integrations/"):
@@ -473,7 +502,7 @@ class Handler(BaseHTTPRequestHandler):
             reply["error"] = {"code": -32603, "message": f"Interner Fehler: {e}"}
         self.send(reply, headers=headers)
 
-    def do_DELETE(self):
+    def delete(self):
         if MCP_PATH.match(self.path):
             hub.clients.end(self.headers.get("Mcp-Session-Id"))
             self.send_response(HTTPStatus.NO_CONTENT)
@@ -523,6 +552,7 @@ def main():
         Path(log).parent.mkdir(parents=True, exist_ok=True)
         sys.stdout = sys.stderr = open(log, "a", buffering=1, encoding="utf-8")
     port = int(option("--port", os.environ.get("PORT", 4747)))
+    STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     server = bind(port)
     atexit.register(inspector.disconnect_all)
     atexit.register(hub.close)

@@ -11,6 +11,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from fsutil import atomic_write
+
 REPO = "endorfin/mcp-hub"
 INTERVAL = 12 * 3600
 
@@ -88,8 +90,7 @@ class Updater:
             self.data = {**self.data, "checkedAt": time.time(), "error": f"Update check failed: {e}"}
         finally:
             self.checking = False
-        self.cache.parent.mkdir(parents=True, exist_ok=True)
-        self.cache.write_text(json.dumps(self.data))
+        atomic_write(self.cache, json.dumps(self.data))
         return self.status()
 
     def check_in_background(self):

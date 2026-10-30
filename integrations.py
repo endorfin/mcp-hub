@@ -9,6 +9,7 @@ import tomllib
 from pathlib import Path
 
 import importer
+from fsutil import atomic_write
 
 NAME = "mcp-hub"
 KEEP_BACKUPS = 5
@@ -130,10 +131,7 @@ def _backup(path):
 
 def _write_json(path, data):
     _backup(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".mcp-hub.tmp")
-    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    tmp.replace(path)
+    atomic_write(path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
 
 def _hub_entry(client, url, bridge):
@@ -197,10 +195,7 @@ def remove_toml_servers(text, names):
 
 def _write_toml(path, text):
     _backup(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".mcp-hub.tmp")
-    tmp.write_text(text)
-    tmp.replace(path)
+    atomic_write(path, text)
 
 
 def connect(client_id, url, port, bridge):
