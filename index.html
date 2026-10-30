@@ -1964,7 +1964,7 @@ function renderResult(box, res, ms, request) {
 }
 
 
-const CLIENT_NAMES = { "claude-code": "Claude Code", "claude-ai": "Claude Desktop", "mcp": "mcp-proxy (Claude Desktop)", "mcp-hub-inspector": "Inspector" };
+const CLIENT_NAMES = { "claude-code": "Claude Code", "claude-ai": "Claude Desktop", "mcp-hub-inspector": "Inspector" };
 const clientName = c => CLIENT_NAMES[c] || (c.startsWith("local-agent-mode-") ? "Claude Desktop (Agent)" : fromBackend(c));
 let calls = [];
 

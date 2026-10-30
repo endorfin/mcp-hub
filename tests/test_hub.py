@@ -405,26 +405,5 @@ class FixedClientOAuthTest(OAuthTest):
             self.assertIn("client ID", json.loads(e.read())["error"])
 
 
-class MigrationTest(unittest.TestCase):
-    def test_legacy_config_dir_is_moved(self):
-        with tempfile.TemporaryDirectory() as home:
-            legacy = Path(home, ".config", "mcp-proxy")
-            legacy.mkdir(parents=True)
-            Path(legacy, "servers.json").write_text(json.dumps({"mcpServers": {}}))
-            Path(legacy, "usage.json").write_text(json.dumps({"alpha": {"count": 3, "last": 1}}))
-            port = free_port()
-            env = {k: v for k, v in os.environ.items() if k not in ("MCP_HUB_HOME", "MCP_PROXY_GUI_HOME")}
-            proc = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env={**env, "HOME": home, "PORT": str(port)},
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            try:
-                HubTest.wait_for(lambda: fetch(f"http://127.0.0.1:{port}/api/usage") == {"alpha": {"count": 3, "last": 1}})
-                state = fetch(f"http://127.0.0.1:{port}/api/state")
-                self.assertEqual(state["configPath"], str(Path(home, ".config", "mcp-hub", "servers.json")))
-                self.assertFalse(legacy.exists())
-            finally:
-                proc.terminate()
-                proc.wait(10)
-
-
 if __name__ == "__main__":
     unittest.main()

@@ -17,7 +17,7 @@ No dependencies besides Python 3.11+. The server only listens on `127.0.0.1`. Th
 
 ## Files
 
-Everything lives in `~/.config/mcp-hub/` (override with `MCP_HUB_HOME`), not in the repository. An old `~/.config/mcp-proxy/` folder is moved there on first start; `MCP_PROXY_GUI_HOME` still works.
+Everything lives in `~/.config/mcp-hub/` (override with `MCP_HUB_HOME`), not in the repository.
 
 | File | Contents |
 | --- | --- |
