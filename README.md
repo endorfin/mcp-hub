@@ -59,7 +59,7 @@ Welche Quelle gilt, entscheidet allein die Schreibweise, pro Wert. Es gibt keine
 - `${keychain:name}` liest den macOS-Schlüsselbund (Account `mcp-hub`, Dienst `mcp-hub/<name>`; die Suche nach `mcp-hub` in der Schlüsselbundverwaltung zeigt alle Einträge). Am einfachsten über das Schloss neben einem Wert im Editor: Es legt den Eintrag an und ersetzt den Wert durch die Referenz, gespeichert wird erst mit „Speichern“. Von Hand geht es mit `security add-generic-password -a mcp-hub -s mcp-hub/<name> -w`. Nur druckbare ASCII-Werte, andere gibt `security` als Hex aus.
 - `${op://Tresor/Eintrag/Feld}` liest per 1Password-CLI (`op read`). `op` muss dafür in der Umgebung des Hubs angemeldet sein, z. B. über die Integration mit der 1Password-App. Der Hub legt in 1Password nichts an, das Schloss schreibt immer in den Schlüsselbund. Sinnvoll für Tokens, die ohnehin in 1Password gepflegt, geteilt oder rotiert werden; sonst ist der Schlüsselbund einfacher.
 - Referenzen dürfen in einem längeren Wert stehen, etwa `Bearer ${keychain:…}` oder `?key=${keychain:…}`.
-- Aufgelöste Werte bleiben bis zum Neustart des Hubs im Speicher. Nach einer Änderung im Schlüsselbund oder in 1Password den Hub neu starten (`prun restart mcp-hub`); den Server aus- und einzuschalten reicht nicht. Nur das Schloss in der GUI aktualisiert den Speicher für seinen Eintrag sofort.
+- Aufgelöste Werte bleiben bis zum Neustart des Hubs im Speicher. Nach einer Änderung im Schlüsselbund oder in 1Passwordden Hub neu starten (z. B. `./autostart.sh restart`); den Server aus- und einzuschalten reicht nicht. Nur das Schloss in der GUI aktualisiert den Speicher für seinen Eintrag sofort.
 - Fehlt ein Eintrag, startet der Server nicht. Der Tooltip am Status-Chip zeigt dann z. B. „Secret: Kein Schlüsselbund-Eintrag …“.
 
 Mit `passEnvironment` (Einstellungen) erben lokale Server die Umgebung des Hubs, sonst nur `env`.
@@ -106,13 +106,18 @@ Die Brücke reicht Benachrichtigungen des Hubs an Claude Desktop weiter und meld
 - **Claude Desktop** über `bridge.py`: Die Brücke hält den Stream offen und reicht die Meldungen weiter. Mit mcp-proxy als Brücke gehen sie verloren, dann hilft nur ein Neustart von Claude Desktop.
 - **Neustart des Hubs:** Sitzungen gelten nur bis zum Neustart. Danach beantwortet der Hub alte Sitzungs-IDs mit `404`, und Clients melden sich neu an (so verlangt es die MCP-Spezifikation). `DELETE /mcp` beendet eine Sitzung.
 
-## Betrieb über prun
+## Autostart
 
-Der Hub läuft als prun-Projekt `mcp-hub` (Port 4747, Befehl `python3 app.py`). Die prun-Tools sind selbst über den Hub angebunden (`mcp__mcp-hub__prun__*`). Ein Neustart des Hubs über diese Tools kappt die eigene Verbindung, daher für den Hub selbst die CLI nehmen:
+Damit Claude Code, Claude Desktop und Copilot nach einem Neustart des Macs ihre Tools haben, muss der Hub beim Login starten. `autostart.sh` richtet dafür einen LaunchAgent ein (`~/Library/LaunchAgents/de.tpwd.mcp-hub.plist`), der `python3 app.py` startet und nach einem Absturz neu startet:
 
 ```bash
-prun restart mcp-hub
+./autostart.sh install     # einrichten und sofort starten
+./autostart.sh status      # eingerichtet? läuft der Hub?
+./autostart.sh restart     # Hub neu starten, z. B. nach einer Änderung im Schlüsselbund
+./autostart.sh uninstall   # entfernen und den Hub beenden
 ```
+
+Log: `~/Library/Logs/mcp-hub.log`. Pfad zu `python3`, `PATH` und `PORT` werden beim Einrichten festgehalten; nach einem Umzug des Repos oder einer neuen Python-Installation erneut `install` ausführen. Läuft beim Einrichten schon ein Hub auf dem Port, bricht das Skript ab, statt einen zweiten zu starten.
 
 ## GUI
 
