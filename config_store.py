@@ -165,3 +165,11 @@ def _update_profiles(action, name, new_name, on_config_change):
         return f"Unknown action: {action}"
     write_json(PROFILES_FILE, data)
     return None
+
+
+def reveal_command(path, platform=sys.platform):
+    if platform == "darwin":
+        return ["open", "-R", str(path)]
+    if platform == "win32":
+        return ["explorer", f"/select,{path}"]
+    return ["xdg-open", str(Path(path).parent)]

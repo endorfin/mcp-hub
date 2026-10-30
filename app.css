@@ -323,3 +323,5 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   .grid2 { grid-template-columns: 1fr; }
   .envrow { grid-template-columns: 1fr 1fr auto auto; }
 }
+.file-line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.file-line .hint { margin: 0; }

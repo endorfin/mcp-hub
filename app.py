@@ -8,6 +8,7 @@ import re
 import shutil
 import signal
 import socketserver
+import subprocess
 import sys
 import threading
 import time
@@ -24,8 +25,8 @@ import oauth
 import secrets_store
 import sessions
 import updater as updater_module
-from config_store import (STATE_DIR, config_path, load_config, load_profiles, load_settings, save_servers, save_settings,
-                          update_profiles, validate_servers)
+from config_store import (STATE_DIR, config_path, load_config, load_profiles, load_settings, reveal_command, save_servers,
+                          save_settings, update_profiles, validate_servers)
 from version import VERSION
 
 ROOT = Path(__file__).resolve().parent
@@ -143,6 +144,7 @@ class Handler(BaseHTTPRequestHandler):
             "settings": load_settings(),
             "profiles": load_profiles(),
             "bridge": bridge_info(),
+            "platform": sys.platform,
         }
 
     def get(self):
@@ -238,6 +240,12 @@ class Handler(BaseHTTPRequestHandler):
             except OSError as e:
                 return self.send({"error": f"Could not write the client configuration: {e}"}, HTTPStatus.CONFLICT)
             return self.send(integrations.status(port))
+        if self.path == "/api/reveal":
+            try:
+                subprocess.Popen(reveal_command(config_path()), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except OSError as e:
+                return self.send({"error": f"Could not open the folder: {e}"}, HTTPStatus.CONFLICT)
+            return self.send({})
         if self.path == "/api/hub/restart":
             name = self.body().get("name", "")
             if name not in hub.upstreams:

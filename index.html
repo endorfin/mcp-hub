@@ -56,11 +56,16 @@
         <div class="menu" role="menu" id="addMenu" hidden>
           <button role="menuitem" id="addBtn" data-i18n="s.addServer">Server hinzufügen…</button>
           <button role="menuitem" id="importBtn" data-i18n="s.import">Importieren…</button>
+          <hr>
+          <button role="menuitem" id="copyJsonBtn" data-i18n="s.copyJson">Als JSON kopieren</button>
         </div>
       </div>
     </div>
     <div class="list" id="list"></div>
-    <p class="hint" style="margin-top:12px" data-i18n="s.file">Datei: <code id="cfgPath"></code></p>
+    <div class="file-line">
+      <p class="hint" data-i18n="s.file">Datei: <code id="cfgPath"></code></p>
+      <button class="btn ghost" id="revealBtn" hidden></button>
+    </div>
   </section>
 
   <section data-panel="calls" hidden>
@@ -181,16 +186,6 @@
           <pre id="hubCopilot"></pre>
         </div>
       </div>
-    </div>
-    <div class="card">
-      <div class="toolbar" style="margin:0">
-        <h2 style="flex:1" data-i18n="s.serversJson">Server als JSON</h2>
-        <button class="btn" id="jsonReset" data-i18n="s.discard">Verwerfen</button>
-        <button class="btn primary" id="jsonSave" data-i18n="s.save">Speichern</button>
-      </div>
-      <span class="hint" data-i18n="s.jsonHint">Komplette <code>mcpServers</code>-Definition bearbeiten, z. B. zum Kopieren in andere Clients oder für viele Änderungen auf einmal.</span>
-      <textarea id="jsonText" rows="24" spellcheck="false"></textarea>
-      <p class="error" id="jsonError"></p>
     </div>
   </section>
 
@@ -424,9 +419,7 @@ function renderProfiles() {
 
 async function profileAction(action, name, message, extra = {}) {
   try {
-    const dirty = jsonDirty();
     state = await api("POST", "/api/profiles", { action, name, ...extra });
-    if (!dirty) syncJson();
     render();
     if (message) toast(message);
   } catch (e) {
@@ -688,6 +681,9 @@ function render() {
   renderHubStatus();
   renderProfiles();
   $("#cfgPath").textContent = state.configPath;
+  const reveal = { darwin: "revealFinder", win32: "revealExplorer", linux: "revealFolder" }[state.platform];
+  $("#revealBtn").hidden = !reveal;
+  if (reveal) $("#revealBtn").textContent = t(reveal);
   $("#version").textContent = state.version ? `v${state.version}` : "";
   $("#restartChip").hidden = !!state.version;
   $("#restartChip").title = t("restartNeededTitle");
@@ -897,17 +893,11 @@ document.addEventListener("keydown", e => {
 let saveQueue = Promise.resolve();
 let saveGeneration = 0;
 
-function jsonDirty() {
-  return !!state && $("#jsonText").value !== JSON.stringify(servers(), null, 2);
-}
-
 function saveServers(next) {
   const run = async () => {
     saveGeneration++;
     try {
-      const dirty = jsonDirty();
       state = await api("PUT", "/api/servers", { mcpServers: typeof next === "function" ? next(servers()) : next });
-      if (!dirty) syncJson();
       render();
       toast(t("saved"));
       return true;
@@ -1233,6 +1223,12 @@ async function openImport(clientId) {
 }
 
 $("#importBtn").onclick = () => openImport();
+$("#copyJsonBtn").onclick = () => {
+  closeMenus();
+  navigator.clipboard.writeText(JSON.stringify({ mcpServers: servers() }, null, 2))
+    .then(() => toast(t("jsonCopied")), err => toast(err.message, true));
+};
+$("#revealBtn").onclick = () => api("POST", "/api/reveal").catch(err => toast(err.message, true));
 $("#importCancel").onclick = () => $("#importer").close();
 $("#importForm").onsubmit = async e => {
   e.preventDefault();
@@ -1254,15 +1250,6 @@ $("#importForm").onsubmit = async e => {
   }
 };
 
-function syncJson() {
-  $("#jsonText").value = JSON.stringify(servers(), null, 2);
-  $("#jsonError").textContent = "";
-}
-$("#jsonReset").onclick = syncJson;
-$("#jsonSave").onclick = async () => {
-  try { if (await saveServers(JSON.parse($("#jsonText").value))) syncJson(); }
-  catch (e) { $("#jsonError").textContent = e.message; }
-};
 
 function fillSettings() {
   const f = $("#settingsForm");
@@ -1279,7 +1266,7 @@ $("#settingsForm").onsubmit = async e => {
   try {
     state = await api("PUT", "/api/settings", body);
     if (rememberLanguage(state.settings.language)) return;
-    fillSettings(); syncJson(); render(); refreshUpdate();
+    fillSettings(); render(); refreshUpdate();
     toast(t("settingsSaved"));
   } catch (err) { toast(err.message, true); }
 };
@@ -1854,9 +1841,7 @@ async function poll() {
     const fresh = await api("GET", "/api/state");
     const modal = $("#editor").open || $("#importer").open;
     if (!modal && generation === saveGeneration && JSON.stringify([fresh.config, fresh.profiles]) !== JSON.stringify([state?.config, state?.profiles])) {
-      const dirty = jsonDirty();
       state = fresh;
-      if (!dirty) syncJson();
       render();
     }
   } catch {
@@ -1939,7 +1924,7 @@ $("#updateApply").onclick = async () => {
     return setTimeout(boot, 2000);
   }
   if (rememberLanguage(state.settings.language)) return;
-  syncJson(); fillSettings(); render();
+  fillSettings(); render();
   setInterval(poll, 2000);
   refreshUpdate();
   setInterval(refreshUpdate, 30 * 60000);

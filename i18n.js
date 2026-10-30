@@ -24,6 +24,7 @@ const I18N = {
   "s.sortConfig": ["Reihenfolge der Datei", "File order"],
   "s.add": ["Hinzufügen", "Add"],
   "s.addServer": ["Server hinzufügen…", "Add server…"],
+  "s.copyJson": ["Als JSON kopieren", "Copy as JSON"],
   "s.import": ["Importieren…", "Import…"],
   "s.file": ["Datei: <code id=\"cfgPath\"></code>", "File: <code id=\"cfgPath\"></code>"],
   "s.hubEndpoint": ["Hub-Endpunkt", "Hub endpoint"],
@@ -50,9 +51,6 @@ const I18N = {
   "s.languageAuto": ["Automatisch (Browser)", "Automatic (browser)"],
   "s.passEnv": ["Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben", "Pass the hub’s own environment variables to locally started servers"],
   "s.save": ["Speichern", "Save"],
-  "s.serversJson": ["Server als JSON", "Servers as JSON"],
-  "s.discard": ["Verwerfen", "Discard"],
-  "s.jsonHint": ["Komplette <code>mcpServers</code>-Definition bearbeiten, z. B. zum Kopieren in andere Clients oder für viele Änderungen auf einmal.", "Edit the complete <code>mcpServers</code> definition, e.g. to copy it into other clients or for many changes at once."],
   "s.nameLabel": ["<b>Name</b> – Präfix der Tools im Hub (<code>name__tool</code>)", "<b>Name</b> – prefix of the tools in the hub (<code>name__tool</code>)"],
   "s.purposeLabel": ["<b>Wofür</b> – kurze Beschreibung, nur für dich", "<b>Purpose</b> – short description, just for you"],
   "s.purposePlaceholder": ["z. B. Dashboards, Loki- und Prometheus-Abfragen", "e.g. dashboards, Loki and Prometheus queries"],
@@ -263,6 +261,10 @@ const I18N = {
   compactOn: ["Clients bekommen nur search_tools, describe_tool und call_tool und suchen sich passende Tools selbst.", "Clients only receive search_tools, describe_tool and call_tool and look up matching tools themselves."],
   compactOffSize: ["Clients laden alle Tool-Definitionen, rund {full} Tokens pro Anfrage. Im Kompakt-Modus wären es rund {small}.", "Clients load every tool definition, about {full} tokens per request. Compact mode would need about {small}."],
   compactOnSize: ["Clients bekommen nur search_tools, describe_tool und call_tool: rund {small} statt {full} Tokens pro Anfrage.", "Clients only receive search_tools, describe_tool and call_tool: about {small} instead of {full} tokens per request."],
+  jsonCopied: ["mcpServers-Definition kopiert", "mcpServers definition copied"],
+  revealFinder: ["Im Finder zeigen", "Show in Finder"],
+  revealExplorer: ["Im Explorer zeigen", "Show in Explorer"],
+  revealFolder: ["Ordner öffnen", "Open folder"],
   clientCompact: ["kompakt", "compact"],
   intNotFound: ["nicht gefunden", "not found"],
   intConnectedChip: ["verbunden", "connected"],
@@ -319,6 +321,7 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^Could not open the folder: (.*)$/, "Ordner ließ sich nicht öffnen: $1"],
   [/^Server “(.*)” is not running$/, "Server „$1“ läuft nicht"],
   [/^Server “(.*)”: (.*)$/, "Server „$1“: $2"],
   [/^Connection is closed$/, "Verbindung ist geschlossen"],

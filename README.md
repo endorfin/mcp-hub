@@ -292,11 +292,11 @@ The check is the only request the hub sends on its own. Turn it off in the setti
 
 Design rules and components of the interface are documented in [DESIGN.md](DESIGN.md); audience, purpose and principles of the product in [PRODUCT.md](PRODUCT.md).
 
-- **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts JSON, Codex TOML and `mcp add` commands from other configurations.
+- **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts JSON, Codex TOML and `mcp add` commands from other configurations; “Copy as JSON” in the + menu copies the complete `mcpServers` definition. Below the list, the button next to the file path shows `servers.json` in Finder or Explorer (or opens its folder on Linux) for editing it by hand; the hub reads the file on every request.
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
 - **Clients:** every session since the last hub start with client name and version, profile endpoint, compact mode, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
-- **Settings:** path to the server file, language, `passEnvironment`, the update check; the hub endpoint with the compact switch and connect snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code; and the complete `mcpServers` definition as JSON for direct editing.
+- **Settings:** path to the server file, language, `passEnvironment`, the update check, and the hub endpoint with the compact switch, “Connect clients” and connect snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code.
 
 **Language:** English or German, chosen under Settings → Language. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 
@@ -346,6 +346,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `POST` | `/api/integrations/connect`, `/disconnect` | `{"id", "compact"}`: add the hub to a client or remove it |
 | `POST` | `/api/integrations/export` | `{"id"}`: the client’s own servers as text for the import parser |
 | `POST` | `/api/integrations/remove` | `{"id", "names"}`: delete these servers from the client |
+| `POST` | `/api/reveal` | Show the server file in the system’s file manager |
 | `GET` | `/api/compact` | Size of the tool definitions as JSON characters, `fullChars` and `compactChars` |
 | `GET` | `/api/clients` | Sessions since the hub start: name, version, profile, `since`, `lastSeen`, `requests`, `calls`, `streams` |
 | `GET` | `/api/update` | Installed and latest version, release notes, install method; checks GitHub in the background when the last check is older than 12 hours |

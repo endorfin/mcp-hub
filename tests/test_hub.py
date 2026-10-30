@@ -631,6 +631,14 @@ class RestartPolicyTest(unittest.TestCase):
         self.assertEqual(self.hub.restarts["x"]["failures"], 1)
 
 
+class RevealTest(unittest.TestCase):
+    def test_commands_per_platform(self):
+        import config_store
+        self.assertEqual(config_store.reveal_command("/x/servers.json", "darwin"), ["open", "-R", "/x/servers.json"])
+        self.assertEqual(config_store.reveal_command("C:/x/servers.json", "win32"), ["explorer", "/select,C:/x/servers.json"])
+        self.assertEqual(config_store.reveal_command("/x/servers.json", "linux"), ["xdg-open", "/x"])
+
+
 class UpstreamTest(unittest.TestCase):
     def test_any_start_failure_ends_in_error(self):
         upstream = hub_module.Upstream("broken", {"command": sys.executable, "args": [1]}, "key")
