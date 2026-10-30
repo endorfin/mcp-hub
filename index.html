@@ -1933,15 +1933,19 @@ function renderUpdate() {
     : update.error ? fromBackend(update.error)
     : !update.checkedAt ? t("updateNever")
     : `${update.available ? t("updateNewer", { v: update.latest }) : t("updateCurrent")} · ${t("updateChecked", { when: ago(update.checkedAt) })}`;
+  $("#updateCheck").textContent = update?.available ? t("updateInstall") : t("s.updateCheck");
 }
 
 $("#updateCheck").onclick = async () => {
+  if (update?.available) return openUpdateDialog();
   $("#updateInfo").textContent = t("updateChecking");
   update = await api("POST", "/api/update/check").catch(err => { toast(err.message, true); return update; });
   renderUpdate();
 };
 
-$("#updateChip").onclick = () => {
+$("#updateChip").onclick = openUpdateDialog;
+
+function openUpdateDialog() {
   if (!update?.available) return;
   $("#updateTitle").textContent = t("updateTitle", { v: update.latest });
   $("#updateSub").textContent = t("updateSub", { cur: update.current, method: t(update.method === "git" ? "updateMethodGit" : "updateMethodArchive") });
@@ -1952,7 +1956,7 @@ $("#updateChip").onclick = () => {
   $("#updateState").className = "hint";
   $("#updateApply").disabled = false;
   $("#updateDialog").showModal();
-};
+}
 $("#updateClose").onclick = () => $("#updateDialog").close();
 
 $("#updateApply").onclick = async () => {

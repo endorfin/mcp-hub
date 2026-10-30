@@ -262,6 +262,7 @@ const I18N = {
   updateInstalling: ["Wird installiert …", "Installing …"],
   updateRestarting: ["Installiert, der Hub startet neu …", "Installed, the hub is restarting …"],
   updateTimeout: ["Der Hub hat nach dem Update nicht mit der neuen Version geantwortet. Bitte die Seite neu laden.", "The hub did not come back with the new version. Please reload the page."],
+  updateInstall: ["Aktualisieren", "Update"],
   updateChecking: ["Suche nach Updates …", "Checking for updates …"],
   updateCurrent: ["Aktuell", "Up to date"],
   updateNewer: ["{v} verfügbar", "{v} available"],
