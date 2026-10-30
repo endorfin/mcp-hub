@@ -60,7 +60,7 @@ class HubTest(unittest.TestCase):
         }}
         Path(cls.home.name, "servers.json").write_text(json.dumps(servers))
         env = {**os.environ, "MCP_HUB_HOME": cls.home.name, "PORT": str(cls.port), "MCP_HUB_TEST_VALUE": "from-env",
-               "MCP_HUB_UPDATE_API": "http://127.0.0.1:9"}
+               "MCP_HUB_UPDATE_API": "http://127.0.0.1:9", "MCP_HUB_CLIENT_HOME": str(Path(cls.home.name) / "clients")}
         cls.proc = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.wait_for(lambda: len(cls.get("/api/hub")) == 2 and all(
@@ -324,6 +324,22 @@ class HubTest(unittest.TestCase):
         self.assertEqual(self.call_text("beta__echo"), "")
         self.assertIn("stopped unexpectedly", self.get("/api/hub")["beta"]["lastError"])
         self.assertEqual(self.request("POST", "/api/hub/restart", {"name": "nope"})[0], 404)
+
+    def test_integrations_connect_export_and_disconnect(self):
+        cursor = Path(self.home.name) / "clients" / ".cursor" / "mcp.json"
+        cursor.parent.mkdir(parents=True)
+        cursor.write_text(json.dumps({"mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}}))
+        row = next(r for r in self.get("/api/integrations") if r["id"] == "cursor")
+        self.assertEqual((row["installed"], row["connected"], row["importable"]), (True, False, ["fetch"]))
+        status, rows = self.request("POST", "/api/integrations/connect", {"id": "cursor", "compact": True})
+        self.assertEqual(status, 200, rows)
+        self.assertTrue(next(r for r in rows if r["id"] == "cursor")["compact"])
+        self.assertEqual(json.loads(cursor.read_text())["mcpServers"]["mcp-hub"]["url"], f"{self.base}/mcp/compact")
+        status, exported = self.request("POST", "/api/integrations/export", {"id": "cursor"})
+        self.assertEqual(exported["servers"], ["fetch"])
+        self.request("POST", "/api/integrations/disconnect", {"id": "cursor"})
+        self.assertNotIn("mcp-hub", json.loads(cursor.read_text())["mcpServers"])
+        self.assertEqual(self.request("POST", "/api/integrations/connect", {"id": "nope"})[0], 409)
 
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
