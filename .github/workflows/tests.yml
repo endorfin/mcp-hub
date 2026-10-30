@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
         python: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v7
@@ -35,7 +35,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gnome-keyring libsecret-tools
 
       - name: Run tests
-        if: runner.os == 'macOS'
+        if: runner.os != 'Linux'
         run: python -m unittest discover -s tests -v
         env:
           MCP_HUB_REQUIRE_KEYCHAIN: "1"
@@ -49,3 +49,13 @@ jobs:
             mkdir -p ~/.local/share/keyrings && printf login > ~/.local/share/keyrings/default
             printf test | gnome-keyring-daemon --unlock --components=secrets > /dev/null
             python -m unittest discover -s tests -v'
+
+      - name: Autostart smoke test
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./autostart.ps1 install
+          if (-not (Get-ScheduledTask -TaskName "MCP Hub" -ErrorAction SilentlyContinue)) { throw "task was not registered" }
+          ./autostart.ps1 status
+          ./autostart.ps1 uninstall
+          if (Get-ScheduledTask -TaskName "MCP Hub" -ErrorAction SilentlyContinue) { throw "task was not removed" }

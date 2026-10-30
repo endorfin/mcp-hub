@@ -19,10 +19,11 @@ class SecretError(Exception):
 
 
 MACOS = sys.platform == "darwin"
+WINDOWS = sys.platform == "win32"
 
 
 def keychain_available():
-    return shutil.which("security" if MACOS else "secret-tool") is not None
+    return WINDOWS or shutil.which("security" if MACOS else "secret-tool") is not None
 
 
 def _require_keychain():
@@ -32,11 +33,24 @@ def _require_keychain():
         raise SecretError("security not found")
     if sys.platform.startswith("linux"):
         raise SecretError("secret-tool not found – install libsecret-tools")
-    raise SecretError("The keychain is only available on macOS and Linux")
+    raise SecretError("The keychain is only available on macOS, Linux and Windows")
+
+
+def _wincred(action, *args):
+    import wincred
+    try:
+        return getattr(wincred, action)(*args)
+    except wincred.CredentialError as e:
+        raise SecretError(str(e))
 
 
 def _keychain_read(name):
     _require_keychain()
+    if WINDOWS:
+        value = _wincred("read", SERVICE_PREFIX + name)
+        if value is None:
+            raise SecretError(f"No keychain entry “{name}”")
+        return value
     if MACOS:
         return _run(["security", "find-generic-password", "-a", ACCOUNT, "-s", SERVICE_PREFIX + name, "-w"]).rstrip("\n")
     return _run(["secret-tool", "lookup", "service", SERVICE_PREFIX + name, "account", ACCOUNT])
@@ -44,7 +58,9 @@ def _keychain_read(name):
 
 def _keychain_write(name, value):
     _require_keychain()
-    if MACOS:
+    if WINDOWS:
+        _wincred("write", SERVICE_PREFIX + name, ACCOUNT, value)
+    elif MACOS:
         # Pass the value via stdin, not as an argument, or it shows up in the process list.
         quoted = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
         _run(["security", "-i"], f"add-generic-password -U -a {ACCOUNT} -s {SERVICE_PREFIX}{name} -w {quoted}\n")
@@ -56,7 +72,9 @@ def _keychain_write(name, value):
 def _keychain_delete(name):
     if not keychain_available():
         return
-    if MACOS:
+    if WINDOWS:
+        _wincred("delete", SERVICE_PREFIX + name)
+    elif MACOS:
         subprocess.run(["security", "delete-generic-password", "-a", ACCOUNT, "-s", SERVICE_PREFIX + name],
                        capture_output=True)
     else:

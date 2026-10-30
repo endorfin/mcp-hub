@@ -161,7 +161,7 @@ case "$(uname -s)" in
   Darwin) platform=macos; unit_file="$PLIST" ;;
   Linux) platform=linux; unit_file="$UNIT" ;;
   *)
-    echo "The autostart supports macOS (launchd) and Linux (systemd)." >&2
+    echo "This script supports macOS (launchd) and Linux (systemd); on Windows use autostart.ps1." >&2
     exit 1
     ;;
 esac
