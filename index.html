@@ -129,7 +129,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .hubsnip-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; font-size: 13px; }
 .hubsnip-head .chip { margin-left: auto; }
 .hubsnips pre { margin: 0; background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all; }
-.chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); } .chip.wait { color: var(--warn); }
+.chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); } .chip.wait, .chip.warn { color: var(--warn); }
 @media (max-width: 760px) { .hubsnips { grid-template-columns: 1fr; } }
 .insp-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .insp-bar select { width: auto; min-width: 200px; }
@@ -485,11 +485,20 @@ function renderList() {
     const meta = $(".meta", row);
     const h = hubStatus[name];
     if (on && h) {
-      const unit = h.toolsTotal === 1 ? "Tool" : "Tools";
-      const tools = h.tools === h.toolsTotal ? `${h.tools} ${unit}` : `${h.tools} von ${h.toolsTotal} ${unit}`;
-      const text = h.state === "running" ? `Hub: ${tools}` + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
+      const text = h.state === "running" ? `Hub: ${h.tools} ${h.tools === 1 ? "Tool" : "Tools"}` + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
         : h.state === "error" ? "Hub: Fehler" : "Hub: startet…";
       meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: h.error || "", style: "cursor:default" }));
+    }
+    const hidden = s.disabledTools || [];
+    if (hidden.length) {
+      const canOpen = on && h?.state === "running";
+      meta.append(el("button", {
+        className: "chip warn",
+        textContent: `${hidden.length} ${hidden.length === 1 ? "Tool" : "Tools"} deaktiviert`,
+        title: hidden.join("\n") + (canOpen ? "\n\nKlicken zum Bearbeiten" : ""),
+        style: canOpen ? "" : "cursor:default",
+        onclick: canOpen ? () => openTools(name) : null,
+      }));
     }
     const u = usage[name];
     meta.append(el("span", {

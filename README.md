@@ -41,7 +41,7 @@ Ein Eintrag mit `url` und ohne `type` gilt als Streamable HTTP. Optional:
 
 - `description`: Zweck des Servers, nur für die GUI. Fehlt sie, zeigt die GUI die Beschreibung des Servers oder seine ersten Tools.
 - `enabled: false`: Server bleibt eingetragen, der Hub startet ihn aber nicht.
-- `disabledTools`: Liste von Tool-Namen (ohne Präfix), die der Hub ausblendet und deren Aufruf er ablehnt. Pflege am einfachsten über ⋯ → „Tools auswählen…“: Der Dialog listet alle Tools mit Kurzbeschreibung, lässt sich filtern, und „Alle an“ / „Alle aus“ wirken nur auf die gefilterten Tools (z. B. „incident“ filtern, „Alle aus“). Der Status-Chip zeigt dann „Hub: 73 von 79 Tools“. Eine Änderung startet den Server nicht neu.
+- `disabledTools`: Liste von Tool-Namen (ohne Präfix), die der Hub ausblendet und deren Aufruf er ablehnt. Pflege am einfachsten über ⋯ → „Tools auswählen…“: Der Dialog listet alle Tools mit Kurzbeschreibung, lässt sich filtern, und „Alle an“ / „Alle aus“ wirken nur auf die gefilterten Tools (z. B. „incident“ filtern, „Alle aus“). In der Liste zeigt dann ein Chip mit orangefarbener Schrift „6 Tools deaktiviert“, der Tooltip nennt die Tools, ein Klick öffnet die Auswahl. Eine Änderung startet den Server nicht neu.
 - `env` (stdio) bzw. `headers` (HTTP/SSE).
 
 ### Secrets
