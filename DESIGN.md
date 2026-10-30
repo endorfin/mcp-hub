@@ -6,6 +6,10 @@ colors:
   accent-dark: "#4cc27f"
   on-accent: "#ffffff"
   on-accent-dark: "#0e1a12"
+  ok: "#1f8a4c"
+  ok-dark: "#4cc27f"
+  active: "#1f8a4c"
+  active-dark: "#4cc27f"
   warn: "#b26a00"
   warn-dark: "#e0a440"
   bad: "#c0362c"
@@ -139,7 +143,8 @@ There are no native operating-system controls. Selects, checkboxes and menus are
 Neutral, slightly warm grays with a single accent; every color outside the grays reports a state.
 
 ### Primary
-- **Switch Green** (`accent`, dark `accent-dark`): primary buttons, active switches and checkboxes, focus rings (mixed at 40–50 %), status “running”. Text on green uses `on-accent`.
+- **Switch Green** (`accent`, dark `accent-dark`): primary buttons, checkboxes, focus rings (mixed at 40–50 %). Text on green uses `on-accent`.
+- **Active** (`active`): switched-on switches and “available” chips (`Hub: n tools`, active profile, update). Follows the accent hue of the color scheme; in Default it equals the accent.
 
 ### Neutral
 - **Workshop Gray** (`bg`): page background and header.
@@ -150,6 +155,7 @@ Neutral, slightly warm grays with a single accent; every color outside the grays
 - **Ink** (`ink`) and **Label** (`muted`): text and secondary text, icons at rest.
 
 ### Status
+- **Signal Green** (`ok`): status “running” and successful results. Green in every color scheme, even where `accent` and `active` are not.
 - **Signal Orange** (`warn`): deviations that are not errors: “tools disabled”, unsaved profile change (dot), server starting.
 - **Signal Red** (`bad`): errors and destructive menu items (“Delete”).
 
@@ -160,7 +166,10 @@ Neutral, slightly warm grays with a single accent; every color outside the grays
 ### Named Rules
 **The Meaning-Only Rule.** Green, orange and red only appear when they denote a state or the primary action. There is no decorative color.
 
-**The Twin Scheme Rule.** Every color exists as a light and dark pair (`-dark`); new colors are always added as tokens on `:root` for both schemes, never directly on an element. The dark values live twice in `app.css`: under `prefers-color-scheme: dark` guarded by `:root:not([data-theme="light"])`, and under `:root[data-theme="dark"]`; change both together.
+**The Twin Scheme Rule.** Every color exists as a light and dark pair (`-dark`); new colors are always added as tokens on `:root` for both schemes, never directly on an element. The dark values live twice in `app.css`: under `prefers-color-scheme: dark` guarded by `:root:not([data-theme="light"])`, and under `:root[data-theme="dark"]`; change both together. The same holds for every color scheme.
+
+### Color Schemes
+Besides Default there are five schemes: Slate (cool gray, blue accent, after prun), Graphite (neutral gray, black/white accent, steel-blue `active`), Lavender (violet), Coffee (cream and espresso, caramel accent) and Teal. Each one defines the full token set for light and dark under `[data-palette="…"]`; the selectors also match elements below `:root`, so the preview cards in Settings → Interface render each scheme regardless of the active one. `ok`, `warn` and `bad` stay green, orange and red in every scheme; Slate takes its shades from prun, all others use the Default values.
 
 ## Typography
 
