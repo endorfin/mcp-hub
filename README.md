@@ -168,7 +168,7 @@ Every client loads the definitions of all tools into its context, for every requ
 
 The search is a weighted keyword search over tool names, titles, descriptions, parameter names and the server descriptions, with prefix matching and without filler words; it runs locally, without an index or a model. The `initialize` instructions list the servers with their descriptions, so the model knows what is available. Disabled tools, profiles and the call log work as on the normal endpoint, and calls show up in the log with the real tool name.
 
-In the GUI, the “Compact mode” switch in the hub card changes all connect snippets to the compact URL and shows the estimated tool definition size for both modes. Each client decides by its URL, so you can connect one client compactly and another with every tool.
+In the GUI, the “Compact mode” switch in the hub endpoint card (Settings) changes all connect snippets to the compact URL and shows the estimated tool definition size for both modes. Each client decides by its URL, so you can connect one client compactly and another with every tool.
 
 ### Connecting clients
 
@@ -197,7 +197,7 @@ Copilot / VS Code (`~/.copilot/mcp-config.json`):
 { "mcpServers": { "mcp-hub": { "type": "http", "url": "http://127.0.0.1:4747/mcp", "tools": ["*"] } } }
 ```
 
-Claude Desktop can only start local commands. For that, the repository ships `bridge.py`, a dependency-free bridge from stdio to the hub (`~/Library/Application Support/Claude/claude_desktop_config.json`; the GUI shows the matching snippet with absolute paths below the server list):
+Claude Desktop can only start local commands. For that, the repository ships `bridge.py`, a dependency-free bridge from stdio to the hub (`~/Library/Application Support/Claude/claude_desktop_config.json`; the GUI shows the matching snippet with absolute paths under Settings):
 
 ```json
 { "mcpServers": { "mcp-hub": { "command": "/opt/homebrew/bin/python3", "args": ["/path/to/mcp-hub/bridge.py", "http://127.0.0.1:4747/mcp"] } } }
@@ -242,11 +242,11 @@ The check is the only request the hub sends on its own. Turn it off in the setti
 
 Design rules and components of the interface are documented in [DESIGN.md](DESIGN.md); audience, purpose and principles of the product in [PRODUCT.md](PRODUCT.md).
 
-- **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts `mcpServers` JSON from other configurations.
+- **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts JSON, Codex TOML and `mcp add` commands from other configurations.
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
 - **Clients:** every session since the last hub start with client name and version, profile endpoint, compact mode, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
-- **Settings:** path to the server file, language, `passEnvironment`, the update check, and below that the complete `mcpServers` definition as JSON for direct editing.
+- **Settings:** path to the server file, language, `passEnvironment`, the update check; the hub endpoint with the compact switch and connect snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code; and the complete `mcpServers` definition as JSON for direct editing.
 
 **Language:** English or German, chosen under Settings → Language. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 

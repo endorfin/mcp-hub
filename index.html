@@ -268,7 +268,6 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .call .body pre { margin: 0; background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 40vh; overflow: auto; }
 .call .body .lbl { font-size: 11.5px; color: var(--muted); }
 @media (max-width: 760px) { .call summary { grid-template-columns: 70px 1fr auto; } .call .who, .call .ms { display: none; } }
-.hubcard { margin-top: 24px; }
 .hubhead { display: flex; gap: 14px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
 .compact-row { display: grid; gap: 4px; margin-top: 14px; }
 .snip-tabs { margin: 10px 0 14px; box-shadow: inset 0 -1px var(--line); }
@@ -371,45 +370,6 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
     </div>
     <div class="list" id="list"></div>
     <p class="hint" style="margin-top:12px" data-i18n="s.file">Datei: <code id="cfgPath"></code></p>
-    <div class="card hubcard">
-      <div class="hubhead">
-        <div>
-          <div class="name" data-i18n="s.hubEndpoint">Hub-Endpunkt</div>
-          <div class="hint" data-i18n="s.hubHint">Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).</div>
-        </div>
-        <code id="hubUrl"></code>
-      </div>
-      <div class="compact-row">
-        <label class="check"><input type="checkbox" id="hubCompact"> <span data-i18n="s.compactMode">Kompakt-Modus</span></label>
-        <span class="hint" id="compactHint"></span>
-      </div>
-      <nav class="line-tabs snip-tabs" id="hubTabs">
-        <button data-snip="code" class="active">Claude Code</button>
-        <button data-snip="desktop">Claude Desktop</button>
-        <button data-snip="codex">Codex</button>
-        <button data-snip="copilot">Copilot / VS Code</button>
-      </nav>
-      <div class="hubsnips">
-        <div data-snip-panel="code">
-          <div class="hubsnip-head"><span class="hint" data-i18n="s.terminal">im Terminal</span><button class="chip" data-copy="hubCode" data-i18n="s.copy">kopieren</button></div>
-          <pre id="hubCode"></pre>
-        </div>
-        <div data-snip-panel="desktop" hidden>
-          <div class="hubsnip-head"><span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop" data-i18n="s.copy">kopieren</button></div>
-          <pre id="hubDesktop"></pre>
-        </div>
-        <div data-snip-panel="codex" hidden>
-          <div class="hubsnip-head"><span class="hint" data-i18n="s.terminal">im Terminal</span><button class="chip" data-copy="hubCodex" data-i18n="s.copy">kopieren</button></div>
-          <pre id="hubCodex"></pre>
-          <div class="hubsnip-head"><span class="hint" data-i18n="s.orCodexConfig">oder in ~/.codex/config.toml</span><button class="chip" data-copy="hubCodexToml" data-i18n="s.copy">kopieren</button></div>
-          <pre id="hubCodexToml"></pre>
-        </div>
-        <div data-snip-panel="copilot" hidden>
-          <div class="hubsnip-head"><span class="hint">~/.copilot/mcp-config.json → mcpServers</span><button class="chip" data-copy="hubCopilot" data-i18n="s.copy">kopieren</button></div>
-          <pre id="hubCopilot"></pre>
-        </div>
-      </div>
-    </div>
   </section>
 
   <section data-panel="calls" hidden>
@@ -488,6 +448,45 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       <div class="update-line"><span class="hint" id="updateInfo"></span><button type="button" class="btn" id="updateCheck" data-i18n="s.updateCheck">Jetzt prüfen</button></div>
       <div><button class="btn primary" data-i18n="s.save">Speichern</button></div>
     </form>
+    <div class="card hubcard">
+      <div class="hubhead">
+        <div>
+          <div class="name" data-i18n="s.hubEndpoint">Hub-Endpunkt</div>
+          <div class="hint" data-i18n="s.hubHint">Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).</div>
+        </div>
+        <code id="hubUrl"></code>
+      </div>
+      <div class="compact-row">
+        <label class="check"><input type="checkbox" id="hubCompact"> <span data-i18n="s.compactMode">Kompakt-Modus</span></label>
+        <span class="hint" id="compactHint"></span>
+      </div>
+      <nav class="line-tabs snip-tabs" id="hubTabs">
+        <button data-snip="code" class="active">Claude Code</button>
+        <button data-snip="desktop">Claude Desktop</button>
+        <button data-snip="codex">Codex</button>
+        <button data-snip="copilot">Copilot / VS Code</button>
+      </nav>
+      <div class="hubsnips">
+        <div data-snip-panel="code">
+          <div class="hubsnip-head"><span class="hint" data-i18n="s.terminal">im Terminal</span><button class="chip" data-copy="hubCode" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCode"></pre>
+        </div>
+        <div data-snip-panel="desktop" hidden>
+          <div class="hubsnip-head"><span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubDesktop"></pre>
+        </div>
+        <div data-snip-panel="codex" hidden>
+          <div class="hubsnip-head"><span class="hint" data-i18n="s.terminal">im Terminal</span><button class="chip" data-copy="hubCodex" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCodex"></pre>
+          <div class="hubsnip-head"><span class="hint" data-i18n="s.orCodexConfig">oder in ~/.codex/config.toml</span><button class="chip" data-copy="hubCodexToml" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCodexToml"></pre>
+        </div>
+        <div data-snip-panel="copilot" hidden>
+          <div class="hubsnip-head"><span class="hint">~/.copilot/mcp-config.json → mcpServers</span><button class="chip" data-copy="hubCopilot" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCopilot"></pre>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div class="toolbar" style="margin:0">
         <h2 style="flex:1" data-i18n="s.serversJson">Server als JSON</h2>
