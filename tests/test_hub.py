@@ -60,7 +60,8 @@ class HubTest(unittest.TestCase):
         }}
         Path(cls.home.name, "servers.json").write_text(json.dumps(servers))
         env = {**os.environ, "MCP_HUB_HOME": cls.home.name, "PORT": str(cls.port), "MCP_HUB_TEST_VALUE": "from-env",
-               "MCP_HUB_UPDATE_API": "http://127.0.0.1:9", "MCP_HUB_CLIENT_HOME": str(Path(cls.home.name) / "clients")}
+               "MCP_HUB_UPDATE_API": "http://127.0.0.1:9", "MCP_HUB_CLIENT_HOME": str(Path(cls.home.name) / "clients"),
+               "MCP_HUB_ON_DEMAND_IDLE": "3"}
         cls.proc = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.wait_for(lambda: len(cls.get("/api/hub")) == 2 and all(
@@ -340,6 +341,27 @@ class HubTest(unittest.TestCase):
         self.request("POST", "/api/integrations/disconnect", {"id": "cursor"})
         self.assertNotIn("mcp-hub", json.loads(cursor.read_text())["mcpServers"])
         self.assertEqual(self.request("POST", "/api/integrations/connect", {"id": "nope"})[0], 409)
+
+    def test_profile_endpoint_starts_switched_off_servers_on_demand(self):
+        self.request("POST", "/api/profiles", {"action": "save", "name": "wide"})
+        servers = self.servers()
+        servers["beta"]["enabled"] = False
+        self.save_servers(servers)
+        try:
+            self.wait_for(lambda: "beta" not in self.get("/api/hub"))
+            self.assertIn("beta__echo", self.tool_names("/p/wide/mcp"))
+            self.assertNotIn("beta__echo", self.tool_names())
+            self.assertTrue(self.get("/api/hub")["beta"]["onDemand"])
+            body = self.rpc("tools/call", {"name": "beta__echo", "arguments": {"text": "on demand"}}, path="/p/wide/mcp")
+            self.assertEqual(body["result"]["content"][0]["text"], "on demand")
+            self.wait_for(lambda: "beta" not in self.get("/api/hub"))
+            self.assertIn("beta__echo", self.tool_names("/p/wide/mcp"))
+        finally:
+            self.request("POST", "/api/profiles", {"action": "delete", "name": "wide"})
+            servers["beta"]["enabled"] = True
+            self.save_servers(servers)
+            self.wait_for(lambda: "beta__echo" in self.tool_names())
+            self.assertNotIn("onDemand", self.get("/api/hub")["beta"])
 
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]

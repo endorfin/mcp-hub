@@ -40,7 +40,7 @@ MCP Hub turns that around: servers live in one place, secrets stay in the keycha
 - [Hub](#hub): [compact mode](#compact-mode), [connecting clients](#connecting-clients), [live updates](#live-updates)
 - [Autostart](#autostart) · [Updates](#updates)
 - [GUI](#gui): [profiles](#profiles), [statistics](#statistics), [usage and call log](#usage-and-call-log)
-- [API](#api) · [Tests](#tests) · [Troubleshooting](#troubleshooting) · [Roadmap](#roadmap) · [Contributing](#contributing) · [License](#license)
+- [API](#api) · [Tests](#tests) · [Troubleshooting](#troubleshooting) · [Contributing](#contributing) · [License](#license)
 
 ## Getting started
 
@@ -319,7 +319,7 @@ The profile selected at the top applies to the whole hub, i.e. to all clients on
 claude mcp add --scope user --transport http mcp-hub-frontend http://127.0.0.1:4747/p/Frontend/mcp
 ```
 
-The profile endpoint only filters: servers switched off in the hub are missing there too. Servers the profile does not know appear with their current setting. The log shows the profile after the client, e.g. `claude-code · Frontend`.
+If the profile contains a server that is switched off in the hub, the hub starts it on demand as soon as a client asks at that profile endpoint, and stops it again after 10 minutes without use (`MCP_HUB_ON_DEMAND_IDLE` in seconds). The normal endpoint never sees such a server; the server list marks it as “running for a profile endpoint”. That way rarely used servers stay off in the hub and still serve the profiles that need them. Servers the profile does not know appear with their current setting. The log shows the profile after the client, e.g. `claude-code · Frontend`.
 
 ### Statistics
 
@@ -375,7 +375,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_integrations.py` covers connecting, switching and disconnecting clients in a temporary home folder (JSON clients, the Codex TOML with subtables and quoted names, refusing files with comments or inline tables), plus exporting and removing their servers. `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), restarting a crashed server and the restart delays, the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. Without a usable keychain (no Secret Service on Linux, for example) those tests are skipped. GitHub Actions runs the suite on macOS, Ubuntu and Windows with Python 3.11 and 3.13, with a temporary keychain on macOS, GNOME Keyring on Ubuntu and the Credential Manager on Windows, so the keychain and OAuth tests run everywhere; on Windows it also registers and removes the scheduled task.
+`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_integrations.py` covers connecting, switching and disconnecting clients in a temporary home folder (JSON clients, the Codex TOML with subtables and quoted names, refusing files with comments or inline tables), plus exporting and removing their servers. `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), restarting a crashed server and the restart delays, starting switched-off servers on demand for a profile endpoint, the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. Without a usable keychain (no Secret Service on Linux, for example) those tests are skipped. GitHub Actions runs the suite on macOS, Ubuntu and Windows with Python 3.11 and 3.13, with a temporary keychain on macOS, GNOME Keyring on Ubuntu and the Credential Manager on Windows, so the keychain and OAuth tests run everywhere; on Windows it also registers and removes the scheduled task.
 
 ## Troubleshooting
 
@@ -383,10 +383,6 @@ python3 -m unittest discover -s tests -v
 - **Tool missing in the client:** is the server enabled and green in the hub? Then reconnect the client.
 - **Orphaned processes:** processes left over after a client quits usually come from clients that only end the top-level process. The hub itself ends whole process groups. Check with `ps -axo pid,ppid,command | grep <server>`.
 - **Port in use:** `lsof -iTCP:4747 -sTCP:LISTEN`. Set a different port with `PORT=…`, but then update the client URLs too.
-
-## Roadmap
-
-- **Profile endpoint starts servers on demand:** a server switched off in the hub is currently missing from profile endpoints as well.
 
 ## Contributing
 

@@ -1,4 +1,5 @@
 import json
+import os
 import queue
 import statistics
 import re
@@ -16,6 +17,7 @@ SEPARATOR = "__"
 SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
 RESTART_DELAYS = (2, 4, 8, 16, 32)
 STABLE_AFTER = 60
+ON_DEMAND_IDLE = 600
 
 
 def runtime_key(entry, pass_environment):
@@ -328,6 +330,26 @@ class Hub:
         self.lock = threading.Lock()
         self.upstreams = {}
         self.restarts = {}
+        self.on_demand = {}
+        self.idle_after = float(os.environ.get("MCP_HUB_ON_DEMAND_IDLE") or ON_DEMAND_IDLE)
+
+    def _demand(self, profile):
+        saved = self.load_profiles()["profiles"].get(profile)
+        if not saved:
+            return
+        config = self.load_config()["mcpServers"]
+        now = time.time()
+        for name, wanted in saved["servers"].items():
+            entry = config.get(name) or {}
+            if wanted.get("enabled") and entry.get("enabled", True) is False and (entry.get("command") or entry.get("url")):
+                self.on_demand[name] = now
+
+    def _expire_on_demand(self):
+        cutoff = time.time() - self.idle_after
+        expired = [name for name, used in list(self.on_demand.items()) if used < cutoff]
+        for name in expired:
+            self.on_demand.pop(name, None)
+        return bool(expired)
 
     def _schedule_restart(self, upstream, now):
         info = self.restarts.setdefault(upstream.name, {"count": 0, "failures": 0, "retryAt": None, "gaveUp": False})
@@ -355,7 +377,7 @@ class Hub:
         while True:
             time.sleep(interval)
             try:
-                if self._needs_attention():
+                if self._expire_on_demand() or self._needs_attention():
                     self.sync()
             except Exception:
                 pass
@@ -365,10 +387,17 @@ class Hub:
 
     def sync(self):
         pass_environment = self.load_settings()["passEnvironment"]
+        config = self.load_config()["mcpServers"]
         wanted = {
-            name: entry for name, entry in self.load_config()["mcpServers"].items()
+            name: entry for name, entry in config.items()
             if entry.get("enabled", True) and (entry.get("command") or entry.get("url"))
         }
+        for name in list(self.on_demand):
+            entry = config.get(name) or {}
+            if name in wanted or not (entry.get("command") or entry.get("url")):
+                self.on_demand.pop(name, None)
+            else:
+                wanted[name] = entry
         with self.lock:
             now = time.time()
             for name, upstream in list(self.upstreams.items()):
@@ -406,7 +435,7 @@ class Hub:
                 if upstream.state == "running" and upstream.stale:
                     upstream.refresh()
             running = [u for u in self.upstreams.values() if u.state == "running"]
-            self._notify_if_changed(running)
+            self._notify_if_changed([u for u in running if u.name not in self.on_demand])
             return running
 
     def reconnect(self, name):
@@ -470,6 +499,7 @@ class Hub:
                 "tools": len(u.tools()),
                 "toolsTotal": len(u.catalog["tools"]),
                 **self._restart_status(name),
+                **({"onDemand": True} if name in self.on_demand else {}),
                 **({"oauth": oauth.status(name)} if u.entry.get("url") else {}),
             }
             for name, u in self.upstreams.items()
@@ -494,7 +524,7 @@ class Hub:
 
     def _view(self, running, profile):
         if not profile:
-            return {u: set(u.entry.get("disabledTools") or []) for u in running}
+            return {u: set(u.entry.get("disabledTools") or []) for u in running if u.name not in self.on_demand}
         saved = self.load_profiles()["profiles"].get(profile)
         if saved is None:
             raise JsonRpcError(-32602, f"Unknown profile: {profile}")
@@ -502,7 +532,8 @@ class Hub:
         for upstream in running:
             wanted = saved["servers"].get(upstream.name)
             if wanted is None:
-                view[upstream] = set(upstream.entry.get("disabledTools") or [])
+                if upstream.name not in self.on_demand:
+                    view[upstream] = set(upstream.entry.get("disabledTools") or [])
             elif wanted["enabled"]:
                 view[upstream] = set(wanted["disabledTools"])
         return view
@@ -515,6 +546,8 @@ class Hub:
 
     def handle(self, method, params, client="unbekannt", profile=None, mode=None):
         params = params or {}
+        if profile and method not in ("ping", "logging/setLevel"):
+            self._demand(profile)
         if method == "initialize":
             if profile and profile not in self.load_profiles()["profiles"]:
                 raise JsonRpcError(-32602, f"Unknown profile: {profile}")

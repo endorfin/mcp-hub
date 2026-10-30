@@ -609,7 +609,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 <dialog id="profilesDialog">
   <div class="dhead" data-i18n="s.profiles">Profile</div>
   <div class="dbody">
-    <span class="hint" data-i18n="s.profilesHint">Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, fehlen allerdings auch dort.</span>
+    <span class="hint" data-i18n="s.profilesHint">Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, startet der Hub dafür bei Bedarf und beendet sie nach 10 Minuten ohne Nutzung wieder.</span>
     <div class="prof-list" id="profileList"></div>
   </div>
   <div class="dfoot"><button type="button" class="btn" id="profilesClose" data-i18n="s.close">Schließen</button></div>
@@ -741,7 +741,7 @@ const I18N = {
   "warn.self": ["{server}: zeigt auf diesen Hub und wird übersprungen", "{server}: points to this hub and is skipped"],
   importSkippedList: ["Übersprungen (weder command noch url): {list}", "Skipped (neither command nor url): {list}"],
   "s.profiles": ["Profile", "Profiles"],
-  "s.profilesHint": ["Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, fehlen allerdings auch dort.", "Each profile has its own endpoint. A client connected there always sees that profile’s servers and tools – regardless of which profile is active above. Servers that are switched off in the hub are missing there too."],
+  "s.profilesHint": ["Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, startet der Hub dafür bei Bedarf und beendet sie nach 10 Minuten ohne Nutzung wieder.", "Each profile has its own endpoint. A client connected there always sees that profile’s servers and tools – regardless of which profile is active above. Servers switched off in the hub are started on demand for it and stopped after 10 minutes without use."],
   "s.close": ["Schließen", "Close"],
   "s.toolsHint": ["Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Verbundene Clients bekommen die neue Liste automatisch.", "The hub hides deselected tools and rejects calls to them. The server itself is not restarted. Connected clients receive the new list automatically."],
   "s.filterTools": ["Tools filtern…", "Filter tools…"],
@@ -806,6 +806,8 @@ const I18N = {
   hubGaveUp: ["Hub: Fehler, 5 Neustarts gescheitert", "Hub: error, 5 restarts failed"],
   hubRestarted: [v => pl(v.n, "1× neu gestartet", "{n}× neu gestartet"), v => pl(v.n, "restarted once", "restarted {n}×")],
   hubRetry: ["Erneut versuchen", "Try again"],
+  hubOnDemand: [v => pl(v.n, "läuft für Profil-Endpunkt · 1 Tool", "läuft für Profil-Endpunkt · {n} Tools"), v => pl(v.n, "running for a profile endpoint · 1 tool", "running for a profile endpoint · {n} tools")],
+  hubOnDemandTitle: ["Im Hub ausgeschaltet, aber von einem Profil-Endpunkt angefordert. Wird nach 10 Minuten ohne Nutzung beendet.", "Switched off in the hub but requested by a profile endpoint. Stops after 10 minutes without use."],
   hubRetryStarted: ["„{name}“ wird neu gestartet", "Restarting “{name}”"],
   clickToEdit: ["Klicken zum Bearbeiten", "Click to edit"],
   usedTimes: ["{n}× genutzt · {ago}", "used {n}× · {ago}"],
@@ -1404,7 +1406,7 @@ function render() {
 }
 
 function renderHubStatus(reachable = true) {
-  const entries = Object.values(hubStatus);
+  const entries = Object.values(hubStatus).filter(h => !h.onDemand);
   const running = entries.filter(h => h.state === "running");
   const failed = entries.filter(h => h.state === "error").length;
   const auth = entries.filter(h => h.state === "auth").length;
@@ -1475,7 +1477,9 @@ function renderList() {
     $(".cmd", row).textContent = kind === "stdio" ? [s.command, ...(s.args || [])].map(shellQuote).join(" ") : `${kind.toUpperCase()} · ${s.url}`;
     const meta = $(".meta", row);
     const h = hubStatus[name];
-    if (on && h?.state === "auth") {
+    if (!on && h?.onDemand) {
+      meta.append(el("span", { className: "chip ok", textContent: t("hubOnDemand", { n: h.tools }), title: t("hubOnDemandTitle"), style: "cursor:default" }));
+    } else if (on && h?.state === "auth") {
       meta.append(el("button", { className: "chip warn", textContent: t("signInRequired"), title: t("signInTitle"), onclick: () => startOAuth(name) }));
     } else if (on && h) {
       const retrying = h.state === "error" && h.retryAt;
