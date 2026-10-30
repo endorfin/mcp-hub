@@ -124,3 +124,14 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 - **Tool fehlt im Client:** Ist der Server aktiviert und im Hub grün? Danach den Client neu verbinden.
 - **Verwaiste Prozesse:** Prozesse, die nach dem Beenden eines Clients übrig bleiben, stammen meist von Clients, die nur den obersten Prozess beenden. Der Hub selbst beendet ganze Prozessgruppen. Prüfen mit `ps -axo pid,ppid,command | grep <server>`.
 - **Port belegt:** `lsof -iTCP:4747 -sTCP:LISTEN`. Einen anderen Port per `PORT=…` setzen, dann aber auch die Client-URLs anpassen.
+
+## Ideen und nächste Schritte
+
+1. **Remote und Backup:** Den Code in ein privates Git-Repo pushen und `servers.json` verschlüsselt sichern, etwa per Time Machine oder als 1Password-Dokument.
+2. **Tokens aus der JSON holen:** Header-Werte als Verweis auf den macOS-Schlüsselbund oder 1Password (`op://…`) hinterlegen. Der Hub löst sie erst beim Start auf, dann steht kein Geheimnis mehr in `servers.json`.
+3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
+4. **Änderungen an Clients melden:** `notifications/tools/list_changed` per SSE an verbundene Clients schicken, damit neue Server ohne Reconnect erscheinen.
+5. **Statistik im Protokoll:** Aufrufe pro Tag, langsamste Tools und Fehlerquote je Server, berechnet aus `calls.jsonl`.
+6. **OAuth für entfernte Server:** Für gehostete MCPs, die nur OAuth anbieten.
+7. **Alte Reste entfernen:** `proxy.log` und `proxy.pid` in `~/.config/mcp-proxy` sowie die alten `.bak-*`-Dateien von `~/.claude.json`.
+8. **Tests:** Ein Smoke-Test, der den Hub mit einem Dummy-Server startet und `tools/list` sowie `tools/call` prüft.
