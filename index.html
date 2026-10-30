@@ -314,7 +314,6 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   <section data-panel="settings" hidden>
     <form class="card" id="settingsForm">
       <label class="f"><span><b>Konfigurationsdatei</b></span><input name="configPath"></label>
-      <label class="f"><span><b>mcp-proxy</b> – Pfad zum Programm, dient Claude Desktop als Brücke zum Hub</span><input name="proxyBinary"></label>
       <label class="check"><input type="checkbox" name="passEnvironment"> Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</label>
       <div><button class="btn primary">Speichern</button></div>
     </form>
@@ -659,7 +658,7 @@ function render() {
   const hubUrl = `http://127.0.0.1:${location.port}/mcp`;
   $("#hubUrl").textContent = hubUrl;
   $("#hubCode").textContent = `claude mcp add --scope user --transport http mcp-hub ${hubUrl}`;
-  $("#hubDesktop").textContent = JSON.stringify({ mcpServers: { "mcp-hub": { command: state.settings.proxyBinary, args: ["--transport", "streamablehttp", hubUrl] } } }, null, 2);
+  $("#hubDesktop").textContent = JSON.stringify({ mcpServers: { "mcp-hub": { command: state.bridge.python, args: [state.bridge.script, hubUrl] } } }, null, 2);
   renderList();
   fillInspServers();
 }
@@ -1340,8 +1339,8 @@ function renderResult(box, res, ms, request) {
 }
 
 
-const CLIENT_NAMES = { "claude-code": "Claude Code", "mcp": "mcp-proxy (Claude Desktop)", "mcp-hub-inspector": "Inspector" };
-const clientName = c => CLIENT_NAMES[c] || c;
+const CLIENT_NAMES = { "claude-code": "Claude Code", "claude-ai": "Claude Desktop", "mcp": "mcp-proxy (Claude Desktop)", "mcp-hub-inspector": "Inspector" };
+const clientName = c => CLIENT_NAMES[c] || (c.startsWith("local-agent-mode-") ? "Claude Desktop (Agent)" : c);
 let calls = [];
 
 function fillSelect(sel, values, allLabel, label = v => v) {

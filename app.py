@@ -24,7 +24,6 @@ PROFILES_FILE = STATE_DIR / "profiles.json"
 
 DEFAULT_SETTINGS = {
     "configPath": str(STATE_DIR / "servers.json"),
-    "proxyBinary": shutil.which("mcp-proxy") or "mcp-proxy",
     "passEnvironment": True,
 }
 
@@ -182,6 +181,7 @@ class Handler(BaseHTTPRequestHandler):
             "config": load_config(),
             "settings": load_settings(),
             "profiles": load_profiles(),
+            "bridge": {"python": shutil.which("python3") or sys.executable, "script": str(ROOT / "bridge.py")},
         }
 
     def do_GET(self):

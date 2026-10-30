@@ -243,5 +243,81 @@ class HubTest(unittest.TestCase):
         self.assertEqual(sorted(self.servers()), ["alpha", "beta"])
 
 
+def fetch(url, data=None, method=None):
+    req = urllib.request.Request(url, data, {"Content-Type": "application/json"}, method=method)
+    with urllib.request.urlopen(req) as response:
+        return json.loads(response.read() or b"null")
+
+
+class BridgeTest(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory()
+        self.port = free_port()
+        self.base = f"http://127.0.0.1:{self.port}"
+        Path(self.home.name, "servers.json").write_text(json.dumps(
+            {"mcpServers": {"alpha": {"command": DUMMY[0], "args": DUMMY[1:]}}}))
+        self.start_hub()
+        self.lines = []
+        self.bridge = subprocess.Popen([sys.executable, str(ROOT / "bridge.py"), self.base + "/mcp"],
+                                       stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        threading.Thread(target=self.read_bridge, daemon=True).start()
+
+    def tearDown(self):
+        self.bridge.kill()
+        self.bridge.wait(10)
+        self.bridge.stdin.close()
+        self.bridge.stdout.close()
+        self.hub.terminate()
+        self.hub.wait(10)
+        self.home.cleanup()
+
+    def start_hub(self):
+        env = {**os.environ, "MCP_PROXY_GUI_HOME": self.home.name, "PORT": str(self.port)}
+        self.hub = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        HubTest.wait_for(lambda: fetch(self.base + "/api/hub").get("alpha", {}).get("state") == "running")
+
+    def read_bridge(self):
+        for line in self.bridge.stdout:
+            self.lines.append(json.loads(line))
+
+    def send(self, message):
+        self.bridge.stdin.write((json.dumps(message) + "\n").encode())
+        self.bridge.stdin.flush()
+
+    def reply(self, message_id):
+        HubTest.wait_for(lambda: any(m.get("id") == message_id for m in self.lines))
+        return next(m for m in self.lines if m.get("id") == message_id)
+
+    def notified(self):
+        return any(m.get("method") == "notifications/tools/list_changed" for m in self.lines)
+
+    def live(self):
+        return fetch(self.base + "/api/live")
+
+    def test_bridge_forwards_requests_notifications_and_survives_restart(self):
+        self.send({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                   "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "desktop-test"}}})
+        self.assertTrue(self.reply(1)["result"]["capabilities"]["tools"]["listChanged"])
+        self.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        self.send({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+        self.assertIn("alpha__echo", [t["name"] for t in self.reply(2)["result"]["tools"]])
+        HubTest.wait_for(lambda: self.live() == ["desktop-test"])
+
+        servers = json.loads(Path(self.home.name, "servers.json").read_text())
+        servers["mcpServers"]["alpha"]["disabledTools"] = ["fail"]
+        fetch(self.base + "/api/servers", json.dumps(servers).encode(), "PUT")
+        HubTest.wait_for(self.notified)
+
+        self.lines.clear()
+        self.hub.terminate()
+        self.hub.wait(10)
+        self.start_hub()
+        HubTest.wait_for(self.notified, timeout=40)
+        self.send({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "alpha__echo", "arguments": {"text": "zurück"}}})
+        self.assertEqual(self.reply(3)["result"]["content"][0]["text"], "zurück")
+        HubTest.wait_for(lambda: self.live() == ["desktop-test"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -89,11 +89,13 @@ Copilot / VS Code (`~/.copilot/mcp-config.json`):
 { "mcpServers": { "mcp-hub": { "type": "http", "url": "http://127.0.0.1:4747/mcp", "tools": ["*"] } } }
 ```
 
-Claude Desktop kann nur lokale Befehle starten, deshalb dort [mcp-proxy](https://github.com/sparfenyuk/mcp-proxy) als Brücke (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Claude Desktop kann nur lokale Befehle starten. Dafür liegt `bridge.py` im Repo: eine Brücke von stdio auf den Hub, ohne Abhängigkeiten (`~/Library/Application Support/Claude/claude_desktop_config.json`, das passende Snippet mit absoluten Pfaden zeigt die GUI unter der Serverliste):
 
 ```json
-{ "mcpServers": { "mcp-hub": { "command": "/Users/<du>/.local/bin/mcp-proxy", "args": ["--transport", "streamablehttp", "http://127.0.0.1:4747/mcp"] } } }
+{ "mcpServers": { "mcp-hub": { "command": "/opt/homebrew/bin/python3", "args": ["/pfad/zu/mcp-hub/bridge.py", "http://127.0.0.1:4747/mcp"] } } }
 ```
+
+Die Brücke reicht Benachrichtigungen des Hubs an Claude Desktop weiter und meldet sich nach einem Neustart des Hubs von selbst neu an. Ist der Hub nicht erreichbar, beantwortet sie Anfragen mit einer Fehlermeldung, statt zu hängen. [mcp-proxy](https://github.com/sparfenyuk/mcp-proxy) funktioniert ebenfalls, leitet aber keine Benachrichtigungen weiter.
 
 ### Live-Aktualisierung
 
@@ -101,7 +103,7 @@ Claude Desktop kann nur lokale Befehle starten, deshalb dort [mcp-proxy](https:/
 
 - **Claude Code und VS Code/Copilot** unterstützen das. Nach dem ersten Update des Hubs einmal neu verbinden (Claude Code: `/mcp` → Reconnect), danach kommen Änderungen ohne Reconnect an.
 - **Anzeige:** Die Kopfzeile der GUI zählt die Clients mit offenem Stream („· 2 Clients“), der Tooltip nennt sie.
-- **Claude Desktop** nicht: Die Brücke mcp-proxy leitet nur Fortschrittsmeldungen weiter und meldet `listChanged: false`. Nach Änderungen Claude Desktop neu starten.
+- **Claude Desktop** über `bridge.py`: Die Brücke hält den Stream offen und reicht die Meldungen weiter. Mit mcp-proxy als Brücke gehen sie verloren, dann hilft nur ein Neustart von Claude Desktop.
 - **Neustart des Hubs:** Sitzungen gelten nur bis zum Neustart. Danach beantwortet der Hub alte Sitzungs-IDs mit `404`, und Clients melden sich neu an (so verlangt es die MCP-Spezifikation). `DELETE /mcp` beendet eine Sitzung.
 
 ## Betrieb über prun
@@ -175,7 +177,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 python3 -m unittest discover -s tests -v
 ```
 
-Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz und (nur macOS) die Auflösung aus dem Schlüsselbund. Die echte Konfiguration bleibt unberührt; der Schlüsselbund-Test legt `mcp-hub/selftest/hub-tests` an und löscht ihn wieder.
+Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz und (nur macOS) die Auflösung aus dem Schlüsselbund. Die echte Konfiguration bleibt unberührt; der Schlüsselbund-Test legt `mcp-hub/selftest/hub-tests` an und löscht ihn wieder.
 
 ## Fehlersuche
 
