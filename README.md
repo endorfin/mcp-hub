@@ -134,7 +134,7 @@ Codex fields map as follows: `command`, `args`, `env`, `cwd`, `url`, `enabled`, 
 
 Remote servers that require OAuth only need their URL; no token in a header is needed. When the server answers `401`, the list shows “Sign-in required – sign in”. A click opens the provider’s sign-in page in a new window.
 
-The flow follows the MCP specification: the hub discovers the authorization server via Protected Resource Metadata (RFC 9728) and Authorization Server Metadata (RFC 8414), registers itself as a client (RFC 7591) and signs in using the authorization code flow with PKCE (S256) and the `resource` parameter. The provider redirects back to `http://127.0.0.1:4747/oauth/callback`.
+The flow follows the MCP specification: the hub discovers the authorization server via Protected Resource Metadata (RFC 9728) and Authorization Server Metadata (RFC 8414), registers itself as a client (RFC 7591) and signs in using the authorization code flow with PKCE (S256) and the `resource` parameter. The provider redirects back to `http://127.0.0.1:4747/oauth/callback`. The authorization, token and registration endpoints must use `https:` (plain `http:` only on the local machine), and tokens are never sent along when a server redirects to another host.
 
 - Access and refresh tokens are stored in the keychain under `mcp-hub/oauth/<server>` (macOS keychain, Secret Service on Linux, Credential Manager on Windows), never in `servers.json`.
 - When a token expires, the hub fetches a new one with the refresh token and retries the call; clients never notice.
@@ -184,7 +184,7 @@ At `/mcp`, the hub bundles all enabled servers into one MCP endpoint (Streamable
 - **Crashes:** a server that stops unexpectedly, or fails to start, is restarted after 2, 4, 8, 16 and 32 seconds. After five failures in a row the hub gives up and the server list offers “Try again”; a server that ran for at least a minute starts counting from zero. The server list shows how often a server was restarted and the last error. Clients get a `list_changed` notification when its tools disappear and again when they are back.
 - **Processes:** local servers run in their own process group. On shutdown, the hub cleans up the whole group, child processes included.
 - **Working directory:** local servers run in the hub folder, so tools that expect a project path need an absolute path.
-- **Security:** write requests (`POST`, `PUT`) with a foreign `Origin` header are rejected, for the MCP endpoint and the GUI API alike (protection against DNS rebinding and CSRF).
+- **Security:** every request must be addressed to `127.0.0.1`, `localhost` or `[::1]` with the hub’s port, so a web page whose domain is rebound to 127.0.0.1 gets nothing (DNS rebinding). If a browser sends an `Origin`, it must be exactly the hub’s own address, port included, so other local web apps cannot use the API either. Write requests to the API must be JSON, which forces a browser preflight. New files in the state folder are created readable only by you, and existing files keep their permissions when the hub rewrites them.
 - **Messages:** error messages from the hub and its API are in English, since agents read them too. The GUI translates the common ones when German is selected.
 
 ### Compact mode

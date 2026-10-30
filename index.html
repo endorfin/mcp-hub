@@ -806,6 +806,7 @@ const I18N = {
   hubGaveUp: ["Hub: Fehler, 5 Neustarts gescheitert", "Hub: error, 5 restarts failed"],
   hubRestarted: [v => pl(v.n, "1× neu gestartet", "{n}× neu gestartet"), v => pl(v.n, "restarted once", "restarted {n}×")],
   hubRetry: ["Erneut versuchen", "Try again"],
+  oauthBadUrl: ["Der Anmeldeserver hat eine ungültige Adresse geliefert.", "The sign-in server returned an invalid address."],
   hubOnDemand: [v => pl(v.n, "läuft für Profil-Endpunkt · 1 Tool", "läuft für Profil-Endpunkt · {n} Tools"), v => pl(v.n, "running for a profile endpoint · 1 tool", "running for a profile endpoint · {n} tools")],
   hubOnDemandTitle: ["Im Hub ausgeschaltet, aber von einem Profil-Endpunkt angefordert. Wird nach 10 Minuten ohne Nutzung beendet.", "Switched off in the hub but requested by a profile endpoint. Stops after 10 minutes without use."],
   hubRetryStarted: ["„{name}“ wird neu gestartet", "Restarting “{name}”"],
@@ -961,6 +962,10 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^Host not allowed$/, "Host nicht erlaubt"],
+  [/^Content-Type must be application\/json$/, "Content-Type muss application/json sein"],
+  [/^(.+) must use https: (.*)$/, "$1 muss https verwenden: $2"],
+  [/^The SSE endpoint must be on the same server: (.*)$/, "Der SSE-Endpunkt muss auf demselben Server liegen: $1"],
   [/^Unknown client: (.*)$/, "Unbekannter Client: $1"],
   [/^claude CLI not found$/, "claude-Befehl nicht gefunden"],
   [/^claude mcp (\S+) failed: (.*)$/, "claude mcp $1 fehlgeschlagen: $2"],
@@ -1548,6 +1553,7 @@ async function startOAuth(name) {
   const popup = window.open("about:blank", "mcp-hub-oauth", "width=520,height=720");
   try {
     const { url } = await api("POST", "/api/oauth/start", { name });
+    if (!["https:", "http:"].includes(new URL(url).protocol)) throw new Error(t("oauthBadUrl"));
     if (popup) popup.location = url; else location.href = url;
   } catch (e) {
     popup?.close();
@@ -2083,7 +2089,7 @@ $("#inspConnect").onclick = inspConnect;
 $("#inspDisconnect").onclick = inspDisconnect;
 $("#inspServer").onchange = () => { if (insp.name) inspConnect(); };
 addEventListener("pagehide", () => {
-  if (insp.name) navigator.sendBeacon("/api/inspect/disconnect", JSON.stringify({ name: insp.name }));
+  if (insp.name) fetch("/api/inspect/disconnect", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: insp.name }) });
 });
 
 async function pollInspLog() {
