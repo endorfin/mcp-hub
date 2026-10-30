@@ -29,7 +29,7 @@ class HubTest(unittest.TestCase):
         cls.port = free_port()
         cls.base = f"http://127.0.0.1:{cls.port}"
         servers = {"mcpServers": {
-            "alpha": {"command": DUMMY[0], "args": DUMMY[1:], "env": {"DUMMY_SECRET": "klartext"}},
+            "alpha": {"command": DUMMY[0], "args": DUMMY[1:], "env": {"DUMMY_SECRET": "plain-text"}},
             "beta": {"command": DUMMY[0], "args": DUMMY[1:]},
         }}
         Path(cls.home.name, "servers.json").write_text(json.dumps(servers))
@@ -78,7 +78,7 @@ class HubTest(unittest.TestCase):
             except (OSError, KeyError, TypeError):
                 pass
             time.sleep(0.2)
-        raise AssertionError("Bedingung nicht erfüllt")
+        raise AssertionError("condition not met")
 
     def rpc(self, method, params=None, path="/mcp"):
         status, body = self.request("POST", path, {"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}})
@@ -102,8 +102,8 @@ class HubTest(unittest.TestCase):
         self.assertEqual(tools["alpha__echo"]["title"], "alpha: Echo")
 
     def test_call_is_routed_and_logged(self):
-        result = self.rpc("tools/call", {"name": "beta__echo", "arguments": {"text": "hallo"}})["result"]
-        self.assertEqual(result["content"][0]["text"], "hallo")
+        result = self.rpc("tools/call", {"name": "beta__echo", "arguments": {"text": "hello"}})["result"]
+        self.assertEqual(result["content"][0]["text"], "hello")
         last = self.get("/api/calls?limit=1")[0]
         self.assertEqual((last["server"], last["target"], last["ok"]), ("beta", "echo", True))
         self.assertGreaterEqual(self.get("/api/usage")["beta"]["count"], 1)
@@ -139,20 +139,20 @@ class HubTest(unittest.TestCase):
             self.wait_for(lambda: "alpha__fail" in self.tool_names())
 
     def test_profiles_save_apply_and_delete(self):
-        self.request("POST", "/api/profiles", {"action": "save", "name": "voll"})
+        self.request("POST", "/api/profiles", {"action": "save", "name": "everything"})
         servers = self.servers()
         servers["beta"]["enabled"] = False
         self.save_servers(servers)
         self.wait_for(lambda: "beta__echo" not in self.tool_names())
-        self.request("POST", "/api/profiles", {"action": "save", "name": "ohne-beta"})
+        self.request("POST", "/api/profiles", {"action": "save", "name": "without-beta"})
         try:
-            self.request("POST", "/api/profiles", {"action": "apply", "name": "voll"})
+            self.request("POST", "/api/profiles", {"action": "apply", "name": "everything"})
             self.wait_for(lambda: "beta__echo" in self.tool_names())
-            self.assertEqual(self.get("/api/state")["profiles"]["active"], "voll")
-            self.request("POST", "/api/profiles", {"action": "apply", "name": "ohne-beta"})
+            self.assertEqual(self.get("/api/state")["profiles"]["active"], "everything")
+            self.request("POST", "/api/profiles", {"action": "apply", "name": "without-beta"})
             self.wait_for(lambda: "beta__echo" not in self.tool_names())
         finally:
-            for name in ("voll", "ohne-beta"):
+            for name in ("everything", "without-beta"):
                 self.request("POST", "/api/profiles", {"action": "delete", "name": name})
             servers = self.servers()
             servers["beta"]["enabled"] = True
@@ -172,21 +172,21 @@ class HubTest(unittest.TestCase):
         self.assertNotIn("disabledTools", servers["alpha"])
         self.assertTrue(servers["beta"]["enabled"])
 
-    @unittest.skipUnless(sys.platform == "darwin", "Schlüsselbund nur auf macOS")
+    @unittest.skipUnless(sys.platform == "darwin", "keychain is macOS only")
     def test_keychain_secret_is_resolved(self):
-        status, body = self.request("POST", "/api/secrets", {"name": KEYCHAIN_NAME, "value": "aus-dem-schluesselbund"})
+        status, body = self.request("POST", "/api/secrets", {"name": KEYCHAIN_NAME, "value": "from-the-keychain"})
         self.assertEqual(status, 200, body)
         servers = self.servers()
         servers["alpha"]["env"]["DUMMY_SECRET"] = body["ref"]
         self.save_servers(servers)
         try:
             self.wait_for(lambda: self.rpc("tools/call", {"name": "alpha__secret"})["result"]["content"][0]["text"]
-                          == "aus-dem-schluesselbund")
+                          == "from-the-keychain")
         finally:
-            servers["alpha"]["env"]["DUMMY_SECRET"] = "klartext"
+            servers["alpha"]["env"]["DUMMY_SECRET"] = "plain-text"
             self.save_servers(servers)
             self.wait_for(lambda: self.rpc("tools/call", {"name": "alpha__secret"})["result"]["content"][0]["text"]
-                          == "klartext")
+                          == "plain-text")
 
     def test_clients_are_notified_about_changes(self):
         received = []
@@ -215,22 +215,22 @@ class HubTest(unittest.TestCase):
         servers["alpha"]["disabledTools"] = ["fail"]
         servers["beta"]["enabled"] = False
         self.save_servers(servers)
-        self.request("POST", "/api/profiles", {"action": "save", "name": "schmal"})
+        self.request("POST", "/api/profiles", {"action": "save", "name": "narrow"})
         del servers["alpha"]["disabledTools"]
         servers["beta"]["enabled"] = True
         self.save_servers(servers)
         try:
             self.wait_for(lambda: "beta__echo" in self.tool_names() and "alpha__fail" in self.tool_names())
-            self.assertEqual(self.tool_names("/p/schmal/mcp"), ["alpha__echo", "alpha__secret"])
-            body = self.rpc("tools/call", {"name": "beta__echo", "arguments": {"text": "x"}}, path="/p/schmal/mcp")
+            self.assertEqual(self.tool_names("/p/narrow/mcp"), ["alpha__echo", "alpha__secret"])
+            body = self.rpc("tools/call", {"name": "beta__echo", "arguments": {"text": "x"}}, path="/p/narrow/mcp")
             self.assertIn("error", body)
-            self.rpc("tools/call", {"name": "alpha__echo", "arguments": {"text": "x"}}, path="/p/schmal/mcp")
-            self.assertTrue(self.get("/api/calls?limit=1")[0]["client"].endswith("· schmal"))
+            self.rpc("tools/call", {"name": "alpha__echo", "arguments": {"text": "x"}}, path="/p/narrow/mcp")
+            self.assertTrue(self.get("/api/calls?limit=1")[0]["client"].endswith("· narrow"))
             self.assertIn("beta__echo", self.tool_names())
-            body = self.rpc("initialize", {"protocolVersion": "2025-06-18"}, path="/p/gibts-nicht/mcp")
+            body = self.rpc("initialize", {"protocolVersion": "2025-06-18"}, path="/p/does-not-exist/mcp")
             self.assertIn("Unknown profile", body["error"]["message"])
         finally:
-            self.request("POST", "/api/profiles", {"action": "delete", "name": "schmal"})
+            self.request("POST", "/api/profiles", {"action": "delete", "name": "narrow"})
 
     def test_unknown_and_ended_sessions_get_404(self):
         status, body = self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
@@ -326,12 +326,12 @@ class BridgeTest(unittest.TestCase):
         self.hub.wait(10)
         self.start_hub()
         HubTest.wait_for(self.notified, timeout=40)
-        self.send({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "alpha__echo", "arguments": {"text": "zurück"}}})
-        self.assertEqual(self.reply(3)["result"]["content"][0]["text"], "zurück")
+        self.send({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "alpha__echo", "arguments": {"text": "back"}}})
+        self.assertEqual(self.reply(3)["result"]["content"][0]["text"], "back")
         HubTest.wait_for(lambda: self.live() == ["desktop-test"])
 
 
-@unittest.skipUnless(sys.platform == "darwin", "Tokens liegen im macOS-Schlüsselbund")
+@unittest.skipUnless(sys.platform == "darwin", "tokens live in the macOS keychain")
 class OAuthTest(unittest.TestCase):
     NAME = "selftest-oauth"
     PROVIDER_ARGS = []

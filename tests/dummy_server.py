@@ -3,9 +3,9 @@ import os
 import sys
 
 TOOLS = [
-    {"name": "echo", "description": "Gibt den Text zurück", "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}}}},
-    {"name": "secret", "description": "Gibt DUMMY_SECRET zurück", "inputSchema": {"type": "object"}},
-    {"name": "fail", "description": "Liefert immer einen Fehler", "inputSchema": {"type": "object"}},
+    {"name": "echo", "description": "Returns the text", "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}}}},
+    {"name": "secret", "description": "Returns DUMMY_SECRET", "inputSchema": {"type": "object"}},
+    {"name": "fail", "description": "Always fails", "inputSchema": {"type": "object"}},
 ]
 
 
@@ -38,8 +38,8 @@ for line in sys.stdin:
         elif name == "secret":
             reply(message_id, text(os.environ.get("DUMMY_SECRET", "")))
         else:
-            reply(message_id, error={"code": -32000, "message": "absichtlich fehlgeschlagen"})
+            reply(message_id, error={"code": -32000, "message": "failed on purpose"})
     elif method == "ping":
         reply(message_id, {})
     else:
-        reply(message_id, error={"code": -32601, "message": f"unbekannt: {method}"})
+        reply(message_id, error={"code": -32601, "message": f"unknown: {method}"})
