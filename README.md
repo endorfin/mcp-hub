@@ -1,5 +1,7 @@
 # MCP Hub
 
+[![Tests](https://github.com/endorfin/mcp-hub/actions/workflows/tests.yml/badge.svg)](https://github.com/endorfin/mcp-hub/actions/workflows/tests.yml)
+
 A local hub for MCP servers: manage all your servers in one place, test them, and serve them bundled behind a single endpoint to Claude Code, Claude Desktop, Copilot and other clients.
 
 <picture>
@@ -222,7 +224,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-The tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again.
+The tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
 
 ## Troubleshooting
 

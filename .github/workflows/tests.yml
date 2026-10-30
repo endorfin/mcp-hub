@@ -1,0 +1,34 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Unlocked keychain for the keychain and OAuth tests
+        if: runner.os == 'macOS'
+        run: |
+          security create-keychain -p ci mcp-hub-ci.keychain
+          security default-keychain -s mcp-hub-ci.keychain
+          security unlock-keychain -p ci mcp-hub-ci.keychain
+          security set-keychain-settings -t 3600 mcp-hub-ci.keychain
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
