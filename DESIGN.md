@@ -184,7 +184,7 @@ Neutral, slightly warm grays with a single accent; every color outside the grays
 
 ## Layout
 
-A centered column, at most 1040 px wide with a 20 px margin. Above it, a sticky header with product name, hub status, profile picker and tabs (Servers, Log, Inspector, Settings). Below the header, each tab has a toolbar (filter, sort, + menu) above a list or cards.
+A centered column, at most 1040 px wide with a 20 px margin. Above it, a sticky header: product name, hub status and profile picker in the first row, the tabs (Servers, Log, Inspector, Settings) on its bottom edge. Below 600 px the status moves to its own row. Below the header, each tab has a toolbar (filter, sort, + menu) above a list or cards.
 
 Spacing follows a small grid: 6 px inside field groups, 8 px between controls in a toolbar, 14 px between fields in dialogs and cards, 16–24 px between cards and sections. Below 760 px the inspector collapses to one column and the log hides secondary columns; below 640 px two-column forms stack.
 
@@ -254,7 +254,9 @@ Replaces every native select.
 - **Corner Style:** 10 px; **Background:** Console; **Border:** 1 px Seam; **Internal Padding:** 18 px × 20 px; no shadows. Lists are cards with 1 px seams between rows.
 
 ### Navigation
-- Segmented tabs in a Keycap (8 px radius, 3 px inner padding); the active tab is Console with the “Raised” shadow, the others `muted`.
+- Main tabs: text tabs sitting on the header’s bottom seam, 22 px apart, `muted`; the active tab is `ink` with a 2 px `ink` underline that covers the seam.
+- Tabs inside a card (the connect snippets) use the same text tabs on a 1 px Seam line.
+- Small mode switches (Inspector: tools, prompts, resources): segmented tabs in a Keycap (8 px radius, 3 px inner padding); the active tab is Console with the “Raised” shadow, the others `muted`.
 
 ## Do's and Don'ts
 
