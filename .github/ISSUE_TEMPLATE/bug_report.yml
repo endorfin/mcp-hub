@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in MCP Hub does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown next to “MCP Hub” in the header, e.g. v0.4.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Linux, Windows]
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Client
+      description: Which client talks to the hub, if it matters (Claude Code, Claude Desktop, Codex, Copilot, Cursor, VS Code …)
+  - type: textarea
+    id: details
+    attributes:
+      label: Error message or log
+      description: The tooltip of the server's status chip, the call log entry, or the hub log. Remove tokens and other secrets first.
+      render: text
