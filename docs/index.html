@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://endorfin.github.io/mcp-hub/">
 <meta property="og:image" content="https://endorfin.github.io/mcp-hub/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f8a4c'/%3E%3Cpath d='M8 10h6M8 16h6M8 22h6M18 16h6' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M14 10c3 0 2 6 4 6M14 22c3 0 2-6 4-6' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="icon" id="favicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f8a4c'/%3E%3Cpath d='M8 10h6M8 16h6M8 22h6M18 16h6' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M14 10c3 0 2 6 4 6M14 22c3 0 2-6 4-6' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..125,300..800&display=swap">
@@ -1193,11 +1193,19 @@ function applyAppearance() {
   if (theme === "system") root.removeAttribute("data-theme"); else root.dataset.theme = theme;
   $$("#swatches .sw").forEach(b => b.setAttribute("aria-pressed", b.dataset.palette === pal));
   $$("#theme button").forEach(b => b.setAttribute("aria-pressed", b.dataset.themeSet === theme));
+  updateFavicon();
+}
+function updateFavicon() {
+  const cs = getComputedStyle(document.documentElement);
+  const bg = cs.getPropertyValue("--accent").trim(), fg = cs.getPropertyValue("--on-accent").trim();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${bg}"/><path d="M8 10h6M8 16h6M8 22h6M18 16h6" stroke="${fg}" stroke-width="2.4" stroke-linecap="round"/><path d="M14 10c3 0 2 6 4 6M14 22c3 0 2-6 4-6" stroke="${fg}" stroke-width="2" fill="none"/></svg>`;
+  $("#favicon").href = "data:image/svg+xml," + encodeURIComponent(svg);
 }
 function setupAppearance() {
   $("#swatches").innerHTML = PALETTES.map(p => `<button type="button" class="sw" data-palette="${p}" aria-pressed="false"><span class="mini"><i></i><i></i><span class="r"><span class="tg"></span><i></i><span class="bt"></span></span></span><span class="nm">${p[0].toUpperCase() + p.slice(1)}</span></button>`).join("");
   $("#swatches").addEventListener("click", e => { const b = e.target.closest(".sw"); if (b) { store.set("palette", b.dataset.palette); applyAppearance(); } });
   $("#theme").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { store.set("theme", b.dataset.themeSet); applyAppearance(); } });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateFavicon);
   applyAppearance();
 }
 
