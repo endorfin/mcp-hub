@@ -61,6 +61,18 @@ button.ghost:hover { color: var(--ink); background: var(--chip); }
 .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .toolbar input[type=search] { flex: 1; min-width: 180px; }
 .toolbar select { width: auto; }
+.fgroup { display: flex; flex: 1; min-width: 260px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+.fgroup:hover { border-color: var(--muted); }
+.fgroup:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.fgroup > input, .fgroup > select { border: 0; border-radius: 0; background-color: transparent; outline: none; }
+.fgroup > :first-child { border-radius: 6px 0 0 6px; }
+.fgroup > :last-child { border-radius: 0 6px 6px 0; }
+.fgroup > select { border-left: 1px solid var(--line); }
+.fgroup > select:hover { background-color: var(--chip); }
+.fgroup > input:focus, .fgroup > select:focus-visible { outline: none; }
+.fgroup > select:focus-visible { border-left-color: var(--line); }
+.toolbar > .actions { align-self: stretch; display: flex; }
+button.btn.add { display: grid; place-items: center; width: 38px; padding: 0; }
 input, textarea, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; width: 100%; }
 select { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 30px; background: var(--panel) var(--chevron) no-repeat right 11px center; }
 select:hover { border-color: var(--muted); }
@@ -240,14 +252,23 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 <main>
   <section data-panel="servers">
     <div class="toolbar">
-      <input type="search" id="filter" placeholder="Filtern…">
-      <select id="sort" aria-label="Sortierung">
-        <option value="recent">Zuletzt verwendet</option>
-        <option value="name">Name</option>
-        <option value="config">Reihenfolge der Datei</option>
-      </select>
-      <button class="btn" id="importBtn">Importieren</button>
-      <button class="btn primary" id="addBtn">Server hinzufügen</button>
+      <div class="fgroup">
+        <input type="search" id="filter" placeholder="Filtern…" aria-label="Server filtern">
+        <select id="sort" aria-label="Sortierung">
+          <option value="recent">Zuletzt verwendet</option>
+          <option value="name">Name</option>
+          <option value="config">Reihenfolge der Datei</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button class="btn primary add" id="addMenuBtn" aria-label="Hinzufügen" title="Hinzufügen" aria-haspopup="menu" aria-expanded="false">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+        </button>
+        <div class="menu" role="menu" id="addMenu" hidden>
+          <button role="menuitem" id="addBtn">Server hinzufügen…</button>
+          <button role="menuitem" id="importBtn">Importieren…</button>
+        </div>
+      </div>
     </div>
     <div class="list" id="list"></div>
     <p class="hint" style="margin-top:12px">Datei: <code id="cfgPath"></code></p>
@@ -946,6 +967,15 @@ $("#editCancel").onclick = () => $("#editor").close();
 $("#addEnv").onclick = () => envRow();
 $("#addHeader").onclick = () => headerRow();
 $("#addBtn").onclick = () => openEditor(null);
+$("#addMenuBtn").onclick = e => {
+  e.stopPropagation();
+  closePicker();
+  const menu = $("#addMenu");
+  closeMenus(menu);
+  menu.hidden = !menu.hidden;
+  e.currentTarget.setAttribute("aria-expanded", String(!menu.hidden));
+  if (!menu.hidden) menu.firstElementChild.focus();
+};
 
 let toolsServer = null;
 
