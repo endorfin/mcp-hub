@@ -68,39 +68,58 @@ def _well_known(base, name):
     return [f"{origin}/.well-known/{name}{path}", f"{origin}/.well-known/{name}"] if path else [f"{origin}/.well-known/{name}"]
 
 
-def discover(server_url, challenge=None):
+def discover(server_url, challenge=None, settings=None):
+    settings = settings or {}
     resource_meta_url = _challenge_param(challenge, "resource_metadata")
     resource = _first_json([resource_meta_url] if resource_meta_url else _well_known(server_url, "oauth-protected-resource"))
     parts = urllib.parse.urlsplit(server_url)
     issuer = ((resource or {}).get("authorization_servers") or [f"{parts.scheme}://{parts.netloc}"])[0]
-    meta = _first_json(_well_known(issuer, "oauth-authorization-server") + _well_known(issuer, "openid-configuration")) or {
+    explicit = settings.get("authorizationUrl") and settings.get("tokenUrl")
+    meta = None if explicit else _first_json(_well_known(issuer, "oauth-authorization-server") + _well_known(issuer, "openid-configuration"))
+    meta = dict(meta or {
         "authorization_endpoint": urllib.parse.urljoin(issuer, "/authorize"),
         "token_endpoint": urllib.parse.urljoin(issuer, "/token"),
         "registration_endpoint": urllib.parse.urljoin(issuer, "/register"),
-    }
+    })
+    if settings.get("authorizationUrl"):
+        meta["authorization_endpoint"] = settings["authorizationUrl"]
+    if settings.get("tokenUrl"):
+        meta["token_endpoint"] = settings["tokenUrl"]
     if "S256" not in meta.get("code_challenge_methods_supported", ["S256"]):
         raise OAuthError("Der Anmeldeserver unterstützt kein PKCE (S256)")
-    scope = _challenge_param(challenge, "scope") or " ".join((resource or {}).get("scopes_supported") or [])
+    scope = settings.get("scopes") or _challenge_param(challenge, "scope") or " ".join((resource or {}).get("scopes_supported") or [])
     return {"resource": (resource or {}).get("resource") or server_url, "meta": meta, "scope": scope}
 
 
 def _register(meta, redirect_uri):
     if not meta.get("registration_endpoint"):
-        raise OAuthError("Der Anmeldeserver bietet keine automatische Client-Registrierung an")
-    return _request(meta["registration_endpoint"], {
+        raise OAuthError("Der Anbieter bietet keine automatische Client-Registrierung an. "
+                         "Eine OAuth-App beim Anbieter anlegen und Client-ID im Server-Eintrag unter „OAuth“ hinterlegen.")
+    try:
+        return _request(meta["registration_endpoint"], {
         "client_name": CLIENT_NAME,
         "redirect_uris": [redirect_uri],
         "grant_types": ["authorization_code", "refresh_token"],
         "response_types": ["code"],
         "token_endpoint_auth_method": "none",
-    }, {"Content-Type": "application/json"})
+        }, {"Content-Type": "application/json"})
+    except OAuthError as e:
+        raise OAuthError(f"Automatische Client-Registrierung fehlgeschlagen ({e}). "
+                         "Eine OAuth-App beim Anbieter anlegen und Client-ID im Server-Eintrag unter „OAuth“ hinterlegen.")
 
 
-def start(server, server_url, redirect_uri, challenge=None):
-    found = discover(server_url, challenge)
-    stored = load(server) or {}
-    client = stored.get("client") if stored.get("redirect_uri") == redirect_uri else None
-    client = client or _register(found["meta"], redirect_uri)
+def start(server, server_url, redirect_uri, challenge=None, settings=None):
+    settings = settings or {}
+    found = discover(server_url, challenge, settings)
+    if settings.get("clientId"):
+        client = {"client_id": settings["clientId"]}
+        if settings.get("clientSecret"):
+            client["client_secret"] = settings["clientSecret"]
+            client["token_endpoint_auth_method"] = settings.get("tokenAuth", "client_secret_post")
+    else:
+        stored = load(server) or {}
+        client = stored.get("client") if stored.get("redirect_uri") == redirect_uri and not stored.get("client", {}).get("client_secret") else None
+        client = client or _register(found["meta"], redirect_uri)
     verifier = secrets.token_urlsafe(48)
     code_challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     state = secrets.token_urlsafe(24)

@@ -7,7 +7,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
 PORT = int(sys.argv[1])
+FIXED = "--fixed-client" in sys.argv
 BASE = f"http://127.0.0.1:{PORT}"
+FIXED_ID, FIXED_SECRET = "fixed-id", "fixed-secret"
 clients, codes, access, refresh = {}, {}, set(), set()
 
 
@@ -36,13 +38,18 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/.well-known/oauth-protected-resource":
             return self.reply(200, {"resource": f"{BASE}/mcp", "authorization_servers": [BASE], "scopes_supported": ["mcp"]})
         if url.path == "/.well-known/oauth-authorization-server":
-            return self.reply(200, {"issuer": BASE, "authorization_endpoint": f"{BASE}/authorize",
-                                    "token_endpoint": f"{BASE}/token", "registration_endpoint": f"{BASE}/register",
-                                    "code_challenge_methods_supported": ["S256"]})
+            meta = {"issuer": BASE, "authorization_endpoint": f"{BASE}/authorize", "token_endpoint": f"{BASE}/token",
+                    "code_challenge_methods_supported": ["S256"]}
+            if not FIXED:
+                meta["registration_endpoint"] = f"{BASE}/register"
+            return self.reply(200, meta)
         if url.path == "/authorize":
             q = {k: v[0] for k, v in parse_qs(url.query).items()}
-            assert q["client_id"] in clients and q["code_challenge_method"] == "S256"
-            assert q["redirect_uri"] in clients[q["client_id"]] and q["resource"] == f"{BASE}/mcp"
+            if FIXED:
+                assert q["client_id"] == FIXED_ID and q["scope"] == "repo read:user"
+            else:
+                assert q["client_id"] in clients and q["redirect_uri"] in clients[q["client_id"]]
+            assert q["code_challenge_method"] == "S256" and q["resource"] == f"{BASE}/mcp"
             code = secrets.token_hex(8)
             codes[code] = q
             target = q["redirect_uri"] + "?" + urlencode({"code": code, "state": q["state"]})
@@ -52,12 +59,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         url = urlparse(self.path)
         if url.path == "/register":
+            if FIXED:
+                return self.reply(404, {"error": "not found"})
             body = self.form()
             client_id = secrets.token_hex(6)
             clients[client_id] = body["redirect_uris"]
             return self.reply(201, {"client_id": client_id, **body})
         if url.path == "/token":
             body = self.form()
+            if FIXED and (body.get("client_id") != FIXED_ID or body.get("client_secret") != FIXED_SECRET):
+                return self.reply(401, {"error": "invalid_client"})
             if body["grant_type"] == "authorization_code":
                 flow = codes.pop(body["code"], None)
                 challenge = base64.urlsafe_b64encode(hashlib.sha256(body["code_verifier"].encode()).digest()).rstrip(b"=").decode()

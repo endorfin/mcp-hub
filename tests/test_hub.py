@@ -334,17 +334,19 @@ class BridgeTest(unittest.TestCase):
 @unittest.skipUnless(sys.platform == "darwin", "Tokens liegen im macOS-Schlüsselbund")
 class OAuthTest(unittest.TestCase):
     NAME = "selftest-oauth"
+    PROVIDER_ARGS = []
+    ENTRY_EXTRA = {}
 
     def setUp(self):
         self.home = tempfile.TemporaryDirectory()
         self.oauth_port, self.port = free_port(), free_port()
         self.base = f"http://127.0.0.1:{self.port}"
         self.oauth_base = f"http://127.0.0.1:{self.oauth_port}"
-        self.provider = subprocess.Popen([sys.executable, str(ROOT / "tests" / "dummy_oauth_server.py"), str(self.oauth_port)],
+        self.provider = subprocess.Popen([sys.executable, str(ROOT / "tests" / "dummy_oauth_server.py"), str(self.oauth_port), *self.PROVIDER_ARGS],
                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         HubTest.wait_for(lambda: fetch(self.oauth_base + "/.well-known/oauth-protected-resource"))
         Path(self.home.name, "servers.json").write_text(json.dumps(
-            {"mcpServers": {self.NAME: {"type": "http", "url": self.oauth_base + "/mcp"}}}))
+            {"mcpServers": {self.NAME: {"type": "http", "url": self.oauth_base + "/mcp", **self.ENTRY_EXTRA}}}))
         env = {**os.environ, "MCP_HUB_HOME": self.home.name, "PORT": str(self.port)}
         self.hub = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -385,6 +387,22 @@ class OAuthTest(unittest.TestCase):
         fetch(self.base + "/api/oauth/logout", json.dumps({"name": self.NAME}).encode())
         HubTest.wait_for(lambda: self.state().get("state") == "auth")
         self.assertFalse(self.state()["oauth"]["signedIn"])
+
+
+class FixedClientOAuthTest(OAuthTest):
+    PROVIDER_ARGS = ["--fixed-client"]
+    ENTRY_EXTRA = {"oauth": {"clientId": "fixed-id", "clientSecret": "fixed-secret", "scopes": "repo read:user"}}
+
+    def test_without_client_id_explains_what_to_do(self):
+        HubTest.wait_for(lambda: self.state().get("state") == "auth")
+        servers = {self.NAME: {"type": "http", "url": self.oauth_base + "/mcp"}}
+        fetch(self.base + "/api/servers", json.dumps({"mcpServers": servers}).encode(), "PUT")
+        req = urllib.request.Request(self.base + "/api/oauth/start", json.dumps({"name": self.NAME}).encode(),
+                                     {"Content-Type": "application/json"})
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(req)
+        with error.exception as e:
+            self.assertIn("Client-ID", json.loads(e.read())["error"])
 
 
 class MigrationTest(unittest.TestCase):

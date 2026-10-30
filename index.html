@@ -212,6 +212,14 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .stat-table .share { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
 .stat-table .share i { height: 6px; border-radius: 0 4px 4px 0; background: var(--series); }
 @media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat-tables { grid-template-columns: 1fr; } }
+.oauth-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.oauth-box > summary { cursor: pointer; list-style: none; font-size: 12.5px; color: var(--muted); display: flex; gap: 4px; align-items: baseline; }
+.oauth-box > summary::-webkit-details-marker { display: none; }
+.oauth-box > summary b { color: var(--ink); font-weight: 600; }
+.oauth-box > summary::before { content: ""; width: 6px; height: 6px; margin-right: 6px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(-45deg); transition: transform .15s; flex: none; align-self: center; }
+.oauth-box[open] > summary::before { transform: translateY(-2px) rotate(45deg); }
+.oauth-fields { display: grid; gap: 14px; margin-top: 14px; }
+.callback { display: flex; align-items: center; min-height: 36px; padding: 0 10px; border-radius: 7px; font-size: 12.5px; }
 .call { border-top: 1px solid var(--line); }
 .call:first-child { border-top: 0; }
 .call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
@@ -454,6 +462,24 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
           <div class="env" id="headerRows"></div>
           <div><button type="button" class="btn" id="addHeader">+ Header</button></div>
         </div>
+        <details class="oauth-box" id="oauthBox">
+          <summary><b>OAuth</b> <span>– nur nötig, wenn der Anbieter keine automatische Registrierung anbietet</span></summary>
+          <div class="oauth-fields">
+            <div class="f">
+              <span>Callback-URL – beim Anbieter in der OAuth-App eintragen</span>
+              <span class="urlrow"><code class="callback" id="oauthCallback"></code><button type="button" class="btn" id="oauthCopy">Kopieren</button></span>
+            </div>
+            <div class="grid2">
+              <label class="f"><span><b>Client-ID</b></span><input name="oauthClientId" autocomplete="off" style="font-family:var(--mono)"></label>
+              <label class="f"><span><b>Client-Secret</b> – falls verlangt</span><span class="urlrow"><input name="oauthClientSecret" autocomplete="off" style="font-family:var(--mono)"><button type="button" class="btn ghost lock" id="oauthSecretLock"></button></span></label>
+            </div>
+            <label class="f"><span><b>Scopes</b> – durch Leerzeichen getrennt, leer = vom Anbieter vorgeschlagen</span><input name="oauthScopes" placeholder="z. B. repo read:user" style="font-family:var(--mono)"></label>
+            <div class="grid2">
+              <label class="f"><span><b>Autorisierungs-URL</b> – nur ohne Discovery</span><input name="oauthAuthorizationUrl" inputmode="url" placeholder="https://…/authorize" style="font-family:var(--mono)"></label>
+              <label class="f"><span><b>Token-URL</b> – nur ohne Discovery</span><input name="oauthTokenUrl" inputmode="url" placeholder="https://…/token" style="font-family:var(--mono)"></label>
+            </div>
+          </div>
+        </details>
       </div>
       <span class="hint">Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password geht ebenso.</span>
       <label class="check"><input type="checkbox" name="enabled"> Aktiviert</label>
@@ -1117,6 +1143,10 @@ function showTransportFields() {
 }
 $("#editForm").transport.onchange = showTransportFields;
 const updateUrlLock = lockButton($("#urlLock"), $("#editForm").url, () => "url");
+const updateSecretLock = lockButton($("#oauthSecretLock"), $("#editForm").oauthClientSecret, () => "oauth-client-secret");
+const OAUTH_FIELDS = { oauthClientId: "clientId", oauthClientSecret: "clientSecret", oauthScopes: "scopes", oauthAuthorizationUrl: "authorizationUrl", oauthTokenUrl: "tokenUrl" };
+const callbackUrl = () => `http://127.0.0.1:${location.port}/oauth/callback`;
+$("#oauthCopy").onclick = async () => { await navigator.clipboard.writeText(callbackUrl()); toast("Callback-URL kopiert"); };
 
 function openEditor(name, duplicate = false) {
   const f = $("#editForm");
@@ -1135,6 +1165,10 @@ function openEditor(name, duplicate = false) {
   Object.entries(s.env || {}).forEach(([k, v]) => envRow(k, v));
   $("#headerRows").replaceChildren();
   Object.entries(s.headers || {}).forEach(([k, v]) => headerRow(k, v));
+  for (const [field, key] of Object.entries(OAUTH_FIELDS)) f[field].value = (s.oauth || {})[key] || "";
+  updateSecretLock();
+  $("#oauthCallback").textContent = callbackUrl();
+  $("#oauthBox").open = Boolean(s.oauth && Object.keys(s.oauth).length);
   showTransportFields();
   $("#editError").textContent = "";
   $("#editor").showModal();
@@ -1149,7 +1183,7 @@ $("#editForm").onsubmit = async e => {
   const prev = editing ? servers()[editing] : {};
   const kind = f.transport.value;
   const entry = { ...prev, enabled: f.enabled.checked };
-  for (const key of ["type", "url", "headers", "command", "args", "env"]) delete entry[key];
+  for (const key of ["type", "url", "headers", "command", "args", "env", "oauth"]) delete entry[key];
   if (kind === "stdio") {
     let command = f.command.value.trim();
     let args = f.args.value.split("\n").map(a => a.trim()).filter(Boolean);
@@ -1159,6 +1193,8 @@ $("#editForm").onsubmit = async e => {
   } else {
     const headers = readKv($("#headerRows"));
     Object.assign(entry, { type: kind, url: f.url.value.trim() }, Object.keys(headers).length ? { headers } : {});
+    const settings = Object.fromEntries(Object.entries(OAUTH_FIELDS).map(([field, key]) => [key, f[field].value.trim()]).filter(([, v]) => v));
+    if (Object.keys(settings).length) entry.oauth = settings;
   }
   const description = f.description.value.trim();
   if (description) entry.description = description; else delete entry.description;

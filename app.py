@@ -92,6 +92,8 @@ def validate_servers(servers):
             return f"{name}: headers muss ein Objekt sein"
         if not isinstance(entry.get("args", []), list):
             return f"{name}: args muss eine Liste sein"
+        if not isinstance(entry.get("oauth", {}), dict):
+            return f"{name}: oauth muss ein Objekt sein"
         if not isinstance(entry.get("disabledTools", []), list):
             return f"{name}: disabledTools muss eine Liste sein"
         if not isinstance(entry.get("env", {}), dict):
@@ -287,7 +289,8 @@ class Handler(BaseHTTPRequestHandler):
                 hub.reconnect(name)
                 return self.send({})
             try:
-                url = oauth.start(name, secrets_store.resolve_value(entry["url"]), self.redirect_uri(), hub.challenge(name))
+                settings = {k: secrets_store.resolve_value(v) for k, v in (entry.get("oauth") or {}).items()}
+                url = oauth.start(name, secrets_store.resolve_value(entry["url"]), self.redirect_uri(), hub.challenge(name), settings)
             except (oauth.OAuthError, secrets_store.SecretError) as e:
                 return self.send({"error": str(e)}, HTTPStatus.BAD_GATEWAY)
             return self.send({"url": url})

@@ -55,7 +55,18 @@ Der Ablauf folgt der MCP-Spezifikation: Der Hub ermittelt den Anmeldeserver übe
 - Läuft ein Token ab, holt der Hub per Refresh-Token ein neues und wiederholt den Aufruf; Clients merken davon nichts.
 - Angemeldete Server tragen den Chip „OAuth“ (Tooltip: Gültigkeit). Über ⋯ → „Abmelden“ wird das Token gelöscht.
 - Steht schon ein `Authorization`-Header im Eintrag, nutzt der Hub diesen und kein OAuth.
-- Voraussetzung ist ein Anbieter mit automatischer Client-Registrierung; feste Client-IDs lassen sich bisher nicht eintragen.
+
+**Anbieter ohne automatische Registrierung** (z. B. GitHub): Dort eine OAuth-App anlegen, als Callback-URL `http://127.0.0.1:4747/oauth/callback` eintragen und Client-ID (und ggf. Secret) im Editor unter „OAuth“ hinterlegen. Das Secret lässt sich per Schloss in den Schlüsselbund verschieben. Bietet der Anbieter keine Discovery an, kommen Autorisierungs- und Token-URL dazu:
+
+```json
+"github": {
+  "type": "http",
+  "url": "https://api.githubcopilot.com/mcp/",
+  "oauth": { "clientId": "Iv1.…", "clientSecret": "${keychain:github/oauth-client-secret}", "scopes": "repo read:user" }
+}
+```
+
+Mögliche Felder: `clientId`, `clientSecret`, `scopes`, `authorizationUrl`, `tokenUrl` und `tokenAuth` (`client_secret_post`, Standard, oder `client_secret_basic`). Fehlt die Client-ID bei einem Anbieter ohne Registrierung, sagt die Fehlermeldung beim Anmelden, was zu tun ist.
 
 ### Secrets
 
@@ -203,7 +214,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 python3 -m unittest discover -s tests -v
 ```
 
-Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz, die Statistik und (nur macOS) die Auflösung aus dem Schlüsselbund sowie der komplette OAuth-Ablauf gegen einen Test-Anbieter (`tests/dummy_oauth_server.py`: Anmeldung, Erneuerung eines abgelaufenen Tokens, Abmelden). Die echte Konfiguration bleibt unberührt; die Schlüsselbund-Tests legen `mcp-hub/selftest/hub-tests` und `mcp-hub/oauth/selftest-oauth` an und löschen sie wieder.
+Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz, die Statistik und (nur macOS) die Auflösung aus dem Schlüsselbund sowie der komplette OAuth-Ablauf gegen einen Test-Anbieter (`tests/dummy_oauth_server.py`: Anmeldung, Erneuerung eines abgelaufenen Tokens, Abmelden; einmal mit automatischer Registrierung, einmal mit fester Client-ID und Secret). Die echte Konfiguration bleibt unberührt; die Schlüsselbund-Tests legen `mcp-hub/selftest/hub-tests` und `mcp-hub/oauth/selftest-oauth` an und löschen sie wieder.
 
 ## Fehlersuche
 
@@ -219,6 +230,6 @@ Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem f
 3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
 4. **Änderungen an Clients melden:** Erledigt, siehe „Live-Aktualisierung“.
 5. **Statistik im Protokoll:** Erledigt, siehe „Statistik“.
-6. **OAuth für entfernte Server:** Erledigt, siehe „OAuth“. Offen: feste Client-IDs für Anbieter ohne automatische Registrierung.
+6. **OAuth für entfernte Server:** Erledigt, siehe „OAuth“, auch mit fester Client-ID.
 7. **Alte Reste entfernen:** Erledigt.
 8. **Tests:** Erledigt, siehe „Tests“.
