@@ -1,8 +1,12 @@
 # MCP Hub
 
 [![Tests](https://github.com/endorfin/mcp-hub/actions/workflows/tests.yml/badge.svg)](https://github.com/endorfin/mcp-hub/actions/workflows/tests.yml)
+[![Release](https://img.shields.io/github/v/release/endorfin/mcp-hub)](https://github.com/endorfin/mcp-hub/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/endorfin/mcp-hub)](LICENSE)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![macOS | Linux | Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
 
-A local hub for MCP servers: manage all your servers in one place, test them, and serve them bundled behind a single endpoint to Claude Code, Claude Desktop, Copilot and other clients.
+**Set up your MCP servers once, use them in every client.** A local hub that manages all your servers in one place, tests them, and serves them bundled behind a single endpoint to Claude Code, Claude Desktop, Codex, Copilot, Cursor and VS Code.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
@@ -11,34 +15,54 @@ A local hub for MCP servers: manage all your servers in one place, test them, an
 
 No dependencies besides Python 3.11+. The server only listens on `127.0.0.1`. The interface is available in English and German (see “GUI”).
 
+## Why
+
+Every MCP client keeps its own list of servers. Add a server and you edit four config files; rotate a token and you hunt it down in all of them, usually in plain text. Each client then loads every tool definition into its context on every request, which with a dozen servers means tens of thousands of tokens before you have typed anything.
+
+MCP Hub turns that around: servers live in one place, secrets stay in the keychain, and every client gets a single entry pointing at the hub, connected with a click.
+
+## Features
+
+- **One endpoint for every client:** stdio, Streamable HTTP and SSE servers bundled at `http://127.0.0.1:4747/mcp`, tool names prefixed `server__tool`.
+- **Connect and import with a click:** add the hub to Claude Code, Claude Desktop, Codex, Cursor, VS Code or Copilot CLI, and move their existing servers over (JSON, Codex TOML, `mcp add` commands).
+- **Compact mode:** clients get `search_tools`, `describe_tool` and `call_tool` instead of every definition, about 300 instead of 60,000 tokens with 200 tools.
+- **Profiles:** switch between setups in one click, or give each client its own profile endpoint.
+- **Secrets without plain text:** `${keychain:…}`, `${op://…}` (1Password) and `${env:…}` references, plus OAuth for remote servers with tokens in the keychain.
+- **Inspector, call log and statistics:** call any tool by hand, see every call with client, duration and result.
+- **Runs itself:** crashed servers restart with growing delays, live `list_changed` notifications, updates with one click, autostart at login.
+- **macOS, Linux and Windows**, tested in CI on all three.
+
+## Contents
+
+- [Getting started](#getting-started)
+- [Files](#files)
+- [Server entries](#server-entries): [importing](#importing), [OAuth](#oauth), [secrets](#secrets)
+- [Hub](#hub): [compact mode](#compact-mode), [connecting clients](#connecting-clients), [live updates](#live-updates)
+- [Autostart](#autostart) · [Updates](#updates)
+- [GUI](#gui): [profiles](#profiles), [statistics](#statistics), [usage and call log](#usage-and-call-log)
+- [API](#api) · [Tests](#tests) · [Troubleshooting](#troubleshooting) · [Roadmap](#roadmap) · [Contributing](#contributing) · [License](#license)
+
 ## Getting started
 
 **Requirements:** Python 3.11 or newer, on macOS, Linux or Windows. On Linux, keychain secrets and OAuth tokens need the Secret Service (GNOME Keyring or KWallet) and `secret-tool` (package `libsecret-tools`); the autostart needs systemd. On Windows they use the Credential Manager and a scheduled task, both built in. On Windows, run `python` or `py` wherever this README says `python3`.
 
-**1. Install** – clone the repository (or download the [latest release](https://github.com/endorfin/mcp-hub/releases/latest)). There is nothing to build and nothing to install with pip.
+**1. Install and run** – clone the repository (or download the [latest release](https://github.com/endorfin/mcp-hub/releases/latest)) and start it. There is nothing to build and nothing to install with pip.
 
 ```bash
-git clone https://github.com/endorfin/mcp-hub.git
-cd mcp-hub
-```
-
-**2. Run**
-
-```bash
-python3 app.py
+git clone https://github.com/endorfin/mcp-hub.git && cd mcp-hub && python3 app.py
 ```
 
 Then open the GUI at http://127.0.0.1:4747. The hub endpoint for your clients is `http://127.0.0.1:4747/mcp`. Use `PORT=…` or `--port …` for a different port.
 
-**3. Add servers** – click **+** → “Add server…”, or “Import…” and paste an existing configuration: JSON from Claude Desktop, Claude Code, Cursor or VS Code, TOML from Codex, or `claude mcp add` / `codex mcp add` commands (see [Importing](#importing)).
+**2. Add servers** – click **+** → “Import…” and pick an installed client to take over its servers, or paste an existing configuration: JSON from Claude Desktop, Claude Code, Cursor or VS Code, TOML from Codex, or `claude mcp add` / `codex mcp add` commands (see [Importing](#importing)). “Add server…” creates one by hand.
 
-**4. Connect your clients** – each client only needs this one entry, see [Connecting clients](#connecting-clients):
+**3. Connect your clients** – Settings → “Connect clients” adds the hub to each installed client with one click. By hand, each client only needs this one entry, see [Connecting clients](#connecting-clients):
 
 ```bash
 claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp
 ```
 
-**5. Start at login** – so your clients find the hub after a reboot, stop the hub from step 2 (Ctrl+C) and register it with [`autostart.sh`](#autostart) (a LaunchAgent on macOS, a systemd user service on Linux) or `autostart.ps1` on Windows (a scheduled task); it starts right away and on every login:
+**4. Start at login** – so your clients find the hub after a reboot, stop the hub from step 1 (Ctrl+C) and register it with [`autostart.sh`](#autostart) (a LaunchAgent on macOS, a systemd user service on Linux) or `autostart.ps1` on Windows (a scheduled task); it starts right away and on every login:
 
 ```bash
 ./autostart.sh install
@@ -48,7 +72,7 @@ claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp
 .\autostart.ps1 install
 ```
 
-Update later with `git pull` followed by `./autostart.sh restart` (or restart `python3 app.py` yourself).
+To update, use the green “… available” chip in the header (see [Updates](#updates)), or `git pull` followed by `./autostart.sh restart`.
 
 ## Files
 
