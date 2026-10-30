@@ -12,6 +12,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+import hub as hub_module  # noqa: E402
 DUMMY = [sys.executable, str(ROOT / "tests" / "dummy_server.py")]
 KEYCHAIN_NAME = "selftest/hub-tests"
 
@@ -292,6 +295,14 @@ class HubTest(unittest.TestCase):
         sizes = self.get("/api/compact")
         self.assertLess(sizes["compactChars"], sizes["fullChars"] * 2)
 
+    def test_crashed_server_is_restarted(self):
+        result = self.rpc("tools/call", {"name": "beta__fail", "arguments": {"exit": True}})["result"]
+        self.assertTrue(result["isError"])
+        self.wait_for(lambda: self.get("/api/hub")["beta"]["state"] == "running" and self.get("/api/hub")["beta"]["restarts"] == 1)
+        self.assertEqual(self.call_text("beta__echo"), "")
+        self.assertIn("stopped unexpectedly", self.get("/api/hub")["beta"]["lastError"])
+        self.assertEqual(self.request("POST", "/api/hub/restart", {"name": "nope"})[0], 404)
+
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
 
@@ -483,3 +494,32 @@ class FixedClientOAuthTest(OAuthTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RestartPolicyTest(unittest.TestCase):
+    class Fake:
+        def __init__(self, name, started_at=None):
+            self.name, self.started_at = name, started_at
+
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory()
+        self.hub = hub_module.Hub(lambda: {"mcpServers": {}}, lambda: {"passEnvironment": True}, self.home.name)
+
+    def tearDown(self):
+        self.home.cleanup()
+
+    def test_delays_grow_and_the_hub_gives_up(self):
+        upstream, now, waits = self.Fake("x"), 1000.0, []
+        for _ in hub_module.RESTART_DELAYS:
+            self.hub._schedule_restart(upstream, now)
+            info = self.hub.restarts["x"]
+            waits.append(info["retryAt"] - now)
+            info["retryAt"] = None
+        self.assertEqual(tuple(waits), hub_module.RESTART_DELAYS)
+        self.hub._schedule_restart(upstream, now)
+        self.assertTrue(self.hub.restarts["x"]["gaveUp"])
+
+    def test_a_stable_run_resets_the_failures(self):
+        self.hub.restarts["x"] = {"count": 3, "failures": 3, "retryAt": None, "gaveUp": False}
+        self.hub._schedule_restart(self.Fake("x", started_at=0), hub_module.STABLE_AFTER + 1)
+        self.assertEqual(self.hub.restarts["x"]["failures"], 1)

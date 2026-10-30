@@ -302,6 +302,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
         if match := MCP_PATH.match(self.path):
             return self.mcp(unquote(match.group(1)) if match.group(1) else None, match.group(2))
+        if self.path == "/api/hub/restart":
+            name = self.body().get("name", "")
+            if name not in hub.upstreams:
+                return self.send({"error": f"Unknown server: {name}"}, HTTPStatus.NOT_FOUND)
+            hub.reconnect(name)
+            return self.send({})
         if self.path == "/api/update/check":
             return self.send({**updater.check(), "enabled": load_settings()["checkUpdates"]})
         if self.path == "/api/update/apply":
@@ -469,6 +475,7 @@ def main():
     atexit.register(inspector.disconnect_all)
     atexit.register(hub.close)
     sync_hub_in_background()
+    hub.supervise_in_background()
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     print(f"MCP Hub running at http://127.0.0.1:{port}", flush=True)
     try:

@@ -14,6 +14,8 @@ from inspector import PROTOCOL_VERSION, VERSION, AuthRequired, RpcError, open_se
 
 SEPARATOR = "__"
 SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
+RESTART_DELAYS = (2, 4, 8, 16, 32)
+STABLE_AFTER = 60
 
 
 def runtime_key(entry, pass_environment):
@@ -60,6 +62,7 @@ class Upstream:
         self.instructions = ""
         self.challenge = None
         self.pass_environment = True
+        self.started_at = None
 
     def start(self, pass_environment):
         self.pass_environment = pass_environment
@@ -73,6 +76,7 @@ class Upstream:
             self.refresh()
             self.state = "running"
             self.error = None
+            self.started_at = time.time()
         except AuthRequired as e:
             self.challenge = e.challenge
             self.error = "Sign-in required"
@@ -114,6 +118,12 @@ class Upstream:
 
     def alive(self):
         return self.session is not None and self.session.alive()
+
+    def mark_crashed(self):
+        stderr = [x["data"] for x in self.session.log if x["kind"] in ("stderr", "error")] if self.session else []
+        self.state = "error"
+        self.error = "Server stopped unexpectedly" + (f" – {stderr[-1]}" if stderr else "")
+        self.close()
 
     def request(self, method, params):
         if not self.alive():
@@ -317,6 +327,41 @@ class Hub:
         self.clients = Clients(Path(state_dir) / "clients.json")
         self.lock = threading.Lock()
         self.upstreams = {}
+        self.restarts = {}
+
+    def _schedule_restart(self, upstream, now):
+        info = self.restarts.setdefault(upstream.name, {"count": 0, "failures": 0, "retryAt": None, "gaveUp": False})
+        if info["retryAt"] or info["gaveUp"]:
+            return
+        if upstream.started_at is not None and now - upstream.started_at >= STABLE_AFTER:
+            info["failures"] = 0
+        info["failures"] += 1
+        if info["failures"] > len(RESTART_DELAYS):
+            info["gaveUp"] = True
+        else:
+            info["retryAt"] = now + RESTART_DELAYS[info["failures"] - 1]
+
+    def _needs_attention(self):
+        now = time.time()
+        for name, upstream in list(self.upstreams.items()):
+            info = self.restarts.get(name) or {}
+            if upstream.state == "running" and not upstream.alive():
+                return True
+            if upstream.state == "error" and not info.get("gaveUp") and (not info.get("retryAt") or now >= info["retryAt"]):
+                return True
+        return False
+
+    def supervise(self, interval=2):
+        while True:
+            time.sleep(interval)
+            try:
+                if self._needs_attention():
+                    self.sync()
+            except Exception:
+                pass
+
+    def supervise_in_background(self):
+        threading.Thread(target=self.supervise, daemon=True).start()
 
     def sync(self):
         pass_environment = self.load_settings()["passEnvironment"]
@@ -325,10 +370,24 @@ class Hub:
             if entry.get("enabled", True) and (entry.get("command") or entry.get("url"))
         }
         with self.lock:
+            now = time.time()
             for name, upstream in list(self.upstreams.items()):
                 key = runtime_key(wanted.get(name), pass_environment)
-                crashed = upstream.state == "running" and not upstream.alive()
-                if name not in wanted or upstream.key != key or crashed:
+                if name not in wanted or upstream.key != key:
+                    upstream.close()
+                    del self.upstreams[name]
+                    self.restarts.pop(name, None)
+                    continue
+                if upstream.state == "running" and not upstream.alive():
+                    upstream.mark_crashed()
+                if upstream.state != "error":
+                    continue
+                self._schedule_restart(upstream, now)
+                info = self.restarts[name]
+                if info["retryAt"] and now >= info["retryAt"]:
+                    info["retryAt"] = None
+                    info["count"] += 1
+                    info["lastError"] = upstream.error
                     upstream.close()
                     del self.upstreams[name]
             starting = []
@@ -352,6 +411,7 @@ class Hub:
 
     def reconnect(self, name):
         with self.lock:
+            self.restarts.pop(name, None)
             upstream = self.upstreams.pop(name, None)
             if upstream:
                 upstream.close()
@@ -409,10 +469,18 @@ class Hub:
                 **{k: len(v) for k, v in u.catalog.items()},
                 "tools": len(u.tools()),
                 "toolsTotal": len(u.catalog["tools"]),
+                **self._restart_status(name),
                 **({"oauth": oauth.status(name)} if u.entry.get("url") else {}),
             }
             for name, u in self.upstreams.items()
         }
+
+    def _restart_status(self, name):
+        info = self.restarts.get(name)
+        if not info:
+            return {}
+        return {"restarts": info["count"], "retryAt": info["retryAt"], "gaveUp": info["gaveUp"],
+                "lastError": info.get("lastError")}
 
     def tools(self, name):
         upstream = self.upstreams.get(name)
