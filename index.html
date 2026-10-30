@@ -132,10 +132,11 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .prof:first-child { border-top: 0; }
 .prof-main { display: grid; gap: 3px; min-width: 0; }
 .prof-main small { color: var(--muted); font-size: 12.5px; }
-.prof-url { display: flex; gap: 6px; align-items: center; min-width: 0; }
+#profilesDialog, #profilesDialog .dbody { overflow: visible; }
+.prof-url { display: flex; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: copy; justify-self: start; max-width: 100%; }
 .prof-url code { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
-.prof-actions { display: flex; gap: 6px; }
-@media (max-width: 640px) { .prof { grid-template-columns: 1fr; } }
+.prof-url:hover code { color: var(--ink); background: var(--line); }
+.menu.up { top: auto; bottom: calc(100% + 4px); }
 .call { border-top: 1px solid var(--line); }
 .call:first-child { border-top: 0; }
 .call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
@@ -628,23 +629,43 @@ function renderProfileList() {
     const on = saved.filter(x => x.enabled).length;
     const off = saved.filter(x => x.enabled).reduce((n, x) => n + x.disabledTools.length, 0);
     const url = profileUrl(name);
-    const rename = el("button", { type: "button", className: "btn", textContent: "Umbenennen" });
-    const remove = el("button", { type: "button", className: "btn danger", textContent: "Löschen" });
-    const copy = el("button", { type: "button", className: "btn ghost", textContent: "Kopieren" });
-    rename.onclick = () => {
-      const next = prompt("Neuer Name:", name)?.trim();
-      if (next && next !== name) profileAction("rename", name, `Profil heißt jetzt „${next}“`, { newName: next });
-    };
-    remove.onclick = () => {
-      if (confirm(`Profil „${name}“ löschen? Server und Tools bleiben, wie sie gerade sind.`)) profileAction("delete", name, `Profil „${name}“ gelöscht`);
-    };
-    copy.onclick = async () => { await navigator.clipboard.writeText(url); toast("URL kopiert"); };
-    list.append(el("div", { className: "prof" },
+    const copyUrl = async () => { await navigator.clipboard.writeText(url); toast("URL kopiert"); };
+    const row = el("div", { className: "prof" },
       el("div", { className: "prof-main" },
         el("div", {}, el("b", { textContent: name }), name === active ? el("span", { className: "chip ok", textContent: "aktiv", style: "margin-left:8px;cursor:default" }) : null),
         el("small", { textContent: `${on} von ${saved.length} Servern an` + (off ? ` · ${off} ${off === 1 ? "Tool" : "Tools"} deaktiviert` : "") }),
-        el("div", { className: "prof-url" }, el("code", { textContent: url }), copy)),
-      el("div", { className: "prof-actions" }, rename, remove)));
+        el("button", { type: "button", className: "prof-url", title: "URL kopieren", onclick: copyUrl }, el("code", { textContent: url }))));
+    const actions = el("div", { className: "actions" });
+    actions.innerHTML = `
+      <button type="button" class="btn ghost dots" aria-label="Optionen für Profil" aria-haspopup="menu" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
+      </button>
+      <div class="menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-act="copy">URL kopieren</button>
+        <button type="button" role="menuitem" data-act="apply">Aktivieren</button>
+        <button type="button" role="menuitem" data-act="rename">Umbenennen…</button>
+        <hr>
+        <button type="button" role="menuitem" class="danger" data-act="delete">Löschen</button>
+      </div>`;
+    row.append(actions);
+    $("[data-act=apply]", row).hidden = name === active;
+    $(".dots", row).onclick = e => {
+      e.stopPropagation();
+      toggleMenu(row);
+      const menu = $(".menu", row);
+      menu.classList.remove("up");
+      menu.classList.toggle("up", !menu.hidden && menu.getBoundingClientRect().bottom > window.innerHeight - 8);
+    };
+    $("[data-act=copy]", row).onclick = copyUrl;
+    $("[data-act=apply]", row).onclick = () => { $("#profilesDialog").close(); chooseProfile(name); };
+    $("[data-act=rename]", row).onclick = () => {
+      const next = prompt("Neuer Name:", name)?.trim();
+      if (next && next !== name) profileAction("rename", name, `Profil heißt jetzt „${next}“`, { newName: next });
+    };
+    $("[data-act=delete]", row).onclick = () => {
+      if (confirm(`Profil „${name}“ löschen? Server und Tools bleiben, wie sie gerade sind.`)) profileAction("delete", name, `Profil „${name}“ gelöscht`);
+    };
+    list.append(row);
   }
 }
 

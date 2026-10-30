@@ -131,7 +131,7 @@ Ein Profil merkt sich je Server, ob er aktiviert ist und welche Tools abgewählt
 - **Geändert:** Weicht der Stand vom aktiven Profil ab, zeigt die Auswahl einen orangefarbenen Punkt (Tooltip: ungespeicherte Änderungen). Über ⋯ → „… aktualisieren“ übernimmt das Profil den aktuellen Stand. Beim Wechsel mit ungespeicherten Änderungen fragt die GUI nach.
 - **Kein Profil:** schaltet alle Server ein und alle Tools frei (entfernt jedes `disabledTools`), auch wenn „Kein Profil“ schon ausgewählt ist. Ein geändertes Profil erneut anzuklicken setzt es auf seinen gespeicherten Stand zurück.
 - **Neue Server:** Server, die ein Profil nicht kennt, lässt der Wechsel unverändert. Mit „aktualisieren“ kommen sie ins Profil.
-- **Verwalten:** Unter ⋯ → „Profile verwalten…“ lassen sich Profile umbenennen und löschen, ohne sie vorher anzuwenden. Server und Tools bleiben dabei, wie sie sind. Namen dürfen kein `/` enthalten.
+- **Verwalten:** Unter ⋯ → „Profile verwalten…“ hat jedes Profil ein eigenes ⋯-Menü: URL kopieren, Aktivieren, Umbenennen und Löschen, ohne es vorher anzuwenden. Ein Klick auf die URL kopiert sie ebenfalls. Server und Tools bleiben dabei, wie sie sind. Namen dürfen kein `/` enthalten.
 
 Das Profil oben gilt für den ganzen Hub, also für alle Clients am Standard-Endpunkt `/mcp`.
 
