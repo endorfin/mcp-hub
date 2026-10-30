@@ -73,6 +73,9 @@ def validate_servers(servers):
             return f"{name}: enabledTools must be a list"
         if not isinstance(entry.get("disabledTools", []), list):
             return f"{name}: disabledTools must be a list"
+        tags = entry.get("tags", [])
+        if not isinstance(tags, list) or not all(isinstance(tag, str) and tag.strip() for tag in tags):
+            return f"{name}: tags must be a list of non-empty strings"
         if not isinstance(entry.get("env", {}), dict):
             return f"{name}: env must be an object"
         for key in ("args", "env", "headers"):

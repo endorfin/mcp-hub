@@ -403,6 +403,9 @@ class HubTest(unittest.TestCase):
         twins = {**servers, "my server": {"command": "x"}, "my_server": {"command": "y"}}
         status, body = self.request("PUT", "/api/servers", {"mcpServers": twins})
         self.assertEqual((status, body["error"]), (400, "my server and my_server would share the tool prefix my_server"))
+        bad_tags = {**servers, "gamma": {"command": DUMMY[0], "tags": ["ok", " "]}}
+        status, body = self.request("PUT", "/api/servers", {"mcpServers": bad_tags})
+        self.assertEqual((status, body["error"]), (400, "gamma: tags must be a list of non-empty strings"))
 
     def test_gui_assets_are_served(self):
         for path, kind in (("/app.css", "text/css"), ("/i18n.js", "text/javascript")):
@@ -629,6 +632,12 @@ class RestartPolicyTest(unittest.TestCase):
         self.hub.restarts["x"] = {"count": 3, "failures": 3, "retryAt": None, "gaveUp": False}
         self.hub._schedule_restart(self.Fake("x", started_at=0), hub_module.STABLE_AFTER + 1)
         self.assertEqual(self.hub.restarts["x"]["failures"], 1)
+
+
+class RuntimeKeyTest(unittest.TestCase):
+    def test_tags_and_description_do_not_restart(self):
+        entry = {"command": "x", "args": ["y"]}
+        self.assertEqual(hub_module.runtime_key(entry, True), hub_module.runtime_key({**entry, "tags": ["a"], "description": "d"}, True))
 
 
 class RevealTest(unittest.TestCase):

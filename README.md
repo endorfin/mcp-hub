@@ -108,6 +108,7 @@ Remote servers via Streamable HTTP or SSE:
 An entry with `url` and no `type` is treated as Streamable HTTP. Optional fields:
 
 - `description`: what the server is for, shown in the GUI only. Without it, the GUI shows the server’s own description or its first tools.
+- `tags`: list of free-form labels such as `["monitoring", "frontend"]`, shown next to the name and used by the tag filter above the server list; GUI only.
 - `enabled: false`: the server stays in the list, but the hub does not start it.
 - `disabledTools`: list of tool names (without prefix) that the hub hides and refuses to call. Easiest to manage via ⋯ → “Choose tools…”: the dialog lists all tools with a short description, can be filtered, and “All on” / “All off” only affect the filtered tools (e.g. filter “incident”, then “All off”). The list then shows a chip in orange text, e.g. “6 tools disabled”; its tooltip names the tools and a click opens the dialog. A change does not restart the server.
 - `enabledTools`: allow list of tool names; only these are offered (applied before `disabledTools`). The “Choose tools…” dialog converts it into `disabledTools` when you save.
@@ -180,7 +181,7 @@ At `/mcp`, the hub bundles all enabled servers into one MCP endpoint (Streamable
 
 - **Names:** tools and prompts get the server name as a prefix (`grafana__query_loki_logs`); resources keep their URI.
 - **Titles:** every tool gets the title `server: Name`. Claude Desktop only shows the title in its connector permissions, so you can still tell which server a tool belongs to.
-- **Changes:** saving in the GUI syncs the hub immediately. Only servers whose command, URL, headers or environment changed are restarted. Changing just the description restarts nothing.
+- **Changes:** saving in the GUI syncs the hub immediately. Only servers whose command, URL, headers or environment changed are restarted. Changing just the description or the tags restarts nothing.
 - **Crashes:** a server that stops unexpectedly, or fails to start, is restarted after 2, 4, 8, 16 and 32 seconds. After five failures in a row the hub gives up and the server list offers “Try again”; a server that ran for at least a minute starts counting from zero. The server list shows how often a server was restarted and the last error. Clients get a `list_changed` notification when its tools disappear and again when they are back.
 - **Processes:** local servers run in their own process group. On shutdown, the hub cleans up the whole group, child processes included.
 - **Working directory:** local servers run in the hub folder, so tools that expect a project path need an absolute path.
@@ -292,7 +293,7 @@ The check is the only request the hub sends on its own. Turn it off in the setti
 
 Design rules and components of the interface are documented in [DESIGN.md](DESIGN.md); audience, purpose and principles of the product in [PRODUCT.md](PRODUCT.md).
 
-- **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts JSON, Codex TOML and `mcp add` commands from other configurations; “Copy as JSON” in the + menu copies the complete `mcpServers` definition. Below the list, the button next to the file path shows `servers.json` in Finder or Explorer (or opens its folder on Linux) for editing it by hand; the hub reads the file on every request.
+- **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Tags group servers by topic: the editor takes them as chips (Enter or comma adds one, existing tags are suggested), the list shows them next to the name, and the chips above the list filter by one or more tags (a server matches if it has any of them). Import accepts JSON, Codex TOML and `mcp add` commands from other configurations; “Copy as JSON” in the + menu copies the complete `mcpServers` definition. Below the list, the button next to the file path shows `servers.json` in Finder or Explorer (or opens its folder on Linux) for editing it by hand; the hub reads the file on every request.
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
 - **Clients:** every session since the last hub start with client name and version, profile endpoint, compact mode, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.

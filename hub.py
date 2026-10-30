@@ -24,7 +24,7 @@ ON_DEMAND_IDLE = 600
 
 
 def runtime_key(entry, pass_environment):
-    relevant = {k: v for k, v in (entry or {}).items() if k not in ("description", "disabledTools", "enabledTools")}
+    relevant = {k: v for k, v in (entry or {}).items() if k not in ("description", "tags", "disabledTools", "enabledTools")}
     return json.dumps([relevant, pass_environment], sort_keys=True)
 
 

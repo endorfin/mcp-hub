@@ -3,8 +3,8 @@ import re
 import shlex
 import tomllib
 
-ENTRY_KEYS = {"command", "args", "env", "cwd", "url", "type", "headers", "description", "enabled",
-              "disabledTools", "enabledTools", "oauth"}
+ENTRY_KEYS = {"command", "args", "env", "cwd", "url", "type", "headers", "description", "tags",
+              "enabled", "disabledTools", "enabledTools", "oauth"}
 JSON_CLIENT_KEYS = {"tools", "autoApprove", "alwaysAllow", "timeout", "trust", "gallery", "version", "envFile"}
 CODEX_CLIENT_KEYS = {"required", "default_tools_approval_mode", "tools", "startup_timeout_sec", "tool_timeout_sec"}
 CODEX_UNSUPPORTED = {"http_headers_helper", "experimental_environment", "callback_port", "callback_url"}
@@ -38,7 +38,7 @@ def _from_json_entry(name, raw, warnings):
             entry["headers"] = raw["headers"]
     else:
         raise ImportError_(f"{name}: command or url is missing")
-    for key in ("description", "disabledTools", "enabledTools", "oauth"):
+    for key in ("description", "tags", "disabledTools", "enabledTools", "oauth"):
         if raw.get(key):
             entry[key] = raw[key]
     entry["enabled"] = raw.get("enabled", not raw.get("disabled", False)) is not False

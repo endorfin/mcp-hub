@@ -23,6 +23,11 @@ class JsonTest(unittest.TestCase):
         self.assertEqual(result["skipped"], ["broken"])
         self.assertIn(("remote", "autoApprove", "client"), reasons(result))
 
+    def test_keeps_tags(self):
+        result = importer.parse('{"mcpServers": {"fetch": {"command": "uvx", "tags": ["web", "tools"]}}}')
+        self.assertEqual(result["servers"]["fetch"]["tags"], ["web", "tools"])
+        self.assertEqual(result["warnings"], [])
+
     def test_vscode_format_with_sse_and_disabled(self):
         result = importer.parse('{"servers": {"old": {"type": "sse", "url": "https://x/sse", "disabled": true}}}')
         self.assertEqual(result["format"], "json-vscode")

@@ -62,6 +62,7 @@
         </div>
       </div>
     </div>
+    <div class="tag-filter" id="tagFilter" role="group" aria-label="Nach Tag filtern" data-i18n-aria="s.tagFilter" hidden></div>
     <div class="list" id="list"></div>
     <div class="file-line">
       <p class="hint" data-i18n="s.file">Datei: <code id="cfgPath"></code></p>
@@ -236,6 +237,10 @@
     <div class="dbody">
       <label class="f"><span data-i18n="s.nameLabel"><b>Name</b> – Präfix der Tools im Hub (<code>name__tool</code>)</span><input name="name" required pattern="[^\/\s]+"></label>
       <label class="f"><span data-i18n="s.purposeLabel"><b>Wofür</b> – kurze Beschreibung, nur für dich</span><input name="description" placeholder="z. B. Dashboards, Loki- und Prometheus-Abfragen" data-i18n-placeholder="s.purposePlaceholder"></label>
+      <div class="f"><label for="tagInput" data-i18n="s.tagsLabel"><b>Tags</b> – zum Filtern der Liste, Enter oder Komma fügt hinzu</label>
+        <div class="tag-input" id="tagBox"><input id="tagInput" list="tagSuggestions" autocomplete="off" placeholder="z. B. monitoring" data-i18n-placeholder="s.tagsPlaceholder"></div>
+        <datalist id="tagSuggestions"></datalist>
+      </div>
       <label class="f"><span data-i18n="s.typeLabel"><b>Art</b></span>
         <select name="transport" aria-label="Art" data-i18n-aria="s.type">
           <option value="stdio" data-i18n="s.typeStdio">Lokaler Befehl (stdio)</option>
@@ -757,10 +762,43 @@ function renderHubStatus(reachable = true) {
   $("#statusText").title = reachable && live.length ? `${t("liveTitle")}\n${names.join("\n")}` : "";
 }
 
+const tagFilter = new Set();
+const tagKey = tag => tag.toLocaleLowerCase(LOCALE);
+
+function allTags() {
+  const tags = new Map();
+  for (const s of Object.values(servers())) for (const tag of s.tags || []) {
+    const entry = tags.get(tagKey(tag)) || { tag, count: 0 };
+    entry.count++;
+    tags.set(tagKey(tag), entry);
+  }
+  return [...tags.values()].sort((a, b) => a.tag.localeCompare(b.tag, LOCALE, { sensitivity: "base" }));
+}
+
+function toggleTagFilter(tag) {
+  const key = tagKey(tag);
+  tagFilter[tagFilter.has(key) ? "delete" : "add"](key);
+  renderList();
+}
+
+function renderTagFilter() {
+  const tags = allTags();
+  for (const key of [...tagFilter]) if (!tags.some(t => tagKey(t.tag) === key)) tagFilter.delete(key);
+  const bar = $("#tagFilter");
+  bar.hidden = !tags.length;
+  bar.replaceChildren(...tags.map(({ tag, count }) => el("button", {
+    type: "button", className: "tag-chip", ariaPressed: String(tagFilter.has(tagKey(tag))),
+    onclick: () => toggleTagFilter(tag),
+  }, tag, el("span", { textContent: count }))));
+  if (tagFilter.size) bar.append(el("button", { type: "button", className: "tag-clear", textContent: t("tagFilterClear"), onclick: () => { tagFilter.clear(); renderList(); } }));
+}
+
 function renderList() {
+  renderTagFilter();
   const q = $("#filter").value.trim().toLowerCase();
   const entries = Object.entries(servers()).filter(([n, s]) =>
-    !q || n.toLowerCase().includes(q) || [s.description, s.command, ...(s.args || [])].join(" ").toLowerCase().includes(q));
+    (!q || n.toLowerCase().includes(q) || [s.description, s.command, ...(s.args || []), ...(s.tags || [])].join(" ").toLowerCase().includes(q))
+    && (!tagFilter.size || (s.tags || []).some(tag => tagFilter.has(tagKey(tag)))));
   const sort = $("#sort").value;
   const dir = sortDir === "asc" ? 1 : -1;
   const byName = ([a], [b]) => a.localeCompare(b, LOCALE, { sensitivity: "base" });
@@ -804,6 +842,12 @@ function renderList() {
         </div>
       </div>`;
     $(".name", row).textContent = name;
+    for (const tag of s.tags || []) {
+      $(".name", row).append(el("button", {
+        type: "button", className: "tag-chip small", textContent: tag, ariaPressed: String(tagFilter.has(tagKey(tag))),
+        title: t("tagFilterBy", { tag }), onclick: () => toggleTagFilter(tag),
+      }));
+    }
     const purpose = $(".purpose", row);
     if (s.description) purpose.textContent = s.description;
     else if (hubStatus[name]?.summary) {
@@ -1027,6 +1071,9 @@ function openEditor(name, duplicate = false) {
   $("#editTitle").textContent = duplicate ? t("duplicateTitle", { name }) : name ? t("editTitle", { name }) : t("newServer");
   f.name.value = duplicate ? `${name}${t("copySuffix")}` : name || "";
   f.description.value = s.description || "";
+  editTags = [...(s.tags || [])];
+  $("#tagInput").value = "";
+  renderEditTags();
   f.transport.value = transportOf(s);
   f.command.value = s.command || "";
   f.args.value = (s.args || []).join("\n");
@@ -1071,12 +1118,52 @@ $("#editForm").onsubmit = async e => {
   }
   const description = f.description.value.trim();
   if (description) entry.description = description; else delete entry.description;
+  addEditTag($("#tagInput").value);
+  if (editTags.length) entry.tags = editTags; else delete entry.tags;
   const next = {};
   for (const [n, s] of Object.entries(servers())) next[n === editing ? name : n] = n === editing ? entry : s;
   if (!editing) next[name] = entry;
   if (await saveServers(next)) $("#editor").close();
 };
 $("#editCancel").onclick = () => $("#editor").close();
+
+let editTags = [];
+
+function renderEditTags() {
+  const box = $("#tagBox");
+  box.querySelectorAll(".tag-chip").forEach(chip => chip.remove());
+  for (const tag of editTags) {
+    box.insertBefore(el("span", { className: "tag-chip" }, tag, el("button", {
+      type: "button", textContent: "×", ariaLabel: t("tagRemove", { tag }),
+      onclick: () => { editTags = editTags.filter(other => other !== tag); renderEditTags(); $("#tagInput").focus(); },
+    })), $("#tagInput"));
+  }
+  const taken = new Set(editTags.map(tagKey));
+  $("#tagSuggestions").replaceChildren(...allTags().filter(({ tag }) => !taken.has(tagKey(tag))).map(({ tag }) => el("option", { value: tag })));
+}
+
+function addEditTag(text) {
+  for (const raw of text.split(",")) {
+    const tag = raw.trim();
+    if (tag && !editTags.some(other => tagKey(other) === tagKey(tag))) editTags.push(allTags().find(known => tagKey(known.tag) === tagKey(tag))?.tag || tag);
+  }
+  $("#tagInput").value = "";
+  renderEditTags();
+}
+
+$("#tagInput").onkeydown = e => {
+  if ((e.key === "Enter" || e.key === ",") && e.target.value.trim()) {
+    e.preventDefault();
+    addEditTag(e.target.value);
+  } else if (e.key === "Enter") e.preventDefault();
+  else if (e.key === "Backspace" && !e.target.value && editTags.length) {
+    editTags.pop();
+    renderEditTags();
+  }
+};
+$("#tagInput").oninput = e => { if (e.target.value.includes(",")) addEditTag(e.target.value); };
+$("#tagInput").onblur = e => { if (e.target.value.trim()) addEditTag(e.target.value); };
+$("#tagBox").onclick = e => { if (e.target === e.currentTarget) $("#tagInput").focus(); };
 $("#addEnv").onclick = () => envRow();
 $("#addHeader").onclick = () => headerRow();
 $("#addBtn").onclick = () => openEditor(null);

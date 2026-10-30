@@ -124,6 +124,26 @@ textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
 .row.off .name, .row.off .cmd, .row.off .purpose { opacity: .45; }
 .purpose { font-size: 13px; margin: 1px 0 2px; color: var(--muted); }
 .row .name { font-size: 15.5px; letter-spacing: -.01em; }
+.tag-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+.tag-chip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; line-height: 18px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 99px; padding: 3px 11px; }
+button.tag-chip { cursor: pointer; }
+button.tag-chip:hover { color: var(--ink); border-color: var(--muted); }
+button.tag-chip:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 2px; }
+.tag-chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+button.tag-chip[aria-pressed="true"]:hover { color: var(--on-accent); border-color: var(--accent); filter: brightness(1.08); }
+.tag-chip > span { font-family: var(--mono); font-size: 11.5px; opacity: .75; }
+.tag-clear { font: inherit; font-size: 13px; color: var(--muted); background: none; border: 0; padding: 3px 4px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.tag-clear:hover { color: var(--ink); }
+.tag-clear:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 2px; border-radius: 4px; }
+.tag-chip.small { font-size: 11.5px; line-height: 16px; padding: 0 7px; margin-left: 8px; vertical-align: 2px; background: var(--chip); border-color: transparent; font-weight: 400; letter-spacing: 0; }
+.tag-chip.small[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.row.off .tag-chip.small { opacity: .45; }
+.tag-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--field); border: 1px solid var(--line); border-radius: 7px; padding: 5px 6px; cursor: text; }
+.tag-input:focus-within { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
+.tag-input .tag-chip { color: var(--ink); background: var(--chip); border-color: transparent; padding: 1px 4px 1px 9px; }
+.tag-input .tag-chip button { border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; padding: 0 4px; border-radius: 99px; }
+.tag-input .tag-chip button:hover { color: var(--ink); }
+:is(dialog) .tag-input input#tagInput { flex: 1; min-width: 120px; width: auto; border: 0; background: none; padding: 2px 4px; outline: none; }
 .actions { position: relative; }
 .dots { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; }
 .dots[aria-expanded="true"] { background: var(--chip); color: var(--ink); }
@@ -153,7 +173,7 @@ dialog::backdrop { background: rgb(0 0 0 / .35); }
 .dbody { padding: 16px 20px; display: grid; gap: 14px; max-height: 70vh; overflow: auto; }
 .dfoot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
 .f { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); }
-label.f > span b { color: var(--ink); font-weight: 600; }
+label.f > span b, .f > label b { color: var(--ink); font-weight: 600; }
 .hint { font-size: 12px; color: var(--muted); }
 .env { display: grid; gap: 6px; }
 .env:empty { display: none; }
