@@ -145,6 +145,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
     def do_PUT(self):
+        if not local_origin(self.headers.get("Origin")):
+            return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
         try:
             data = self.body()
         except json.JSONDecodeError as e:
@@ -166,6 +168,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
     def do_POST(self):
+        if not local_origin(self.headers.get("Origin")):
+            return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
         if self.path == "/mcp":
             return self.mcp()
         if self.path.startswith("/api/inspect/"):
@@ -173,8 +177,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
     def mcp(self):
-        if not local_origin(self.headers.get("Origin")):
-            return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
         try:
             message = self.body()
         except json.JSONDecodeError:

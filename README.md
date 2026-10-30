@@ -55,7 +55,7 @@ Unter `/mcp` bündelt der Hub alle aktivierten Server zu einem MCP-Endpunkt (Str
 - **Änderungen:** Speichern in der GUI synchronisiert den Hub sofort. Neu gestartet werden nur Server, deren Befehl, URL, Header oder Umgebung sich geändert hat. Eine reine Änderung der Beschreibung startet nichts neu.
 - **Prozesse:** Lokale Server laufen in einer eigenen Prozessgruppe. Beim Beenden räumt der Hub die ganze Gruppe ab, auch Kindprozesse.
 - **Arbeitsverzeichnis:** Lokale Server laufen im Hub-Ordner. Tools, die einen Projektpfad erwarten, brauchen daher einen absoluten Pfad.
-- **Sicherheit:** Anfragen mit fremdem `Origin`-Header werden abgelehnt (Schutz vor DNS-Rebinding).
+- **Sicherheit:** Schreibende Anfragen (`POST`, `PUT`) mit fremdem `Origin`-Header werden abgelehnt, für den MCP-Endpunkt wie für die GUI-API (Schutz vor DNS-Rebinding und CSRF).
 
 ### Clients anbinden
 
