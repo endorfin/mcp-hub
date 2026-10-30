@@ -1,8 +1,9 @@
+import os
 import re
 import subprocess
 import threading
 
-PATTERN = re.compile(r"\$\{(op://[^}]+|keychain:[^}]+)\}")
+PATTERN = re.compile(r"\$\{(op://[^}]+|keychain:[^}]+|env:[^}]+)\}")
 SERVICE_PREFIX = "mcp-hub/"
 ACCOUNT = "mcp-hub"
 
@@ -30,6 +31,11 @@ def _run(args, stdin=None):
 
 
 def _lookup(ref):
+    if ref.startswith("env:"):
+        name = ref.removeprefix("env:")
+        if name not in os.environ:
+            raise SecretError(f"Environment variable {name} is not set")
+        return os.environ[name]
     if ref.startswith("op://"):
         return _run(["op", "read", "--no-newline", ref])
     name = ref.removeprefix("keychain:")
@@ -60,8 +66,9 @@ def resolve_entry(entry):
             resolved[key] = {k: resolve_value(v) for k, v in entry[key].items()}
     if entry.get("args"):
         resolved["args"] = [resolve_value(a) for a in entry["args"]]
-    if entry.get("url"):
-        resolved["url"] = resolve_value(entry["url"])
+    for key in ("url", "cwd"):
+        if entry.get(key):
+            resolved[key] = resolve_value(entry[key])
     return resolved
 
 

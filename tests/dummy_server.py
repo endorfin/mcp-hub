@@ -6,6 +6,7 @@ TOOLS = [
     {"name": "echo", "description": "Returns the text", "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}}}},
     {"name": "secret", "description": "Returns DUMMY_SECRET", "inputSchema": {"type": "object"}},
     {"name": "fail", "description": "Always fails", "inputSchema": {"type": "object"}},
+    {"name": "where", "description": "Returns the working directory", "inputSchema": {"type": "object"}},
 ]
 
 
@@ -37,6 +38,8 @@ for line in sys.stdin:
             reply(message_id, text(args.get("text", "")))
         elif name == "secret":
             reply(message_id, text(os.environ.get("DUMMY_SECRET", "")))
+        elif name == "where":
+            reply(message_id, text(os.getcwd()))
         else:
             reply(message_id, error={"code": -32000, "message": "failed on purpose"})
     elif method == "ping":

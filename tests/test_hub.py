@@ -33,7 +33,7 @@ class HubTest(unittest.TestCase):
             "beta": {"command": DUMMY[0], "args": DUMMY[1:]},
         }}
         Path(cls.home.name, "servers.json").write_text(json.dumps(servers))
-        env = {**os.environ, "MCP_HUB_HOME": cls.home.name, "PORT": str(cls.port)}
+        env = {**os.environ, "MCP_HUB_HOME": cls.home.name, "PORT": str(cls.port), "MCP_HUB_TEST_VALUE": "from-env"}
         cls.proc = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.wait_for(lambda: len(cls.get("/api/hub")) == 2 and all(
@@ -132,7 +132,7 @@ class HubTest(unittest.TestCase):
             self.wait_for(lambda: "alpha__fail" not in self.tool_names())
             body = self.rpc("tools/call", {"name": "alpha__fail"})
             self.assertIn("disabled", body["error"]["message"])
-            self.assertEqual(self.get("/api/hub")["alpha"]["tools"], 2)
+            self.assertEqual(self.get("/api/hub")["alpha"]["tools"], 3)
         finally:
             del servers["alpha"]["disabledTools"]
             self.save_servers(servers)
@@ -221,7 +221,7 @@ class HubTest(unittest.TestCase):
         self.save_servers(servers)
         try:
             self.wait_for(lambda: "beta__echo" in self.tool_names() and "alpha__fail" in self.tool_names())
-            self.assertEqual(self.tool_names("/p/narrow/mcp"), ["alpha__echo", "alpha__secret"])
+            self.assertEqual(self.tool_names("/p/narrow/mcp"), ["alpha__echo", "alpha__secret", "alpha__where"])
             body = self.rpc("tools/call", {"name": "beta__echo", "arguments": {"text": "x"}}, path="/p/narrow/mcp")
             self.assertIn("error", body)
             self.rpc("tools/call", {"name": "alpha__echo", "arguments": {"text": "x"}}, path="/p/narrow/mcp")
@@ -245,6 +245,36 @@ class HubTest(unittest.TestCase):
         self.assertEqual(self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, headers)[0], 200)
         self.request("DELETE", "/mcp", None, headers)
         self.assertEqual(self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 3, "method": "tools/list"}, headers)[0], 404)
+
+    def call_text(self, tool):
+        return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
+
+    def test_cwd_env_reference_and_enabled_tools(self):
+        servers = self.servers()
+        original = json.loads(json.dumps(servers["alpha"]))
+        with tempfile.TemporaryDirectory() as folder:
+            servers["alpha"].update(cwd=folder, enabledTools=["secret", "where"])
+            servers["alpha"]["env"]["DUMMY_SECRET"] = "${env:MCP_HUB_TEST_VALUE}"
+            self.save_servers(servers)
+            try:
+                self.wait_for(lambda: "alpha__echo" not in self.tool_names())
+                self.assertEqual(Path(self.call_text("alpha__where")).resolve(), Path(folder).resolve())
+                self.assertEqual(self.call_text("alpha__secret"), "from-env")
+                self.assertIn("disabled", self.rpc("tools/call", {"name": "alpha__echo"})["error"]["message"])
+                self.assertEqual(self.get("/api/hub")["alpha"]["tools"], 2)
+            finally:
+                servers["alpha"] = original
+                self.save_servers(servers)
+                self.wait_for(lambda: "alpha__echo" in self.tool_names())
+
+    def test_import_parse_endpoint(self):
+        status, body = self.request("POST", "/api/import/parse", {"text": "[mcp_servers.alpha]\ncommand = \"npx\"\n\n[mcp_servers.new]\nurl = \"https://example.com/mcp\"\n"})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["format"], "toml-codex")
+        self.assertEqual(sorted(body["servers"]), ["alpha", "new"])
+        self.assertEqual(body["existing"], ["alpha"])
+        status, body = self.request("POST", "/api/import/parse", {"text": "nonsense"})
+        self.assertEqual(status, 400)
 
     def test_cross_origin_writes_are_rejected(self):
         status, _ = self.request("PUT", "/api/servers", {"mcpServers": {}}, {"Origin": "https://example.com"})

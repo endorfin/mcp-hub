@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 import hub as hub_module
+import importer
 import inspector
 import oauth
 import secrets_store
@@ -84,6 +85,10 @@ def validate_servers(servers):
             return f"{name}: args must be a list"
         if not isinstance(entry.get("oauth", {}), dict):
             return f"{name}: oauth must be an object"
+        if not isinstance(entry.get("cwd", ""), str):
+            return f"{name}: cwd must be a string"
+        if not isinstance(entry.get("enabledTools", []), list):
+            return f"{name}: enabledTools must be a list"
         if not isinstance(entry.get("disabledTools", []), list):
             return f"{name}: disabledTools must be a list"
         if not isinstance(entry.get("env", {}), dict):
@@ -291,6 +296,13 @@ class Handler(BaseHTTPRequestHandler):
             except (oauth.OAuthError, secrets_store.SecretError) as e:
                 return self.send({"error": str(e)}, HTTPStatus.BAD_GATEWAY)
             return self.send({"url": url})
+        if self.path == "/api/import/parse":
+            try:
+                result = importer.parse(self.body().get("text", ""), self.server.server_address[1])
+            except importer.ImportError_ as e:
+                return self.send({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            result["existing"] = sorted(set(result["servers"]) & set(load_config()["mcpServers"]))
+            return self.send(result)
         if self.path == "/api/secrets":
             data = self.body()
             try:

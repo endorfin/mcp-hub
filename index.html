@@ -221,6 +221,16 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .oauth-box[open] > summary::before { transform: translateY(-2px) rotate(45deg); }
 .oauth-fields { display: grid; gap: 14px; margin-top: 14px; }
 .callback { display: flex; align-items: center; min-height: 36px; padding: 0 10px; border-radius: 7px; font-size: 12.5px; }
+.import-preview { display: grid; gap: 10px; }
+.imp-head { font-size: 13px; color: var(--ink); font-weight: 600; }
+.imp-list { display: grid; border: 1px solid var(--line); border-radius: 8px; max-height: 220px; overflow: auto; }
+.imp-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 12px; border-top: 1px solid var(--line); min-width: 0; }
+.imp-row:first-child { border-top: 0; }
+.imp-row b { font: 600 12.5px var(--mono); flex: none; }
+.imp-cmd { flex: 1; min-width: 0; font: 12px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imp-row .chip { flex: none; cursor: default; }
+.imp-warn { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); display: grid; gap: 3px; }
+.imp-warn li::marker { color: var(--warn); }
 .call { border-top: 1px solid var(--line); }
 .call:first-child { border-top: 0; }
 .call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
@@ -351,6 +361,8 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         <div>
           <div class="hubsnip-head"><b>Claude Code</b><button class="chip" data-copy="hubCode" data-i18n="s.copy">kopieren</button></div>
           <pre id="hubCode"></pre>
+          <div class="hubsnip-head" style="margin-top:14px"><b>Codex</b><button class="chip" data-copy="hubCodex" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCodex"></pre>
         </div>
         <div>
           <div class="hubsnip-head"><b>Claude Desktop</b> <span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop" data-i18n="s.copy">kopieren</button></div>
@@ -456,6 +468,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       <div class="fields" id="stdioFields">
         <label class="f"><span data-i18n="s.commandLabel"><b>Befehl</b></span><input name="command" placeholder="npx" style="font-family:var(--mono)"></label>
         <label class="f"><span data-i18n="s.argsLabel"><b>Argumente</b> – eins pro Zeile</span><textarea name="args" rows="4" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/Users/me/Documents"></textarea></label>
+        <label class="f"><span data-i18n="s.cwdLabel"><b>Arbeitsverzeichnis</b> – optional, sonst der Hub-Ordner</span><input name="cwd" placeholder="~/Projects/app" data-i18n-placeholder="s.cwdPlaceholder" style="font-family:var(--mono)"></label>
         <span class="hint" data-i18n="s.commandTip">Tipp: eine komplette Befehlszeile ins Feld „Befehl“ einfügen – sie wird beim Speichern automatisch in Befehl und Argumente zerlegt.</span>
         <div class="f">
           <span style="font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)" data-i18n="s.envLabel">Umgebungsvariablen</b></span>
@@ -489,7 +502,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
           </div>
         </details>
       </div>
-      <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password geht ebenso.</span>
+      <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.</span>
       <label class="check"><input type="checkbox" name="enabled"> <span data-i18n="s.enabled">Aktiviert</span></label>
       <p class="error" id="editError"></p>
     </div>
@@ -504,13 +517,14 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   <form method="dialog" id="importForm">
     <div class="dhead" data-i18n="s.importTitle">Server importieren</div>
     <div class="dbody">
-      <span class="hint" data-i18n="s.importHint">JSON im Format von Claude Desktop, Cursor &amp; Co. einfügen – entweder mit <code>mcpServers</code> oder direkt die Server-Objekte. Bestehende Einträge gleichen Namens werden überschrieben. Lokale Befehle (<code>command</code>) und URLs (<code>url</code>, optional mit <code>headers</code>) werden übernommen.</span>
-      <textarea id="importText" rows="14" spellcheck="false" placeholder='{ "mcpServers": { "fetch": { "command": "uvx", "args": ["mcp-server-fetch"] } } }'></textarea>
+      <span class="hint" data-i18n="s.importHint">JSON, TOML oder <code>mcp add</code>-Befehle aus Claude, Codex, VS Code, Cursor &amp; Co. einfügen – das Format wird automatisch erkannt. Bestehende Einträge gleichen Namens werden überschrieben.</span>
+      <textarea id="importText" rows="10" spellcheck="false" placeholder='{ "mcpServers": { "fetch": { "command": "uvx", "args": ["mcp-server-fetch"] } } }&#10;&#10;[mcp_servers.context7]&#10;command = "npx"&#10;args = ["-y", "@upstash/context7-mcp"]&#10;&#10;claude mcp add --transport http github https://api.githubcopilot.com/mcp/'></textarea>
+      <div class="import-preview" id="importPreview" hidden></div>
       <p class="error" id="importError"></p>
     </div>
     <div class="dfoot">
       <button type="button" class="btn" id="importCancel" data-i18n="s.cancel">Abbrechen</button>
-      <button class="btn primary" data-i18n="s.importButton">Importieren</button>
+      <button class="btn primary" id="importSubmit" disabled data-i18n="s.importButton">Importieren</button>
     </div>
   </form>
 </dialog>
@@ -602,6 +616,8 @@ const I18N = {
   "s.typeSse": ["URL – SSE (älteres Protokoll)", "URL – SSE (older protocol)"],
   "s.commandLabel": ["<b>Befehl</b>", "<b>Command</b>"],
   "s.argsLabel": ["<b>Argumente</b> – eins pro Zeile", "<b>Arguments</b> – one per line"],
+  "s.cwdLabel": ["<b>Arbeitsverzeichnis</b> – optional, sonst der Hub-Ordner", "<b>Working directory</b> – optional, defaults to the hub folder"],
+  "s.cwdPlaceholder": ["~/Projects/app", "~/Projects/app"],
   "s.commandTip": ["Tipp: eine komplette Befehlszeile ins Feld „Befehl“ einfügen – sie wird beim Speichern automatisch in Befehl und Argumente zerlegt.", "Tip: paste a complete command line into “Command” – it is split into command and arguments when saving."],
   "s.envLabel": ["Umgebungsvariablen", "Environment variables"],
   "s.headersLabel": ["<b style=\"color:var(--ink)\">Header</b> – z. B. Authorization: Bearer …", "<b style=\"color:var(--ink)\">Headers</b> – e.g. Authorization: Bearer …"],
@@ -614,12 +630,27 @@ const I18N = {
   "s.scopesPlaceholder": ["z. B. repo read:user", "e.g. repo read:user"],
   "s.authUrl": ["<b>Autorisierungs-URL</b> – nur ohne Discovery", "<b>Authorization URL</b> – only without discovery"],
   "s.tokenUrl": ["<b>Token-URL</b> – nur ohne Discovery", "<b>Token URL</b> – only without discovery"],
-  "s.secretsHint": ["Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password geht ebenso.", "Use the lock to move secret values into the macOS keychain. The entry then only contains <code>${keychain:…}</code>; <code>${op://vault/item/field}</code> works for 1Password as well."],
+  "s.secretsHint": ["Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.", "Use the lock to move secret values into the macOS keychain. The entry then only contains <code>${keychain:…}</code>; <code>${op://vault/item/field}</code> for 1Password and <code>${env:NAME}</code> for environment variables work as well."],
   "s.enabled": ["Aktiviert", "Enabled"],
   "s.cancel": ["Abbrechen", "Cancel"],
   "s.importTitle": ["Server importieren", "Import servers"],
-  "s.importHint": ["JSON im Format von Claude Desktop, Cursor &amp; Co. einfügen – entweder mit <code>mcpServers</code> oder direkt die Server-Objekte. Bestehende Einträge gleichen Namens werden überschrieben. Lokale Befehle (<code>command</code>) und URLs (<code>url</code>, optional mit <code>headers</code>) werden übernommen.", "Paste JSON in the format of Claude Desktop, Cursor &amp; co. – either with <code>mcpServers</code> or the server objects directly. Existing entries with the same name are overwritten. Local commands (<code>command</code>) and URLs (<code>url</code>, optionally with <code>headers</code>) are imported."],
   "s.importButton": ["Importieren", "Import"],
+  "s.importHint": ["JSON, TOML oder <code>mcp add</code>-Befehle aus Claude, Codex, VS Code, Cursor &amp; Co. einfügen – das Format wird automatisch erkannt. Bestehende Einträge gleichen Namens werden überschrieben.", "Paste JSON, TOML or <code>mcp add</code> commands from Claude, Codex, VS Code, Cursor &amp; co. – the format is detected automatically. Existing entries with the same name are overwritten."],
+  "fmt.json-mcpservers": ["Claude Desktop, Claude Code, Cursor & Co. (JSON)", "Claude Desktop, Claude Code, Cursor & co. (JSON)"],
+  "fmt.json-vscode": ["VS Code (JSON)", "VS Code (JSON)"],
+  "fmt.json-entries": ["Server-Objekte (JSON)", "Server objects (JSON)"],
+  "fmt.toml-codex": ["Codex (TOML)", "Codex (TOML)"],
+  "fmt.cli-claude": ["Claude Code (claude mcp add)", "Claude Code (claude mcp add)"],
+  "fmt.cli-codex": ["Codex (codex mcp add)", "Codex (codex mcp add)"],
+  "fmt.cli-mixed": ["mcp-add-Befehle", "mcp add commands"],
+  importDetected: [v => `Erkannt: ${v.format} · ${pl(v.n, "1 Server", "{n} Server")}`, v => `Detected: ${v.format} · ${pl(v.n, "1 server", "{n} servers")}`],
+  importReplaces: ["ersetzt bestehenden Eintrag", "replaces existing entry"],
+  importDisabled: ["deaktiviert", "disabled"],
+  "warn.client": ["{server}: {key} ist eine Client-Einstellung und entfällt", "{server}: {key} is a client setting and is dropped"],
+  "warn.unsupported": ["{server}: {key} wird vom Hub nicht unterstützt und entfällt", "{server}: {key} is not supported by the hub and is dropped"],
+  "warn.env-forwarding": ["{server}: env_vars entfällt – der Hub gibt mit „passEnvironment“ alle Variablen weiter", "{server}: env_vars is dropped – with “passEnvironment” the hub passes on all variables"],
+  "warn.self": ["{server}: zeigt auf diesen Hub und wird übersprungen", "{server}: points to this hub and is skipped"],
+  importSkippedList: ["Übersprungen (weder command noch url): {list}", "Skipped (neither command nor url): {list}"],
   "s.profiles": ["Profile", "Profiles"],
   "s.profilesHint": ["Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, fehlen allerdings auch dort.", "Each profile has its own endpoint. A client connected there always sees that profile’s servers and tools – regardless of which profile is active above. Servers that are switched off in the hub are missing there too."],
   "s.close": ["Schließen", "Close"],
@@ -803,6 +834,19 @@ const BACKEND_DE = [
   [/^Profile “(.*)” already exists$/, "Profil „$1“ gibt es schon"],
   [/^Server is not running in the hub$/, "Server läuft nicht im Hub"],
   [/^Invalid JSON: (.*)$/, "Ungültiges JSON: $1"],
+  [/^Invalid TOML: (.*)$/, "Ungültiges TOML: $1"],
+  [/^No \[mcp_servers\.<name>\] tables found$/, "Keine Tabellen [mcp_servers.<name>] gefunden"],
+  [/^Unrecognized format.*$/, "Format nicht erkannt: erwartet wird JSON, Codex-TOML oder `claude mcp add` / `codex mcp add`"],
+  [/^Unrecognized command: (.*)$/, "Unbekannter Befehl: $1"],
+  [/^Unsupported option: (.*)$/, "Nicht unterstützte Option: $1"],
+  [/^(.*) needs a value$/, "$1 braucht einen Wert"],
+  [/^No servers found$/, "Keine Server gefunden"],
+  [/^Nothing to import$/, "Nichts zum Importieren"],
+  [/^claude mcp add needs a name and a command or URL$/, "claude mcp add braucht einen Namen und einen Befehl oder eine URL"],
+  [/^codex mcp add needs a name$/, "codex mcp add braucht einen Namen"],
+  [/^(.*): codex mcp add needs a command after -- or --url$/, "$1: codex mcp add braucht einen Befehl nach -- oder --url"],
+  [/^Environment variable (.*) is not set$/, "Umgebungsvariable $1 ist nicht gesetzt"],
+  [/^Secret: Environment variable (.*) is not set$/, "Secret: Umgebungsvariable $1 ist nicht gesetzt"],
   [/^Not a remote server: (.*)$/, "Kein entfernter Server: $1"],
   [/^Unknown server: (.*)$/, "Unbekannter Server: $1"],
   [/^Start failed: (.*)$/, "Start fehlgeschlagen: $1"],
@@ -1185,6 +1229,7 @@ function render() {
   const hubUrl = `http://127.0.0.1:${location.port}/mcp`;
   $("#hubUrl").textContent = hubUrl;
   $("#hubCode").textContent = `claude mcp add --scope user --transport http mcp-hub ${hubUrl}`;
+  $("#hubCodex").textContent = `codex mcp add mcp-hub --url ${hubUrl}`;
   $("#hubDesktop").textContent = JSON.stringify({ mcpServers: { "mcp-hub": { command: state.bridge.python, args: [state.bridge.script, hubUrl] } } }, null, 2);
   renderList();
   fillInspServers();
@@ -1270,11 +1315,12 @@ function renderList() {
       meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: fromBackend(h.error) || "", style: "cursor:default" }));
     }
     const hidden = s.disabledTools || [];
-    if (hidden.length) {
+    const hiddenCount = h?.state === "running" ? h.toolsTotal - h.tools : hidden.length;
+    if (hiddenCount > 0) {
       const canOpen = on && h?.state === "running";
       meta.append(el("button", {
         className: "chip warn",
-        textContent: t("toolsDisabled", { n: hidden.length }),
+        textContent: t("toolsDisabled", { n: hiddenCount }),
         title: hidden.join("\n") + (canOpen ? `\n\n${t("clickToEdit")}` : ""),
         style: canOpen ? "" : "cursor:default",
         onclick: canOpen ? () => openTools(name) : null,
@@ -1448,6 +1494,7 @@ function openEditor(name, duplicate = false) {
   f.transport.value = transportOf(s);
   f.command.value = s.command || "";
   f.args.value = (s.args || []).join("\n");
+  f.cwd.value = s.cwd || "";
   f.url.value = s.url || "";
   updateUrlLock();
   f.enabled.checked = s.enabled !== false;
@@ -1473,13 +1520,13 @@ $("#editForm").onsubmit = async e => {
   const prev = editing ? servers()[editing] : {};
   const kind = f.transport.value;
   const entry = { ...prev, enabled: f.enabled.checked };
-  for (const key of ["type", "url", "headers", "command", "args", "env", "oauth"]) delete entry[key];
+  for (const key of ["type", "url", "headers", "command", "args", "env", "cwd", "oauth"]) delete entry[key];
   if (kind === "stdio") {
     let command = f.command.value.trim();
     let args = f.args.value.split("\n").map(a => a.trim()).filter(Boolean);
     if (/\s/.test(command) && !args.length) [command, ...args] = splitCommand(command);
     const env = readKv($("#envRows"));
-    Object.assign(entry, { command, args }, Object.keys(env).length ? { env } : {});
+    Object.assign(entry, { command, args }, Object.keys(env).length ? { env } : {}, f.cwd.value.trim() ? { cwd: f.cwd.value.trim() } : {});
   } else {
     const headers = readKv($("#headerRows"));
     Object.assign(entry, { type: kind, url: f.url.value.trim() }, Object.keys(headers).length ? { headers } : {});
@@ -1550,25 +1597,68 @@ $("#toolsForm").onsubmit = async e => {
   const disabled = [...$("#toolsList").querySelectorAll("input:not(:checked)")].map(b => b.value);
   const entry = { ...servers()[toolsServer] };
   if (disabled.length) entry.disabledTools = disabled; else delete entry.disabledTools;
+  delete entry.enabledTools;
   if (await saveServers({ ...servers(), [toolsServer]: entry })) $("#toolsDialog").close();
 };
 
-$("#importBtn").onclick = () => { $("#importText").value = ""; $("#importError").textContent = ""; $("#importer").showModal(); };
+let importResult = null;
+
+function resetImport() {
+  importResult = null;
+  $("#importPreview").hidden = true;
+  $("#importPreview").replaceChildren();
+  $("#importError").textContent = "";
+  $("#importSubmit").disabled = true;
+}
+
+function renderImport(result) {
+  const names = Object.keys(result.servers);
+  const existing = new Set(result.existing);
+  const box = $("#importPreview");
+  box.replaceChildren(
+    el("div", { className: "imp-head", textContent: t("importDetected", { format: t(`fmt.${result.format}`), n: names.length }) }),
+    el("div", { className: "imp-list" }, ...names.map(name => {
+      const entry = result.servers[name];
+      const kind = transportOf(entry);
+      return el("div", { className: "imp-row" },
+        el("b", { textContent: name }),
+        el("span", { className: "imp-cmd", textContent: kind === "stdio" ? [entry.command, ...(entry.args || [])].map(shellQuote).join(" ") : `${kind.toUpperCase()} · ${entry.url}` }),
+        entry.enabled === false ? el("span", { className: "chip", textContent: t("importDisabled") }) : null,
+        existing.has(name) ? el("span", { className: "chip warn", textContent: t("importReplaces") }) : null);
+    })),
+    ...(result.warnings.length || result.skipped.length ? [el("ul", { className: "imp-warn" },
+      ...result.warnings.map(w => el("li", { textContent: t(`warn.${w.reason}`, { server: w.server, key: w.key }) })),
+      ...(result.skipped.length ? [el("li", { textContent: t("importSkippedList", { list: result.skipped.join(", ") }) })] : []))] : []));
+  box.hidden = false;
+}
+
+async function previewImport() {
+  const text = $("#importText").value;
+  if (!text.trim()) return resetImport();
+  try {
+    const result = await api("POST", "/api/import/parse", { text });
+    if ($("#importText").value !== text) return;
+    importResult = result;
+    $("#importError").textContent = "";
+    $("#importSubmit").disabled = false;
+    renderImport(result);
+  } catch (e) {
+    if ($("#importText").value !== text) return;
+    resetImport();
+    $("#importError").textContent = e.message;
+  }
+}
+
+$("#importText").addEventListener("input", () => {
+  clearTimeout(previewImport.timer);
+  previewImport.timer = setTimeout(previewImport, 250);
+});
+$("#importBtn").onclick = () => { $("#importText").value = ""; resetImport(); $("#importer").showModal(); $("#importText").focus(); };
 $("#importCancel").onclick = () => $("#importer").close();
 $("#importForm").onsubmit = async e => {
   e.preventDefault();
-  let data;
-  try { data = JSON.parse($("#importText").value); } catch (err) { return ($("#importError").textContent = err.message); }
-  const src = data.mcpServers || data.servers || data;
-  const picked = {}, skipped = [];
-  for (const [n, s] of Object.entries(src || {})) {
-    if (!s || typeof s !== "object" || !(s.command || s.url)) { skipped.push(n); continue; }
-    const base = { ...(s.description ? { description: s.description } : {}), enabled: s.enabled !== false };
-    picked[n] = s.command
-      ? { ...base, command: s.command, args: s.args || [], ...(s.env ? { env: s.env } : {}) }
-      : { ...base, type: transportOf(s), url: s.url, ...(s.headers ? { headers: s.headers } : {}) };
-  }
-  if (!Object.keys(picked).length) return ($("#importError").textContent = t("noServersFound"));
+  if (!importResult) return;
+  const picked = importResult.servers, skipped = importResult.skipped;
   if (await saveServers({ ...servers(), ...picked })) {
     $("#importer").close();
     toast(t("imported", { n: Object.keys(picked).length }) + (skipped.length ? t("skipped", { list: skipped.join(", ") }) : ""));

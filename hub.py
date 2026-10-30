@@ -16,7 +16,7 @@ SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
 
 
 def runtime_key(entry, pass_environment):
-    relevant = {k: v for k, v in (entry or {}).items() if k not in ("description", "disabledTools")}
+    relevant = {k: v for k, v in (entry or {}).items() if k not in ("description", "disabledTools", "enabledTools")}
     return json.dumps([relevant, pass_environment], sort_keys=True)
 
 
@@ -94,10 +94,16 @@ class Upstream:
                 except RpcError:
                     self.catalog[key] = []
 
+    def blocked(self, disabled=None):
+        names = set((self.entry.get("disabledTools") or []) if disabled is None else disabled)
+        allowed = self.entry.get("enabledTools")
+        if allowed:
+            names |= {t["name"] for t in self.catalog["tools"]} - set(allowed)
+        return names
+
     def tools(self, disabled=None):
-        if disabled is None:
-            disabled = set(self.entry.get("disabledTools") or [])
-        return [t for t in self.catalog["tools"] if t["name"] not in disabled]
+        blocked = self.blocked(disabled)
+        return [t for t in self.catalog["tools"] if t["name"] not in blocked]
 
     def alive(self):
         return self.session is not None and self.session.alive()
@@ -382,10 +388,10 @@ class Hub:
         upstream = self.upstreams.get(name)
         if not upstream:
             return None
-        disabled = set(upstream.entry.get("disabledTools") or [])
+        blocked = upstream.blocked()
         return [{"name": t["name"], "title": t.get("title") or (t.get("annotations") or {}).get("title"),
                  "description": (t.get("description") or "").strip().split("\n")[0][:240],
-                 "enabled": t["name"] not in disabled}
+                 "enabled": t["name"] not in blocked}
                 for t in upstream.catalog["tools"]]
 
     def _view(self, running, profile):
@@ -437,7 +443,7 @@ class Hub:
             return {"resourceTemplates": [t for u in running for t in u.catalog["resourceTemplates"]]}
         if method == "tools/call":
             upstream, name = self._route(running, params.get("name", ""))
-            if name in view[upstream]:
+            if name in upstream.blocked(view[upstream]):
                 raise JsonRpcError(-32602, f"Tool disabled in the hub: {params.get('name')}")
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)
         if method == "prompts/get":

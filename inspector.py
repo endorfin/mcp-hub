@@ -152,6 +152,7 @@ class StdioSession(BaseSession):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
+            cwd=os.path.expanduser(entry["cwd"]) if entry.get("cwd") else None,
             start_new_session=True,
         )
         threading.Thread(target=self._read_stdout, daemon=True).start()

@@ -30,7 +30,7 @@ python3 app.py
 
 Then open the GUI at http://127.0.0.1:4747. The hub endpoint for your clients is `http://127.0.0.1:4747/mcp`. Use `PORT=…` for a different port.
 
-**3. Add servers** – click **+** → “Add server…”, or “Import…” and paste the `mcpServers` block from an existing Claude Desktop, Cursor or VS Code configuration.
+**3. Add servers** – click **+** → “Add server…”, or “Import…” and paste an existing configuration: JSON from Claude Desktop, Claude Code, Cursor or VS Code, TOML from Codex, or `claude mcp add` / `codex mcp add` commands (see [Importing](#importing)).
 
 **4. Connect your clients** – each client only needs this one entry, see [Connecting clients](#connecting-clients):
 
@@ -81,7 +81,23 @@ An entry with `url` and no `type` is treated as Streamable HTTP. Optional fields
 - `description`: what the server is for, shown in the GUI only. Without it, the GUI shows the server’s own description or its first tools.
 - `enabled: false`: the server stays in the list, but the hub does not start it.
 - `disabledTools`: list of tool names (without prefix) that the hub hides and refuses to call. Easiest to manage via ⋯ → “Choose tools…”: the dialog lists all tools with a short description, can be filtered, and “All on” / “All off” only affect the filtered tools (e.g. filter “incident”, then “All off”). The list then shows a chip in orange text, e.g. “6 tools disabled”; its tooltip names the tools and a click opens the dialog. A change does not restart the server.
+- `enabledTools`: allow list of tool names; only these are offered (applied before `disabledTools`). The “Choose tools…” dialog converts it into `disabledTools` when you save.
+- `cwd` (stdio): working directory for the server; `~` is expanded. Without it, local servers run in the hub folder.
 - `env` (stdio) or `headers` (HTTP/SSE).
+
+### Importing
+
+“Import…” detects the format by itself; you only paste. A preview shows the detected format, the servers, which existing entries will be replaced and what cannot be carried over.
+
+| Paste | Source |
+| --- | --- |
+| `{ "mcpServers": { … } }` | Claude Desktop, Claude Code (`~/.claude.json`), Cursor, Copilot |
+| `{ "servers": { … } }` | VS Code (`.vscode/mcp.json`) |
+| `{ "name": { "command": … } }` | Bare server objects |
+| `[mcp_servers.<name>]` tables | Codex (`~/.codex/config.toml`) |
+| `claude mcp add …` / `claude mcp add-json …` / `codex mcp add …` | Setup instructions, one command per line |
+
+Codex fields map as follows: `command`, `args`, `env`, `cwd`, `url`, `enabled`, `enabled_tools` and `disabled_tools` carry over directly; `http_headers` become `headers`; `bearer_token_env_var` and `env_http_headers` become headers with `${env:…}` references; the `oauth` table (`client_id`, `client_secret`) and `scopes` go to `oauth`. Client-side settings (`startup_timeout_sec`, `tool_timeout_sec`, approval modes, `required`) and `http_headers_helper` are dropped, and `env_vars` is replaced by the hub’s `passEnvironment`; the preview lists every dropped key. Entries that point to the hub itself (e.g. the `mcp-hub` entry of your Claude configuration) are skipped. Tokens from other clients cannot be transferred: sign in again in the hub.
 
 ### OAuth
 
@@ -108,12 +124,14 @@ Available fields: `clientId`, `clientSecret`, `scopes`, `authorizationUrl`, `tok
 
 ### Secrets
 
-Instead of plain-text tokens, values in `env`, `headers`, `url` and `args` can contain references that the hub only resolves when it starts a server:
+Instead of plain-text tokens, values in `env`, `headers`, `url`, `args` and `cwd` can contain references that the hub only resolves when it starts a server:
 
 ```json
 "glitchtip": { "type": "http", "url": "https://…/mcp", "headers": { "Authorization": "${keychain:glitchtip/Authorization}" } },
 "grafana": { "command": "uvx", "args": ["mcp-grafana"], "env": { "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${op://Private/Grafana/token}" } }
 ```
+
+`${env:NAME}` takes a value from the hub’s environment, e.g. `"Authorization": "Bearer ${env:GITHUB_TOKEN}"`.
 
 The notation alone decides the source, per value. There is no setting and no fallback: if `op` is not signed in, the hub does not look in the keychain instead. A server may mix both sources.
 
@@ -143,6 +161,12 @@ Claude Code:
 
 ```bash
 claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp
+```
+
+Codex:
+
+```bash
+codex mcp add mcp-hub --url http://127.0.0.1:4747/mcp
 ```
 
 Copilot / VS Code (`~/.copilot/mcp-config.json`):
@@ -240,6 +264,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `POST` | `/api/oauth/logout` | `{"name"}`: delete the token |
 | `GET` | `/oauth/callback` | Return from the authorization server |
 | `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}`; `clear` enables everything |
+| `POST` | `/api/import/parse` | `{"text"}`: detect and convert a configuration, returns `format`, `servers`, `warnings`, `skipped`, `existing` |
 | `POST` | `/api/secrets` | Store `{"name", "value"}` in the keychain, returns `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Open an inspector session (`{"name": …}`) |
 | `POST` | `/api/inspect/call` | Send `{"name", "method", "params"}` to the server |
@@ -255,7 +280,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-The tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
+`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
 
 ## Troubleshooting
 
