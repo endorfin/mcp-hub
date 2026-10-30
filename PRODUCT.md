@@ -35,6 +35,7 @@ Ein einziger lokaler Endpunkt für alle Clients statt Konfiguration pro Client, 
 - Nur lokal: lauscht auf `127.0.0.1`, lehnt schreibende Anfragen mit fremdem `Origin` ab.
 - Tool- und Prompt-Namen tragen den Servernamen als Präfix (`server__tool`), Titel `server: Name`.
 - Secrets als Referenz: `${keychain:…}` (macOS-Schlüsselbund) und `${op://…}` (1Password-CLI).
+- OAuth für entfernte Server nach MCP-Spezifikation (Discovery, automatische Client-Registrierung, PKCE); Tokens im Schlüsselbund, automatische Erneuerung.
 - Statistik über die letzten 5.000 Aufrufe: Kennzahlen, Verlauf je Tag, je Server, langsamste Tools.
 - Profile speichern An/Aus und abgewählte Tools je Server; jedes Profil hat einen eigenen Endpunkt.
 - macOS ist die einzige getestete Plattform (Schlüsselbund, LaunchAgent).

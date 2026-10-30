@@ -878,13 +878,14 @@ function renderHubStatus(reachable = true) {
   const entries = Object.values(hubStatus);
   const running = entries.filter(h => h.state === "running");
   const failed = entries.filter(h => h.state === "error").length;
-  const starting = entries.length - running.length - failed;
+  const auth = entries.filter(h => h.state === "auth").length;
+  const starting = entries.length - running.length - failed - auth;
   const tools = running.reduce((sum, h) => sum + h.tools, 0);
-  const dot = !reachable || (entries.length && !running.length) ? "bad" : failed || starting ? "warn" : "ok";
+  const dot = !reachable || (entries.length && !running.length) ? "bad" : failed || starting || auth ? "warn" : "ok";
   $("#dot").className = `dot ${dot}`;
   $("#statusText").textContent = !reachable ? "Hub nicht erreichbar"
     : !entries.length ? "keine aktiven Server"
-    : `${running.length} Server · ${tools} Tools` + (failed ? ` · ${failed} mit Fehler` : "") + (starting ? ` · ${starting} startet` : "")
+    : `${running.length} Server · ${tools} Tools` + (failed ? ` · ${failed} mit Fehler` : "") + (starting ? ` · ${starting} startet` : "") + (auth ? ` · ${auth} ${auth === 1 ? "wartet" : "warten"} auf Anmeldung` : "")
       + (live.length ? ` · ${live.length} ${live.length === 1 ? "Client" : "Clients"}` : "");
   const names = live.map(c => c.split(" · ").map((part, i) => i ? part : clientName(part)).join(" · "));
   $("#statusText").title = reachable && live.length ? `Verbunden mit Live-Aktualisierung:\n${names.join("\n")}` : "";
@@ -924,6 +925,8 @@ function renderList() {
         </button>
         <div class="menu" role="menu" hidden>
           <button role="menuitem" data-act="inspect">Inspizieren</button>
+          <button role="menuitem" data-act="login">Anmelden…</button>
+          <button role="menuitem" data-act="logout">Abmelden</button>
           <button role="menuitem" data-act="tools">Tools auswählen…</button>
           <button role="menuitem" data-act="edit">Bearbeiten</button>
           <button role="menuitem" data-act="dup">Duplizieren</button>
@@ -943,7 +946,9 @@ function renderList() {
     $(".cmd", row).textContent = kind === "stdio" ? [s.command, ...(s.args || [])].map(shellQuote).join(" ") : `${kind.toUpperCase()} · ${s.url}`;
     const meta = $(".meta", row);
     const h = hubStatus[name];
-    if (on && h) {
+    if (on && h?.state === "auth") {
+      meta.append(el("button", { className: "chip warn", textContent: "Anmeldung nötig – anmelden", title: "Beim Anbieter anmelden (OAuth)", onclick: () => startOAuth(name) }));
+    } else if (on && h) {
       const text = h.state === "running" ? `Hub: ${h.tools} ${h.tools === 1 ? "Tool" : "Tools"}` + (h.prompts ? `, ${h.prompts} Prompts` : "") + (h.resources ? `, ${h.resources} Resources` : "")
         : h.state === "error" ? "Hub: Fehler" : "Hub: startet…";
       meta.append(el("span", { className: "chip " + ({ running: "ok", error: "bad" }[h.state] || "wait"), textContent: text, title: h.error || "", style: "cursor:default" }));
@@ -967,12 +972,24 @@ function renderList() {
     }));
     const envCount = Object.keys(s.env || {}).length;
     if (envCount) meta.append(Object.assign(document.createElement("span"), { className: "chip", textContent: `${envCount} env`, style: "cursor:default" }));
+    if (h?.oauth?.signedIn) {
+      const until = h.oauth.expiresAt ? `, Token gültig bis ${new Date(h.oauth.expiresAt * 1000).toLocaleString("de-DE")} (wird automatisch erneuert)` : "";
+      meta.append(el("span", { className: "chip", textContent: "OAuth", title: `Angemeldet${until}`, style: "cursor:default" }));
+    }
     const headerCount = Object.keys(s.headers || {}).length;
     if (headerCount) meta.append(el("span", { className: "chip", textContent: `${headerCount} Header`, style: "cursor:default" }));
     $("input", row).onchange = e => saveServers({ ...servers(), [name]: { ...s, enabled: e.target.checked } });
     $(".dots", row).onclick = e => { e.stopPropagation(); toggleMenu(row); };
     $("[data-act=inspect]", row).onclick =() => { showTab("inspector"); $("#inspServer").value = name; inspConnect(); };
     $("[data-act=tools]", row).hidden = !(on && h?.state === "running" && h.toolsTotal);
+    $("[data-act=login]", row).hidden = !(on && h?.state === "auth");
+    $("[data-act=logout]", row).hidden = !(s.url && h?.oauth?.signedIn);
+    $("[data-act=login]", row).onclick = () => startOAuth(name);
+    $("[data-act=logout]", row).onclick = async () => {
+      if (!confirm(`Bei „${name}“ abmelden? Das Token wird aus dem Schlüsselbund gelöscht.`)) return;
+      try { await api("POST", "/api/oauth/logout", { name }); toast(`Bei „${name}“ abgemeldet`); }
+      catch (e) { toast(e.message, true); }
+    };
     $("[data-act=tools]", row).onclick = () => openTools(name);
     $("[data-act=edit]", row).onclick = () => openEditor(name);
     $("[data-act=dup]", row).onclick = () => openEditor(name, true);
@@ -985,6 +1002,23 @@ function renderList() {
     list.append(row);
   }
 }
+
+async function startOAuth(name) {
+  const popup = window.open("about:blank", "mcp-hub-oauth", "width=520,height=720");
+  try {
+    const { url } = await api("POST", "/api/oauth/start", { name });
+    if (popup) popup.location = url; else location.href = url;
+  } catch (e) {
+    popup?.close();
+    toast(e.message, true);
+  }
+}
+
+window.addEventListener("message", e => {
+  if (e.origin !== location.origin || e.data?.type !== "mcp-hub-oauth") return;
+  if (e.data.error) toast(`Anmeldung fehlgeschlagen: ${e.data.error}`, true);
+  else toast(`Bei „${e.data.server}“ angemeldet`);
+});
 
 function closeMenus(except) {
   closeListboxes();

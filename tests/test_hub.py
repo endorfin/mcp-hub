@@ -331,6 +331,62 @@ class BridgeTest(unittest.TestCase):
         HubTest.wait_for(lambda: self.live() == ["desktop-test"])
 
 
+@unittest.skipUnless(sys.platform == "darwin", "Tokens liegen im macOS-Schlüsselbund")
+class OAuthTest(unittest.TestCase):
+    NAME = "selftest-oauth"
+
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory()
+        self.oauth_port, self.port = free_port(), free_port()
+        self.base = f"http://127.0.0.1:{self.port}"
+        self.oauth_base = f"http://127.0.0.1:{self.oauth_port}"
+        self.provider = subprocess.Popen([sys.executable, str(ROOT / "tests" / "dummy_oauth_server.py"), str(self.oauth_port)],
+                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        HubTest.wait_for(lambda: fetch(self.oauth_base + "/.well-known/oauth-protected-resource"))
+        Path(self.home.name, "servers.json").write_text(json.dumps(
+            {"mcpServers": {self.NAME: {"type": "http", "url": self.oauth_base + "/mcp"}}}))
+        env = {**os.environ, "MCP_HUB_HOME": self.home.name, "PORT": str(self.port)}
+        self.hub = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def tearDown(self):
+        for proc in (self.hub, self.provider):
+            proc.terminate()
+            proc.wait(10)
+        self.home.cleanup()
+        subprocess.run(["security", "delete-generic-password", "-a", "mcp-hub", "-s", f"mcp-hub/oauth/{self.NAME}"],
+                       capture_output=True)
+
+    def state(self):
+        return fetch(self.base + "/api/hub").get(self.NAME, {})
+
+    def call(self):
+        return fetch(self.base + "/mcp", json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                                                     "params": {"name": f"{self.NAME}__whoami"}}).encode())
+
+    def test_login_refresh_and_logout(self):
+        HubTest.wait_for(lambda: self.state().get("state") == "auth")
+        self.assertFalse(self.state()["oauth"]["signedIn"])
+
+        start = fetch(self.base + "/api/oauth/start", json.dumps({"name": self.NAME}).encode())
+        self.assertIn("code_challenge_method=S256", start["url"])
+        with urllib.request.urlopen(start["url"]) as response:
+            self.assertIn("Angemeldet", response.read().decode())
+        HubTest.wait_for(lambda: self.state().get("state") == "running")
+        self.assertTrue(self.state()["oauth"]["signedIn"])
+        first = self.call()["result"]["content"][0]["text"]
+        self.assertTrue(first.startswith("at-"))
+
+        fetch(self.oauth_base + "/admin/expire", b"{}")
+        second = self.call()["result"]["content"][0]["text"]
+        self.assertTrue(second.startswith("at-"))
+        self.assertNotEqual(first, second)
+
+        fetch(self.base + "/api/oauth/logout", json.dumps({"name": self.NAME}).encode())
+        HubTest.wait_for(lambda: self.state().get("state") == "auth")
+        self.assertFalse(self.state()["oauth"]["signedIn"])
+
+
 class MigrationTest(unittest.TestCase):
     def test_legacy_config_dir_is_moved(self):
         with tempfile.TemporaryDirectory() as home:

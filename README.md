@@ -45,6 +45,18 @@ Ein Eintrag mit `url` und ohne `type` gilt als Streamable HTTP. Optional:
 - `disabledTools`: Liste von Tool-Namen (ohne Präfix), die der Hub ausblendet und deren Aufruf er ablehnt. Pflege am einfachsten über ⋯ → „Tools auswählen…“: Der Dialog listet alle Tools mit Kurzbeschreibung, lässt sich filtern, und „Alle an“ / „Alle aus“ wirken nur auf die gefilterten Tools (z. B. „incident“ filtern, „Alle aus“). In der Liste zeigt dann ein Chip mit orangefarbener Schrift „6 Tools deaktiviert“, der Tooltip nennt die Tools, ein Klick öffnet die Auswahl. Eine Änderung startet den Server nicht neu.
 - `env` (stdio) bzw. `headers` (HTTP/SSE).
 
+### OAuth
+
+Entfernte Server, die eine Anmeldung per OAuth verlangen, braucht man nur mit ihrer URL einzutragen; ein Token im Header ist nicht nötig. Antwortet der Server mit `401`, zeigt die Liste „Anmeldung nötig – anmelden“. Ein Klick öffnet die Anmeldeseite des Anbieters in einem neuen Fenster.
+
+Der Ablauf folgt der MCP-Spezifikation: Der Hub ermittelt den Anmeldeserver über Protected Resource Metadata (RFC 9728) und Authorization Server Metadata (RFC 8414), registriert sich dort selbst als Client (RFC 7591) und meldet sich per Authorization Code mit PKCE (S256) und `resource`-Parameter an. Der Anbieter leitet zurück auf `http://127.0.0.1:4747/oauth/callback`.
+
+- Access- und Refresh-Token liegen im macOS-Schlüsselbund unter `mcp-hub/oauth/<server>`, nie in `servers.json`.
+- Läuft ein Token ab, holt der Hub per Refresh-Token ein neues und wiederholt den Aufruf; Clients merken davon nichts.
+- Angemeldete Server tragen den Chip „OAuth“ (Tooltip: Gültigkeit). Über ⋯ → „Abmelden“ wird das Token gelöscht.
+- Steht schon ein `Authorization`-Header im Eintrag, nutzt der Hub diesen und kein OAuth.
+- Voraussetzung ist ein Anbieter mit automatischer Client-Registrierung; feste Client-IDs lassen sich bisher nicht eintragen.
+
 ### Secrets
 
 Statt Tokens im Klartext können Werte in `env`, `headers`, `url` und `args` Referenzen enthalten, die der Hub erst beim Start eines Servers auflöst:
@@ -172,6 +184,9 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
 | `GET` | `/api/stats?days=14` | Auswertung der Aufrufe (Kennzahlen, je Tag, je Server, langsamste Tools) |
+| `POST` | `/api/oauth/start` | `{"name"}`: Anmeldung starten, liefert `{"url"}` der Anmeldeseite |
+| `POST` | `/api/oauth/logout` | `{"name"}`: Token löschen |
+| `GET` | `/oauth/callback` | Rückkehr vom Anmeldeserver |
 | `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}`; `clear` schaltet alles ein |
 | `POST` | `/api/secrets` | `{"name", "value"}` im Schlüsselbund ablegen, liefert `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |
@@ -188,7 +203,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 python3 -m unittest discover -s tests -v
 ```
 
-Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz, die Statistik und (nur macOS) die Auflösung aus dem Schlüsselbund. Die echte Konfiguration bleibt unberührt; der Schlüsselbund-Test legt `mcp-hub/selftest/hub-tests` an und löscht ihn wieder.
+Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz, die Statistik und (nur macOS) die Auflösung aus dem Schlüsselbund sowie der komplette OAuth-Ablauf gegen einen Test-Anbieter (`tests/dummy_oauth_server.py`: Anmeldung, Erneuerung eines abgelaufenen Tokens, Abmelden). Die echte Konfiguration bleibt unberührt; die Schlüsselbund-Tests legen `mcp-hub/selftest/hub-tests` und `mcp-hub/oauth/selftest-oauth` an und löschen sie wieder.
 
 ## Fehlersuche
 
@@ -204,6 +219,6 @@ Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem f
 3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
 4. **Änderungen an Clients melden:** Erledigt, siehe „Live-Aktualisierung“.
 5. **Statistik im Protokoll:** Erledigt, siehe „Statistik“.
-6. **OAuth für entfernte Server:** Für gehostete MCPs, die nur OAuth anbieten.
+6. **OAuth für entfernte Server:** Erledigt, siehe „OAuth“. Offen: feste Client-IDs für Anbieter ohne automatische Registrierung.
 7. **Alte Reste entfernen:** Erledigt.
 8. **Tests:** Erledigt, siehe „Tests“.

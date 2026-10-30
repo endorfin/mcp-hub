@@ -8,7 +8,8 @@ from collections import deque
 import time
 from pathlib import Path
 
-from inspector import PROTOCOL_VERSION, RpcError, open_session
+import oauth
+from inspector import PROTOCOL_VERSION, AuthRequired, RpcError, open_session
 
 SEPARATOR = "__"
 SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
@@ -50,8 +51,11 @@ class Upstream:
         self.stale = False
         self.server_info = {}
         self.instructions = ""
+        self.challenge = None
+        self.pass_environment = True
 
     def start(self, pass_environment):
+        self.pass_environment = pass_environment
         try:
             self.session = open_session(self.name, self.entry, pass_environment, "mcp-hub")
             self.session.on_notification = self._on_notification
@@ -61,6 +65,12 @@ class Upstream:
             self.instructions = info.get("instructions") or ""
             self.refresh()
             self.state = "running"
+            self.error = None
+        except AuthRequired as e:
+            self.challenge = e.challenge
+            self.error = "Anmeldung nötig"
+            self.state = "auth"
+            self.close()
         except (RpcError, OSError) as e:
             stderr = [x["data"] for x in self.session.log if x["kind"] in ("stderr", "error")] if self.session else []
             self.error = str(e).splitlines()[0] + (f" – {stderr[-1]}" if stderr else "")
@@ -95,7 +105,17 @@ class Upstream:
     def request(self, method, params):
         if not self.alive():
             raise RpcError(f"Server „{self.name}“ läuft nicht")
-        return self.session.request(method, params, timeout=300)
+        try:
+            return self.session.request(method, params, timeout=300)
+        except AuthRequired:
+            self.close()
+            if not oauth.access_token(self.name, force_refresh=True):
+                self.state, self.error = "auth", "Anmeldung nötig"
+                raise
+            self.start(self.pass_environment)
+            if self.state != "running":
+                raise RpcError(f"Server „{self.name}“: {self.error}")
+            return self.session.request(method, params, timeout=300)
 
     def close(self):
         if self.session:
@@ -293,6 +313,17 @@ class Hub:
             self._notify_if_changed(running)
             return running
 
+    def reconnect(self, name):
+        with self.lock:
+            upstream = self.upstreams.pop(name, None)
+            if upstream:
+                upstream.close()
+        self.sync_in_background()
+
+    def challenge(self, name):
+        upstream = self.upstreams.get(name)
+        return upstream.challenge if upstream else None
+
     def sync_in_background(self):
         threading.Thread(target=self.sync, daemon=True).start()
 
@@ -342,6 +373,7 @@ class Hub:
                 **{k: len(v) for k, v in u.catalog.items()},
                 "tools": len(u.tools()),
                 "toolsTotal": len(u.catalog["tools"]),
+                **({"oauth": oauth.status(name)} if u.entry.get("url") else {}),
             }
             for name, u in self.upstreams.items()
         }

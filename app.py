@@ -13,8 +13,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
+import html
 import hub as hub_module
 import inspector
+import oauth
 import secrets_store
 
 ROOT = Path(__file__).resolve().parent
@@ -235,6 +237,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({"error": "Unbekannte Sitzung"}, HTTPStatus.NOT_FOUND)
             return self.event_stream(unquote(match.group(1)) if match.group(1) else None)
         url = urlparse(self.path)
+        if url.path == "/oauth/callback":
+            return self.oauth_callback(parse_qs(url.query))
         if url.path == "/api/inspect/log":
             query = parse_qs(url.query)
             return self.send(inspector.log(query.get("name", [""])[0], float(query.get("since", ["0"])[0])))
@@ -273,6 +277,20 @@ class Handler(BaseHTTPRequestHandler):
             if error := update_profiles(data.get("action"), data.get("name"), data.get("newName")):
                 return self.send({"error": error}, HTTPStatus.BAD_REQUEST)
             return self.send(self.state())
+        if self.path in ("/api/oauth/start", "/api/oauth/logout"):
+            name = self.body().get("name", "")
+            entry = load_config()["mcpServers"].get(name)
+            if not entry or not entry.get("url"):
+                return self.send({"error": f"Kein entfernter Server: {name}"}, HTTPStatus.NOT_FOUND)
+            if self.path.endswith("logout"):
+                oauth.logout(name)
+                hub.reconnect(name)
+                return self.send({})
+            try:
+                url = oauth.start(name, secrets_store.resolve_value(entry["url"]), self.redirect_uri(), hub.challenge(name))
+            except (oauth.OAuthError, secrets_store.SecretError) as e:
+                return self.send({"error": str(e)}, HTTPStatus.BAD_GATEWAY)
+            return self.send({"url": url})
         if self.path == "/api/secrets":
             data = self.body()
             try:
@@ -282,6 +300,27 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/inspect/"):
             return self.inspect(self.path.removeprefix("/api/inspect/"))
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
+
+    def redirect_uri(self):
+        return f"http://127.0.0.1:{self.server.server_address[1]}/oauth/callback"
+
+    def oauth_callback(self, query):
+        error = query.get("error_description", query.get("error", [""]))[0]
+        server = None
+        if not error:
+            try:
+                server = oauth.finish(query.get("state", [""])[0], query.get("code", [""])[0])
+                hub.reconnect(server)
+            except (oauth.OAuthError, secrets_store.SecretError) as e:
+                error = str(e)
+        title = "Anmeldung fehlgeschlagen" if error else "Angemeldet"
+        text = error or f"„{server}“ ist verbunden."
+        message = json.dumps({"type": "mcp-hub-oauth", "server": server, "error": error or None}).replace("<", "\\u003c")
+        page = f"""<!doctype html><html lang="de"><meta charset="utf-8"><title>{title} · MCP Hub</title>
+<style>:root{{--bg:#f6f6f4;--ink:#1c1c1a;--muted:#6b6b66;--tone:{"#c0362c" if error else "#1f8a4c"}}}@media (prefers-color-scheme:dark){{:root{{--bg:#141413;--ink:#ecebe6;--muted:#9a998f;--tone:{"#ff7366" if error else "#4cc27f"}}}}}body{{margin:0;min-height:100vh;display:grid;place-items:center;font:14px/1.45 -apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink)}}main{{max-width:420px;padding:24px;text-align:center;display:grid;gap:14px}}h1{{font-size:16px;margin:0;color:var(--tone)}}p{{margin:0;color:var(--muted)}}a{{color:var(--ink);text-underline-offset:3px}}</style>
+<main><h1>{title}</h1><p>{html.escape(text)}</p><a href="/">Zurück zum MCP Hub</a></main>
+<script>if (window.opener) {{ window.opener.postMessage({message}, location.origin); {"" if error else "setTimeout(() => window.close(), 1200);"} }}</script></html>"""
+        self.send(page.encode(), HTTPStatus.BAD_REQUEST if error else HTTPStatus.OK, "text/html; charset=utf-8")
 
     def event_stream(self, profile=None):
         self.send_response(HTTPStatus.OK)

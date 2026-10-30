@@ -10,6 +10,7 @@ import urllib.request
 from collections import deque
 from urllib.parse import urljoin
 
+import oauth
 from secrets_store import SecretError, resolve_entry
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -19,6 +20,12 @@ USER_AGENT = "mcp-hub/1.0"
 
 class RpcError(Exception):
     pass
+
+
+class AuthRequired(RpcError):
+    def __init__(self, challenge=""):
+        super().__init__("Anmeldung nötig (HTTP 401)")
+        self.challenge = challenge
 
 
 class BaseSession:
@@ -242,6 +249,9 @@ class HttpSession(BaseSession):
         try:
             response = urllib.request.urlopen(request, timeout=300)
         except urllib.error.HTTPError as e:
+            if e.code == 401:
+                with e:
+                    raise AuthRequired(e.headers.get("WWW-Authenticate", ""))
             raise http_error(e)
         self.session_id = response.headers.get("Mcp-Session-Id") or self.session_id
         content_type = response.headers.get("Content-Type", "")
@@ -298,6 +308,7 @@ class SseSession(BaseSession):
         self.endpoint_ready = threading.Event()
         self.closed = False
         self.stream = None
+        self.auth_challenge = None
         threading.Thread(target=self._listen, daemon=True).start()
 
     def _listen(self):
@@ -315,6 +326,8 @@ class SseSession(BaseSession):
                 except json.JSONDecodeError:
                     self._record("stdout", data[:500])
         except urllib.error.HTTPError as e:
+            if e.code == 401:
+                self.auth_challenge = e.headers.get("WWW-Authenticate", "")
             self._record("error", str(http_error(e)))
         except OSError as e:
             if not self.closed:
@@ -327,6 +340,8 @@ class SseSession(BaseSession):
 
     def _send(self, message):
         if not self.endpoint_ready.wait(30) or not self.endpoint:
+            if self.auth_challenge is not None:
+                raise AuthRequired(self.auth_challenge)
             errors = [x["data"] for x in self.log if x["kind"] == "error"]
             raise RpcError(errors[-1] if errors else "Kein Endpunkt vom SSE-Server erhalten")
         if self.closed:
@@ -367,6 +382,11 @@ def open_session(name, entry, pass_environment, client_name):
     except SecretError as e:
         raise RpcError(f"Secret: {e}")
     kind = transport(entry)
+    headers = entry.get("headers") or {}
+    if kind != "stdio" and not any(k.lower() == "authorization" for k in headers):
+        token = oauth.access_token(name)
+        if token:
+            entry = {**entry, "headers": {**headers, "Authorization": f"Bearer {token}"}}
     if kind == "http":
         return HttpSession(name, entry, client_name)
     if kind == "sse":

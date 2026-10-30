@@ -7,6 +7,7 @@ SERVICE_PREFIX = "mcp-hub/"
 ACCOUNT = "mcp-hub"
 
 _cache = {}
+_missing = set()
 _lock = threading.Lock()
 
 
@@ -74,6 +75,34 @@ def store_keychain(name, value):
     _run(["security", "-i"], f"add-generic-password -U -a {ACCOUNT} -s {SERVICE_PREFIX}{name} -w {quoted}\n")
     with _lock:
         _cache.pop(f"keychain:{name}", None)
+        _missing.discard(name)
     if _lookup(f"keychain:{name}") != value:
         raise SecretError("Wert im Schlüsselbund weicht ab")
     return "${keychain:" + name + "}"
+
+
+def read_keychain(name):
+    key = f"keychain:{name}"
+    with _lock:
+        if key in _cache:
+            return _cache[key]
+        if name in _missing:
+            return None
+    try:
+        value = _lookup(key)
+    except SecretError:
+        value = None
+    with _lock:
+        if value is None:
+            _missing.add(name)
+        else:
+            _cache[key] = value
+    return value
+
+
+def delete_keychain(name):
+    subprocess.run(["security", "delete-generic-password", "-a", ACCOUNT, "-s", SERVICE_PREFIX + name],
+                   capture_output=True)
+    with _lock:
+        _cache.pop(f"keychain:{name}", None)
+        _missing.add(name)
