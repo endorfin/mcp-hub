@@ -13,7 +13,7 @@ No dependencies besides Python 3.11+. The server only listens on `127.0.0.1`. Th
 
 ## Getting started
 
-**Requirements:** Python 3.11 or newer. macOS is the tested platform; on Linux everything except keychain secrets, OAuth tokens and autostart works.
+**Requirements:** Python 3.11 or newer, on macOS or Linux. On Linux, keychain secrets and OAuth tokens need the Secret Service (GNOME Keyring or KWallet) and `secret-tool` (package `libsecret-tools`); the autostart needs systemd. Windows is not supported yet.
 
 **1. Install** – clone the repository (or download the [latest release](https://github.com/endorfin/mcp-hub/releases/latest)). There is nothing to build and nothing to install with pip.
 
@@ -38,7 +38,7 @@ Then open the GUI at http://127.0.0.1:4747. The hub endpoint for your clients is
 claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp
 ```
 
-**5. Start at login** – so your clients find the hub after a reboot, stop the hub from step 2 (Ctrl+C) and register it as a LaunchAgent with [`autostart.sh`](#autostart); it starts right away and on every login:
+**5. Start at login** – so your clients find the hub after a reboot, stop the hub from step 2 (Ctrl+C) and register it with [`autostart.sh`](#autostart) (a LaunchAgent on macOS, a systemd user service on Linux); it starts right away and on every login:
 
 ```bash
 ./autostart.sh install
@@ -106,7 +106,7 @@ Remote servers that require OAuth only need their URL; no token in a header is n
 
 The flow follows the MCP specification: the hub discovers the authorization server via Protected Resource Metadata (RFC 9728) and Authorization Server Metadata (RFC 8414), registers itself as a client (RFC 7591) and signs in using the authorization code flow with PKCE (S256) and the `resource` parameter. The provider redirects back to `http://127.0.0.1:4747/oauth/callback`.
 
-- Access and refresh tokens are stored in the macOS keychain under `mcp-hub/oauth/<server>`, never in `servers.json`.
+- Access and refresh tokens are stored in the keychain under `mcp-hub/oauth/<server>` (macOS keychain or Secret Service on Linux), never in `servers.json`.
 - When a token expires, the hub fetches a new one with the refresh token and retries the call; clients never notice.
 - Signed-in servers carry an “OAuth” chip (tooltip: validity). ⋯ → “Sign out” deletes the token.
 - If the entry already has an `Authorization` header, the hub uses it instead of OAuth.
@@ -136,7 +136,7 @@ Instead of plain-text tokens, values in `env`, `headers`, `url`, `args` and `cwd
 
 The notation alone decides the source, per value. There is no setting and no fallback: if `op` is not signed in, the hub does not look in the keychain instead. A server may mix both sources.
 
-- `${keychain:name}` reads the macOS keychain (account `mcp-hub`, service `mcp-hub/<name>`; searching for `mcp-hub` in Keychain Access lists all entries). The easiest way is the lock next to a value in the editor: it creates the entry and replaces the value with the reference; nothing is written to the file until you click “Save”. By hand: `security add-generic-password -a mcp-hub -s mcp-hub/<name> -w`. Printable ASCII values only; `security` returns anything else as hex.
+- `${keychain:name}` reads the keychain: on macOS the login keychain (account `mcp-hub`, service `mcp-hub/<name>`; searching for `mcp-hub` in Keychain Access lists all entries), on Linux the Secret Service with the attributes `service mcp-hub/<name>` and `account mcp-hub` (visible in Seahorse or KWallet). The easiest way is the lock next to a value in the editor: it creates the entry and replaces the value with the reference; nothing is written to the file until you click “Save”. By hand on macOS: `security add-generic-password -a mcp-hub -s mcp-hub/<name> -w` (printable ASCII values only; `security` returns anything else as hex). On Linux: `secret-tool store --label="MCP Hub: <name>" service mcp-hub/<name> account mcp-hub`.
 - `${op://vault/item/field}` reads via the 1Password CLI (`op read`). `op` must be signed in within the hub’s environment, e.g. through the 1Password app integration. The hub never writes to 1Password; the lock always writes to the keychain. Useful for tokens that are already maintained, shared or rotated in 1Password; otherwise the keychain is simpler.
 - References may be part of a longer value, such as `Bearer ${keychain:…}` or `?key=${keychain:…}`.
 - Resolved values stay in memory until the hub restarts. After changing a value in the keychain or 1Password, restart the hub (e.g. `./autostart.sh restart`); switching the server off and on is not enough. Only the lock in the GUI refreshes its own entry immediately.
@@ -217,7 +217,7 @@ When the tool list changes (server on/off, tools deselected, profile switched, a
 
 ## Autostart
 
-For Claude Code, Claude Desktop and Copilot to have their tools after a reboot, the hub needs to start at login. `autostart.sh` sets up a LaunchAgent (`~/Library/LaunchAgents/io.github.endorfin.mcp-hub.plist`) that runs `python3 app.py` and restarts it after a crash:
+For Claude Code, Claude Desktop and Copilot to have their tools after a reboot, the hub needs to start at login. `autostart.sh` runs `python3 app.py` at login and restarts it after a crash: on macOS as a LaunchAgent (`~/Library/LaunchAgents/io.github.endorfin.mcp-hub.plist`), on Linux as a systemd user service (`~/.config/systemd/user/mcp-hub.service`):
 
 ```bash
 ./autostart.sh install     # set up and start right away
@@ -226,7 +226,7 @@ For Claude Code, Claude Desktop and Copilot to have their tools after a reboot, 
 ./autostart.sh uninstall   # remove and stop the hub
 ```
 
-Log: `~/Library/Logs/mcp-hub.log`. The path to `python3`, `PATH` and `PORT` are captured at install time; after moving the repository or installing a new Python, run `install` again. If a hub is already running on the port, the script aborts instead of starting a second one.
+Log: `~/Library/Logs/mcp-hub.log` on macOS, `journalctl --user -u mcp-hub` on Linux. On Linux, the user service runs while you are logged in; `loginctl enable-linger` keeps it running without a session. The path to `python3`, `PATH` and `PORT` are captured at install time; after moving the repository or installing a new Python, run `install` again. If a hub is already running on the port, the script aborts instead of starting a second one.
 
 ## Updates
 
@@ -322,7 +322,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 python3 -m unittest discover -s tests -v
 ```
 
-`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), restarting a crashed server and the restart delays, the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13; on Ubuntu the keychain and OAuth tests are skipped.
+`tests/test_importer.py` covers the import parser (JSON variants, Codex TOML, `mcp add` commands). `tests/test_compact.py` covers the compact mode search (ranking, prefixes, filler words, server filter). `tests/test_updater.py` covers the update check against a fake GitHub API, the fast-forward of a git checkout (and refusing one with local changes or commits) and installing a release archive, including rejecting unsafe archive paths. The other tests start their own hub with its own configuration folder on a free port and two instances of a small stdio server (`tests/dummy_server.py`). They cover prefixes and titles, sessions (404 after ending), restarting a crashed server and the restart delays, the bridge including a hub restart, routing and logging, errors, `disabledTools`, profiles including profile endpoints, notifications, origin protection, statistics and (macOS only) keychain resolution, plus the complete OAuth flow against a test provider (`tests/dummy_oauth_server.py`: sign-in, refreshing an expired token, sign-out; once with automatic registration, once with a fixed client ID and secret). Your real configuration stays untouched; the keychain tests create `mcp-hub/selftest/hub-tests` and `mcp-hub/oauth/selftest-oauth` and delete them again. Without a usable keychain (no Secret Service on Linux, for example) those tests are skipped. GitHub Actions runs the suite on macOS and Ubuntu with Python 3.11 and 3.13, with a temporary keychain on macOS and GNOME Keyring on Ubuntu, so the keychain and OAuth tests run on both.
 
 ## Troubleshooting
 
@@ -333,7 +333,7 @@ python3 -m unittest discover -s tests -v
 
 ## Roadmap
 
-- **Linux and Windows:** secrets, OAuth tokens and autostart currently rely on the macOS keychain and LaunchAgents.
+- **Windows:** secrets, OAuth tokens and autostart need a Windows counterpart (Credential Manager, a scheduled task).
 - **Profile endpoint starts servers on demand:** a server switched off in the hub is currently missing from profile endpoints as well.
 
 ## Contributing

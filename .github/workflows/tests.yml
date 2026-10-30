@@ -30,5 +30,22 @@ jobs:
           security unlock-keychain -p ci mcp-hub-ci.keychain
           security set-keychain-settings -t 3600 mcp-hub-ci.keychain
 
+      - name: Secret Service for the keychain and OAuth tests
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gnome-keyring libsecret-tools
+
       - name: Run tests
+        if: runner.os == 'macOS'
         run: python -m unittest discover -s tests -v
+        env:
+          MCP_HUB_REQUIRE_KEYCHAIN: "1"
+
+      - name: Run tests
+        if: runner.os == 'Linux'
+        env:
+          MCP_HUB_REQUIRE_KEYCHAIN: "1"
+        run: |
+          dbus-run-session -- sh -c '
+            mkdir -p ~/.local/share/keyrings && printf login > ~/.local/share/keyrings/default
+            printf test | gnome-keyring-daemon --unlock --components=secrets > /dev/null
+            python -m unittest discover -s tests -v'

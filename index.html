@@ -551,7 +551,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
           </div>
         </details>
       </div>
-      <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.</span>
+      <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den Schlüsselbund verschieben (macOS-Schlüsselbund bzw. Secret Service unter Linux). Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.</span>
       <label class="check"><input type="checkbox" name="enabled"> <span data-i18n="s.enabled">Aktiviert</span></label>
       <p class="error" id="editError"></p>
     </div>
@@ -702,7 +702,7 @@ const I18N = {
   "s.scopesPlaceholder": ["z. B. repo read:user", "e.g. repo read:user"],
   "s.authUrl": ["<b>Autorisierungs-URL</b> – nur ohne Discovery", "<b>Authorization URL</b> – only without discovery"],
   "s.tokenUrl": ["<b>Token-URL</b> – nur ohne Discovery", "<b>Token URL</b> – only without discovery"],
-  "s.secretsHint": ["Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.", "Use the lock to move secret values into the macOS keychain. The entry then only contains <code>${keychain:…}</code>; <code>${op://vault/item/field}</code> for 1Password and <code>${env:NAME}</code> for environment variables work as well."],
+  "s.secretsHint": ["Geheime Werte mit dem Schloss in den Schlüsselbund verschieben (macOS-Schlüsselbund bzw. Secret Service unter Linux). Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.", "Use the lock to move secret values into the keychain (the macOS keychain or the Secret Service on Linux). The entry then only contains <code>${keychain:…}</code>; <code>${op://vault/item/field}</code> for 1Password and <code>${env:NAME}</code> for environment variables work as well."],
   "s.enabled": ["Aktiviert", "Enabled"],
   "s.cancel": ["Abbrechen", "Cancel"],
   "s.importTitle": ["Server importieren", "Import servers"],
@@ -926,6 +926,8 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^secret-tool not found – install libsecret-tools$/, "secret-tool nicht gefunden – bitte libsecret-tools installieren"],
+  [/^The keychain is only available on macOS and Linux$/, "Der Schlüsselbund ist nur unter macOS und Linux verfügbar"],
   [/^Server stopped unexpectedly – (.*)$/, "Server unerwartet beendet – $1"],
   [/^Server stopped unexpectedly$/, "Server unerwartet beendet"],
   [/^Unknown server: (.*)$/, "Unbekannter Server: $1"],

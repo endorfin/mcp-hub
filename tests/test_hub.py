@@ -15,6 +15,29 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import hub as hub_module  # noqa: E402
+import secrets_store  # noqa: E402
+
+
+def keychain_works():
+    if not secrets_store.keychain_available():
+        return False
+    probe = "selftest/probe"
+    try:
+        secrets_store.store_keychain(probe, "probe")
+        return secrets_store.read_keychain(probe) == "probe"
+    except secrets_store.SecretError:
+        return False
+    finally:
+        secrets_store.delete_keychain(probe)
+
+
+KEYCHAIN = keychain_works()
+
+
+class KeychainRequirementTest(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("MCP_HUB_REQUIRE_KEYCHAIN"), "only enforced in CI")
+    def test_keychain_is_usable(self):
+        self.assertTrue(KEYCHAIN, "MCP_HUB_REQUIRE_KEYCHAIN is set, but no keychain is usable")
 DUMMY = [sys.executable, str(ROOT / "tests" / "dummy_server.py")]
 KEYCHAIN_NAME = "selftest/hub-tests"
 
@@ -48,9 +71,8 @@ class HubTest(unittest.TestCase):
         cls.proc.terminate()
         cls.proc.wait(10)
         cls.home.cleanup()
-        if sys.platform == "darwin":
-            subprocess.run(["security", "delete-generic-password", "-a", "mcp-hub", "-s", f"mcp-hub/{KEYCHAIN_NAME}"],
-                           capture_output=True)
+        if KEYCHAIN:
+            secrets_store.delete_keychain(KEYCHAIN_NAME)
 
     @classmethod
     def request(cls, method, path, body=None, headers=None):
@@ -176,7 +198,7 @@ class HubTest(unittest.TestCase):
         self.assertNotIn("disabledTools", servers["alpha"])
         self.assertTrue(servers["beta"]["enabled"])
 
-    @unittest.skipUnless(sys.platform == "darwin", "keychain is macOS only")
+    @unittest.skipUnless(KEYCHAIN, "no usable keychain (macOS keychain or Secret Service)")
     def test_keychain_secret_is_resolved(self):
         status, body = self.request("POST", "/api/secrets", {"name": KEYCHAIN_NAME, "value": "from-the-keychain"})
         self.assertEqual(status, 200, body)
@@ -418,7 +440,7 @@ class BridgeTest(unittest.TestCase):
         HubTest.wait_for(lambda: self.live() == ["desktop-test"])
 
 
-@unittest.skipUnless(sys.platform == "darwin", "tokens live in the macOS keychain")
+@unittest.skipUnless(KEYCHAIN, "tokens live in the keychain (macOS keychain or Secret Service)")
 class OAuthTest(unittest.TestCase):
     NAME = "selftest-oauth"
     PROVIDER_ARGS = []
@@ -443,8 +465,7 @@ class OAuthTest(unittest.TestCase):
             proc.terminate()
             proc.wait(10)
         self.home.cleanup()
-        subprocess.run(["security", "delete-generic-password", "-a", "mcp-hub", "-s", f"mcp-hub/oauth/{self.NAME}"],
-                       capture_output=True)
+        secrets_store.delete_keychain(f"oauth/{self.NAME}")
 
     def state(self):
         return fetch(self.base + "/api/hub").get(self.NAME, {})
