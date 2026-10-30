@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import atexit
+import html
 import json
 import os
 import queue
 import re
 import shutil
 import signal
+import socketserver
 import sys
 import threading
 from http import HTTPStatus
@@ -13,7 +15,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-import html
 import hub as hub_module
 import inspector
 import oauth
@@ -163,6 +164,13 @@ def sync_hub_in_background():
 
 def local_origin(origin):
     return not origin or urlparse(origin).hostname in ("localhost", "127.0.0.1", "::1")
+
+
+class Server(ThreadingHTTPServer):
+    def server_bind(self):
+        # HTTPServer.server_bind resolves the host name via getfqdn, which stalls for ~30 s on some macOS setups.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -403,7 +411,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     port = int(os.environ.get("PORT", 4747))
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = Server(("127.0.0.1", port), Handler)
     atexit.register(inspector.disconnect_all)
     atexit.register(hub.close)
     sync_hub_in_background()

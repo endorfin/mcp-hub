@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import secrets
+import socketserver
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -104,4 +105,10 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(404, {"error": "not found"})
 
 
-ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+class Server(ThreadingHTTPServer):
+    def server_bind(self):
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
+Server(("127.0.0.1", PORT), Handler).serve_forever()
