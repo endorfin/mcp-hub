@@ -123,7 +123,7 @@ components:
 
 A calm control center you open in passing and understand in seconds. The surface is restrained and warm gray, content sits in clear lists, and color almost always carries meaning: green means “running” or “primary action”, orange “deviating”, red “error”. Everything else lives behind a ⋯ menu or a list, not out on the surface.
 
-The density is that of a tool, not a marketing page: 14 px base type, technical values in monospace, status as small chips. Light and dark schemes are equal and follow the system setting; the dark scheme is the everyday one, next to terminal and editor.
+The density is that of a tool, not a marketing page: 14 px base type, technical values in monospace, status as small chips. Light and dark schemes are equal and follow the system setting unless “Appearance” in the settings pins one; the dark scheme is the everyday one, next to terminal and editor.
 
 There are no native operating-system controls. Selects, checkboxes and menus are custom components so they look and behave the same in both schemes.
 
@@ -160,7 +160,7 @@ Neutral, slightly warm grays with a single accent; every color outside the grays
 ### Named Rules
 **The Meaning-Only Rule.** Green, orange and red only appear when they denote a state or the primary action. There is no decorative color.
 
-**The Twin Scheme Rule.** Every color exists as a light and dark pair (`-dark`); new colors are always added as tokens on `:root` for both schemes, never directly on an element.
+**The Twin Scheme Rule.** Every color exists as a light and dark pair (`-dark`); new colors are always added as tokens on `:root` for both schemes, never directly on an element. The dark values live twice in `app.css`: under `prefers-color-scheme: dark` guarded by `:root:not([data-theme="light"])`, and under `:root[data-theme="dark"]`; change both together.
 
 ## Typography
 
@@ -257,6 +257,7 @@ Replaces every native select.
 - Main tabs: text tabs sitting on the header’s bottom seam, 22 px apart, `muted`; the active tab is `ink` with a 2 px `ink` underline that covers the seam.
 - Tabs inside a card (the connect snippets) use the same text tabs on a 1 px Seam line.
 - Keyboard focus on text tabs: a 2 px ring in Switch Green at 50 % around the label, 6 px radius, with a little room on both sides; it ends above the underline. Only phones let the tab row scroll sideways.
+- Settings: a vertical list of topics (Clients, Server, Updates, Interface) on the left, the selected topic’s cards on the right; on phones the list becomes a row above. The active topic sits on Keycap.
 - Small mode switches (Inspector: tools, prompts, resources): segmented tabs in a Keycap (8 px radius, 3 px inner padding); the active tab is Console with the “Raised” shadow, the others `muted`.
 
 ## Do's and Don'ts

@@ -81,7 +81,7 @@ Everything lives in `~/.config/mcp-hub/` (on Windows `%APPDATA%\mcp-hub\`; overr
 | File | Contents |
 | --- | --- |
 | `servers.json` | Server definitions in `mcpServers` format; `servers.json.bak` is written before every change |
-| `gui-settings.json` | Path to the server file, `passEnvironment`, `language`, `checkUpdates` |
+| `gui-settings.json` | Path to the server file, `passEnvironment`, `language`, `theme`, `checkUpdates` |
 | `usage.json` | Usage counter per server (count, last call) |
 | `calls.jsonl` | Call log, the last 5,000 entries |
 | `profiles.json` | Saved profiles and the active profile |
@@ -296,7 +296,7 @@ Design rules and components of the interface are documented in [DESIGN.md](DESIG
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
 - **Clients:** every session since the last hub start with client name and version, profile endpoint, compact mode, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
-- **Settings:** path to the server file, language, `passEnvironment`, the update check, and the hub endpoint with the compact switch, “Connect clients” and connect snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code.
+- **Settings:** grouped by topic with a list on the left. *Clients* has three cards: the hub endpoint with the compact switch, “Connect clients”, and “Set up by hand” with snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code. *Server* holds the path to the server file and `passEnvironment`, *Updates* the update check, *Interface* the language and the appearance (system, light or dark).
 
 **Language:** English or German, chosen under Settings → Language. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 

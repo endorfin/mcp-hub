@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MCP Hub</title>
+<script>try { const theme = localStorage.getItem("theme"); if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme; } catch {}</script>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -129,25 +130,19 @@
   </section>
 
   <section data-panel="settings" hidden class="settings">
-    <form class="card" id="settingsForm">
-      <h2 data-i18n="s.general">Allgemein</h2>
-      <label class="f"><span data-i18n="s.configFile"><b>Konfigurationsdatei</b></span><input name="configPath"></label>
-      <label class="f"><span data-i18n="s.language"><b>Sprache</b></span>
-        <select name="language" aria-label="Sprache" data-i18n-aria="s.languageAria">
-          <option value="auto" data-i18n="s.languageAuto">Automatisch (Browser)</option>
-          <option value="de">Deutsch</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-      <label class="check"><input type="checkbox" name="passEnvironment"> <span data-i18n="s.passEnv">Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</span></label>
-      <label class="check"><input type="checkbox" name="checkUpdates"> <span data-i18n="s.checkUpdates">Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)</span></label>
-      <div class="update-line"><span class="hint" id="updateInfo"></span><button type="button" class="btn" id="updateCheck" data-i18n="s.updateCheck">Jetzt prüfen</button></div>
-      <div><button class="btn primary" data-i18n="s.save">Speichern</button></div>
-    </form>
-    <div class="card hubcard">
+    <form id="settingsForm" hidden></form>
+    <nav class="settings-nav" id="settingsNav">
+      <button data-sec="clients" class="active" data-i18n="s.secClients">Clients</button>
+      <button data-sec="server" data-i18n="s.secServer">Server</button>
+      <button data-sec="updates" data-i18n="s.secUpdates">Updates</button>
+      <button data-sec="ui" data-i18n="s.secUi">Oberfläche</button>
+    </nav>
+    <div class="settings-pane">
+      <div class="settings-group" data-sec-panel="clients">
+        <div class="card">
       <div class="hubhead">
         <div>
-          <div class="name" data-i18n="s.hubEndpoint">Hub-Endpunkt</div>
+          <h2 data-i18n="s.hubEndpoint">Hub-Endpunkt</h2>
           <div class="hint" data-i18n="s.hubHint">Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).</div>
         </div>
         <code id="hubUrl"></code>
@@ -156,10 +151,15 @@
         <label class="check"><input type="checkbox" id="hubCompact"> <span data-i18n="s.compactMode">Kompakt-Modus</span></label>
         <span class="hint" id="compactHint"></span>
       </div>
-      <div class="int-title"><b data-i18n="s.connectClients">Clients verbinden</b></div>
-      <span class="hint" data-i18n="s.connectHint">Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vor jeder Änderung entsteht daneben eine Sicherung mit Zeitstempel (*.mcp-hub-…bak), die letzten fünf bleiben erhalten.</span>
-      <div class="int-list" id="integrations"></div>
-      <div class="int-title"><b data-i18n="s.manualSetup">Von Hand einrichten</b></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2 data-i18n="s.connectClients">Clients verbinden</h2>
+          <span class="hint" data-i18n="s.connectHint">Trägt den Hub in die Konfiguration des Clients ein, im Kompakt-Modus mit der Kompakt-URL. Vor jeder Änderung entsteht daneben eine Sicherung mit Zeitstempel (*.mcp-hub-…bak), die letzten fünf bleiben erhalten.</span></div>
+          <div class="int-list" id="integrations"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2 data-i18n="s.manualSetup">Von Hand einrichten</h2>
+          <span class="hint" data-i18n="s.manualHint">Für Clients, die oben fehlen, oder zum Eintragen auf einem anderen Weg.</span></div>
       <nav class="line-tabs snip-tabs" id="hubTabs">
         <button data-snip="code" class="active">Claude Code</button>
         <button data-snip="desktop">Claude Desktop</button>
@@ -184,6 +184,45 @@
         <div data-snip-panel="copilot" hidden>
           <div class="hubsnip-head"><span class="hint">~/.copilot/mcp-config.json → mcpServers</span><button class="chip" data-copy="hubCopilot" data-i18n="s.copy">kopieren</button></div>
           <pre id="hubCopilot"></pre>
+        </div>
+      </div>
+        </div>
+      </div>
+      <div class="settings-group" data-sec-panel="server" hidden>
+        <div class="card">
+          <h2 data-i18n="s.secServer">Server</h2>
+          <label class="f"><span data-i18n="s.configFile"><b>Konfigurationsdatei</b></span><input name="configPath" form="settingsForm"></label>
+          <label class="check"><input type="checkbox" name="passEnvironment" form="settingsForm"> <span data-i18n="s.passEnv">Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</span></label>
+          <span class="hint check-hint" data-i18n="s.passEnvHint">An: Lokale Server erben alle Umgebungsvariablen des Hubs, etwa PATH für npx und uvx oder Tokens aus der Shell. Aus: Sie bekommen nur Grundvariablen wie PATH und HOME und das, was im Eintrag unter env steht.</span>
+          <div><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button></div>
+        </div>
+      </div>
+      <div class="settings-group" data-sec-panel="updates" hidden>
+        <div class="card">
+          <h2 data-i18n="s.secUpdates">Updates</h2>
+          <label class="check"><input type="checkbox" name="checkUpdates" form="settingsForm"> <span data-i18n="s.checkUpdates">Auf GitHub nach neuen Versionen suchen (beim Öffnen der Oberfläche, höchstens alle 12 Stunden)</span></label>
+          <span class="hint" id="updateInfo"></span>
+          <div class="update-line"><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button><button type="button" class="btn" id="updateCheck" data-i18n="s.updateCheck">Jetzt prüfen</button></div>
+        </div>
+      </div>
+      <div class="settings-group" data-sec-panel="ui" hidden>
+        <div class="card">
+          <h2 data-i18n="s.secUi">Oberfläche</h2>
+          <label class="f"><span data-i18n="s.language"><b>Sprache</b></span>
+            <select name="language" form="settingsForm" aria-label="Sprache" data-i18n-aria="s.languageAria">
+              <option value="auto" data-i18n="s.languageAuto">Automatisch (Browser)</option>
+              <option value="de">Deutsch</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label class="f"><span data-i18n="s.theme"><b>Darstellung</b></span>
+            <select name="theme" form="settingsForm" aria-label="Darstellung" data-i18n-aria="s.themeAria">
+              <option value="auto" data-i18n="s.themeAuto">System</option>
+              <option value="light" data-i18n="s.themeLight">Hell</option>
+              <option value="dark" data-i18n="s.themeDark">Dunkel</option>
+            </select>
+          </label>
+          <div><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button></div>
         </div>
       </div>
     </div>
@@ -584,6 +623,7 @@ enhanceSelect($("#callClient"), { search: true });
 enhanceSelect($("#inspServer"), { search: true });
 enhanceSelect($("#editForm").transport);
 enhanceSelect($("#settingsForm").language);
+enhanceSelect($("#settingsForm").theme);
 
 function profileItems() {
   const names = Object.keys(state.profiles.profiles).sort((a, b) => a.localeCompare(b, LOCALE, { sensitivity: "base" }));
@@ -1265,12 +1305,25 @@ $("#settingsForm").onsubmit = async e => {
   for (const k of Object.keys(state.settings)) if (f[k]) body[k] = f[k].type === "checkbox" ? f[k].checked : f[k].value;
   try {
     state = await api("PUT", "/api/settings", body);
+    applyTheme(state.settings.theme);
     if (rememberLanguage(state.settings.language)) return;
     fillSettings(); render(); refreshUpdate();
     toast(t("settingsSaved"));
   } catch (err) { toast(err.message, true); }
 };
 
+
+function showSettingsSection(name) {
+  if (!$(`[data-sec-panel="${name}"]`)) name = "clients";
+  for (const b of $("#settingsNav").children) b.classList.toggle("active", b.dataset.sec === name);
+  for (const p of document.querySelectorAll("[data-sec-panel]")) p.hidden = p.dataset.secPanel !== name;
+  try { localStorage.setItem("settingsSection", name); } catch {}
+}
+$("#settingsNav").onclick = e => {
+  const b = e.target.closest("button");
+  if (b) showSettingsSection(b.dataset.sec);
+};
+try { showSettingsSection(localStorage.getItem("settingsSection") || "clients"); } catch { showSettingsSection("clients"); }
 
 let tab = "servers";
 function showTab(name) {
@@ -1849,6 +1902,12 @@ async function poll() {
   }
 }
 
+function applyTheme(setting = "auto") {
+  if (setting === "light" || setting === "dark") document.documentElement.dataset.theme = setting;
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem("theme", setting); } catch {}
+}
+
 function rememberLanguage(setting = "auto") {
   try { localStorage.setItem("language", setting); } catch {}
   if (resolveLanguage(setting) === LANG) return false;
@@ -1916,6 +1975,7 @@ $("#updateApply").onclick = async () => {
   fail(t("updateTimeout"));
 };
 
+
 (async function boot() {
   try {
     [state, hubStatus, usage] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/hub"), api("GET", "/api/usage")]);
@@ -1923,6 +1983,7 @@ $("#updateApply").onclick = async () => {
     renderHubStatus(false);
     return setTimeout(boot, 2000);
   }
+  applyTheme(state.settings.theme);
   if (rememberLanguage(state.settings.language)) return;
   fillSettings(); render();
   setInterval(poll, 2000);

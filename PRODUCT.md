@@ -62,4 +62,4 @@ One local endpoint for all clients instead of per-client configuration, with no 
 
 ## Accessibility & Inclusion
 
-Keyboard operable (custom listboxes and menus with arrow keys, Enter, Esc), visible focus rings, roles and labels for screen readers, light and dark color scheme following the system setting, interface in German and English.
+Keyboard operable (custom listboxes and menus with arrow keys, Enter, Esc), visible focus rings, roles and labels for screen readers, light and dark color scheme following the system setting or pinned in the settings, interface in German and English.

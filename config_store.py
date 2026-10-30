@@ -19,6 +19,7 @@ DEFAULT_SETTINGS = {
     "configPath": str(STATE_DIR / "servers.json"),
     "passEnvironment": True,
     "language": "auto",
+    "theme": "auto",
     "checkUpdates": True,
 }
 def read_json(path, default):
