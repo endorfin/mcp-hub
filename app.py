@@ -446,7 +446,7 @@ def main():
     sync_hub_in_background()
     hub.supervise_in_background()
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
-    print(f"MCP Hub running at http://127.0.0.1:{port}", flush=True)
+    print(f"MCP Hub v{VERSION} running at http://127.0.0.1:{port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
