@@ -169,6 +169,13 @@ Codex:
 codex mcp add mcp-hub --url http://127.0.0.1:4747/mcp
 ```
 
+or in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.mcp-hub]
+url = "http://127.0.0.1:4747/mcp"
+```
+
 Copilot / VS Code (`~/.copilot/mcp-config.json`):
 
 ```json

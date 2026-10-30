@@ -249,12 +249,13 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 @media (max-width: 760px) { .call summary { grid-template-columns: 70px 1fr auto; } .call .who, .call .ms { display: none; } }
 .hubcard { margin-top: 24px; }
 .hubhead { display: flex; gap: 14px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
-.hubsnips { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.snip-tabs { width: fit-content; max-width: 100%; overflow-x: auto; margin: 14px 0 12px; }
+.snip-tabs button { white-space: nowrap; }
+.hubsnips pre + .hubsnip-head { margin-top: 14px; }
 .hubsnip-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; font-size: 13px; }
 .hubsnip-head .chip { margin-left: auto; }
 .hubsnips pre { margin: 0; background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all; }
 .chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); } .chip.wait, .chip.warn { color: var(--warn); }
-@media (max-width: 760px) { .hubsnips { grid-template-columns: 1fr; } }
 .insp-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .insp-bar .lb { min-width: 220px; }
 .insp-info { color: var(--muted); font-size: 13px; }
@@ -357,16 +358,30 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         </div>
         <code id="hubUrl"></code>
       </div>
+      <nav class="snip-tabs" id="hubTabs">
+        <button data-snip="code" class="active">Claude Code</button>
+        <button data-snip="desktop">Claude Desktop</button>
+        <button data-snip="codex">Codex</button>
+        <button data-snip="copilot">Copilot / VS Code</button>
+      </nav>
       <div class="hubsnips">
-        <div>
-          <div class="hubsnip-head"><b>Claude Code</b><button class="chip" data-copy="hubCode" data-i18n="s.copy">kopieren</button></div>
+        <div data-snip-panel="code">
+          <div class="hubsnip-head"><span class="hint" data-i18n="s.terminal">im Terminal</span><button class="chip" data-copy="hubCode" data-i18n="s.copy">kopieren</button></div>
           <pre id="hubCode"></pre>
-          <div class="hubsnip-head" style="margin-top:14px"><b>Codex</b><button class="chip" data-copy="hubCodex" data-i18n="s.copy">kopieren</button></div>
-          <pre id="hubCodex"></pre>
         </div>
-        <div>
-          <div class="hubsnip-head"><b>Claude Desktop</b> <span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop" data-i18n="s.copy">kopieren</button></div>
+        <div data-snip-panel="desktop" hidden>
+          <div class="hubsnip-head"><span class="hint">claude_desktop_config.json → mcpServers</span><button class="chip" data-copy="hubDesktop" data-i18n="s.copy">kopieren</button></div>
           <pre id="hubDesktop"></pre>
+        </div>
+        <div data-snip-panel="codex" hidden>
+          <div class="hubsnip-head"><span class="hint" data-i18n="s.terminal">im Terminal</span><button class="chip" data-copy="hubCodex" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCodex"></pre>
+          <div class="hubsnip-head"><span class="hint" data-i18n="s.orCodexConfig">oder in ~/.codex/config.toml</span><button class="chip" data-copy="hubCodexToml" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCodexToml"></pre>
+        </div>
+        <div data-snip-panel="copilot" hidden>
+          <div class="hubsnip-head"><span class="hint">~/.copilot/mcp-config.json → mcpServers</span><button class="chip" data-copy="hubCopilot" data-i18n="s.copy">kopieren</button></div>
+          <pre id="hubCopilot"></pre>
         </div>
       </div>
     </div>
@@ -584,6 +599,8 @@ const I18N = {
   "s.hubEndpoint": ["Hub-Endpunkt", "Hub endpoint"],
   "s.hubHint": ["Alle aktivierten Server gebündelt hinter einer Adresse. Tool-Namen tragen den Server als Präfix (<code>server__tool</code>).", "All enabled servers bundled behind one address. Tool names carry the server as a prefix (<code>server__tool</code>)."],
   "s.copy": ["kopieren", "copy"],
+  "s.terminal": ["im Terminal", "in the terminal"],
+  "s.orCodexConfig": ["oder in ~/.codex/config.toml", "or in ~/.codex/config.toml"],
   "s.errorsOnly": ["Nur Fehler", "Errors only"],
   "s.statistics": ["Statistik", "Statistics"],
   "s.callsPerDay": ["Aufrufe pro Tag", "Calls per day"],
@@ -1230,6 +1247,8 @@ function render() {
   $("#hubUrl").textContent = hubUrl;
   $("#hubCode").textContent = `claude mcp add --scope user --transport http mcp-hub ${hubUrl}`;
   $("#hubCodex").textContent = `codex mcp add mcp-hub --url ${hubUrl}`;
+  $("#hubCodexToml").textContent = `[mcp_servers.mcp-hub]\nurl = "${hubUrl}"`;
+  $("#hubCopilot").textContent = JSON.stringify({ mcpServers: { "mcp-hub": { type: "http", url: hubUrl, tools: ["*"] } } }, null, 2);
   $("#hubDesktop").textContent = JSON.stringify({ mcpServers: { "mcp-hub": { command: state.bridge.python, args: [state.bridge.script, hubUrl] } } }, null, 2);
   renderList();
   fillInspServers();
@@ -2167,6 +2186,18 @@ function renderCalls() {
   }));
 }
 for (const id of ["#callServer", "#callClient", "#callErrors"]) $(id).onchange = renderCalls;
+
+function showSnip(name) {
+  if (!$(`[data-snip-panel="${name}"]`)) name = "code";
+  for (const b of $("#hubTabs").children) b.classList.toggle("active", b.dataset.snip === name);
+  for (const p of document.querySelectorAll("[data-snip-panel]")) p.hidden = p.dataset.snipPanel !== name;
+  try { localStorage.setItem("hubSnip", name); } catch {}
+}
+$("#hubTabs").onclick = e => {
+  const b = e.target.closest("button");
+  if (b) showSnip(b.dataset.snip);
+};
+try { showSnip(localStorage.getItem("hubSnip") || "code"); } catch { showSnip("code"); }
 
 for (const b of document.querySelectorAll("[data-copy]")) {
   b.onclick = () => navigator.clipboard.writeText($("#" + b.dataset.copy).textContent).then(() => toast(t("copied")));
