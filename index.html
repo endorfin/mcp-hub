@@ -281,7 +281,6 @@
               </label>
             </div>
           </fieldset>
-          <div><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button></div>
         </div>
       </div>
     </div>
@@ -2054,6 +2053,22 @@ function applyTheme(setting = "auto", palette = "default") {
   if (palette === "default") delete root.dataset.palette;
   else root.dataset.palette = palette;
   try { localStorage.setItem("theme", setting); localStorage.setItem("palette", palette); } catch {}
+}
+
+for (const key of ["language", "theme", "palette"]) {
+  for (const input of document.querySelectorAll(`[form="settingsForm"][name="${key}"]`)) {
+    input.addEventListener("change", () => saveUiSetting(key, input.value));
+  }
+}
+async function saveUiSetting(key, value) {
+  try {
+    state = await api("PUT", "/api/settings", { [key]: value });
+    applyTheme(state.settings.theme, state.settings.palette);
+    rememberLanguage(state.settings.language);
+  } catch (err) {
+    toast(err.message, true);
+    fillSettings();
+  }
 }
 
 function rememberLanguage(setting = "auto") {
