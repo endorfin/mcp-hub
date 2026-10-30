@@ -119,8 +119,7 @@ prun restart mcp-hub
 - **Server:** Liste mit An/Aus-Schalter, Hub-Status je Server (Tools, Fehler), Nutzung und Sortierung nach zuletzt verwendet, Name oder Datei. Über das Menü ⋯ lassen sich Server inspizieren, Tools für den Hub an- und abwählen, bearbeiten, duplizieren und löschen. Import nimmt `mcpServers`-JSON aus anderen Konfigurationen an.
 - **Protokoll:** Jeder Aufruf über den Hub mit Zeit, Client, Server, Tool, Argumenten, Ergebnisvorschau, Dauer und Fehlerstatus. Filterbar nach Server, Client und Fehlern.
 - **Inspector:** Verbindet sich direkt mit einem Server (unabhängig vom Hub) und listet Tools, Resources, Templates und Prompts. Alles lässt sich mit Formular- oder JSON-Eingabe aufrufen, stderr und Notifications erscheinen darunter.
-- **JSON:** Die Serverdatei direkt bearbeiten.
-- **Einstellungen:** Pfad zur Serverdatei, `passEnvironment`.
+- **Einstellungen:** Pfad zur Serverdatei, `passEnvironment` und darunter die komplette `mcpServers`-Definition als JSON zum direkten Bearbeiten.
 
 ### Profile
 

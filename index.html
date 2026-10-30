@@ -107,6 +107,8 @@ label.f > span b { color: var(--ink); font-weight: 600; }
 .lock { display: grid; place-items: center; padding: 4px 8px; }
 .lock[hidden] { display: grid !important; visibility: hidden; }
 .envrow input { font-family: var(--mono); font-size: 12.5px; }
+.settings { display: grid; gap: 16px; }
+.card h2 { font-size: 14px; font-weight: 600; margin: 0; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 14px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .check { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 13.5px; }
@@ -230,7 +232,6 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       <button data-tab="servers" class="active">Server</button>
       <button data-tab="calls">Protokoll</button>
       <button data-tab="inspector">Inspector</button>
-      <button data-tab="json">JSON</button>
       <button data-tab="settings">Einstellungen</button>
     </nav>
   </div>
@@ -302,22 +303,23 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
     </details>
   </section>
 
-  <section data-panel="json" hidden>
-    <div class="toolbar">
-      <span class="hint" style="flex:1">Komplette <code>mcpServers</code>-Definition bearbeiten.</span>
-      <button class="btn" id="jsonReset">Verwerfen</button>
-      <button class="btn primary" id="jsonSave">Speichern</button>
-    </div>
-    <textarea id="jsonText" rows="28" spellcheck="false"></textarea>
-    <p class="error" id="jsonError"></p>
-  </section>
-
-  <section data-panel="settings" hidden>
+  <section data-panel="settings" hidden class="settings">
     <form class="card" id="settingsForm">
+      <h2>Allgemein</h2>
       <label class="f"><span><b>Konfigurationsdatei</b></span><input name="configPath"></label>
       <label class="check"><input type="checkbox" name="passEnvironment"> Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</label>
       <div><button class="btn primary">Speichern</button></div>
     </form>
+    <div class="card">
+      <div class="toolbar" style="margin:0">
+        <h2 style="flex:1">Server als JSON</h2>
+        <button class="btn" id="jsonReset">Verwerfen</button>
+        <button class="btn primary" id="jsonSave">Speichern</button>
+      </div>
+      <span class="hint">Komplette <code>mcpServers</code>-Definition bearbeiten, z. B. zum Kopieren in andere Clients oder für viele Änderungen auf einmal.</span>
+      <textarea id="jsonText" rows="24" spellcheck="false"></textarea>
+      <p class="error" id="jsonError"></p>
+    </div>
   </section>
 
 </main>
