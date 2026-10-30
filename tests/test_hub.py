@@ -131,7 +131,7 @@ class HubTest(unittest.TestCase):
         try:
             self.wait_for(lambda: "alpha__fail" not in self.tool_names())
             body = self.rpc("tools/call", {"name": "alpha__fail"})
-            self.assertIn("deaktiviert", body["error"]["message"])
+            self.assertIn("disabled", body["error"]["message"])
             self.assertEqual(self.get("/api/hub")["alpha"]["tools"], 2)
         finally:
             del servers["alpha"]["disabledTools"]
@@ -228,7 +228,7 @@ class HubTest(unittest.TestCase):
             self.assertTrue(self.get("/api/calls?limit=1")[0]["client"].endswith("· schmal"))
             self.assertIn("beta__echo", self.tool_names())
             body = self.rpc("initialize", {"protocolVersion": "2025-06-18"}, path="/p/gibts-nicht/mcp")
-            self.assertIn("Unbekanntes Profil", body["error"]["message"])
+            self.assertIn("Unknown profile", body["error"]["message"])
         finally:
             self.request("POST", "/api/profiles", {"action": "delete", "name": "schmal"})
 
@@ -373,7 +373,7 @@ class OAuthTest(unittest.TestCase):
         start = fetch(self.base + "/api/oauth/start", json.dumps({"name": self.NAME}).encode())
         self.assertIn("code_challenge_method=S256", start["url"])
         with urllib.request.urlopen(start["url"]) as response:
-            self.assertIn("Angemeldet", response.read().decode())
+            self.assertIn("Signed in", response.read().decode())
         HubTest.wait_for(lambda: self.state().get("state") == "running")
         self.assertTrue(self.state()["oauth"]["signedIn"])
         first = self.call()["result"]["content"][0]["text"]
@@ -402,7 +402,7 @@ class FixedClientOAuthTest(OAuthTest):
         with self.assertRaises(urllib.error.HTTPError) as error:
             urllib.request.urlopen(req)
         with error.exception as e:
-            self.assertIn("Client-ID", json.loads(e.read())["error"])
+            self.assertIn("client ID", json.loads(e.read())["error"])
 
 
 class MigrationTest(unittest.TestCase):

@@ -86,15 +86,15 @@ def discover(server_url, challenge=None, settings=None):
     if settings.get("tokenUrl"):
         meta["token_endpoint"] = settings["tokenUrl"]
     if "S256" not in meta.get("code_challenge_methods_supported", ["S256"]):
-        raise OAuthError("Der Anmeldeserver unterstützt kein PKCE (S256)")
+        raise OAuthError("The authorization server does not support PKCE (S256)")
     scope = settings.get("scopes") or _challenge_param(challenge, "scope") or " ".join((resource or {}).get("scopes_supported") or [])
     return {"resource": (resource or {}).get("resource") or server_url, "meta": meta, "scope": scope}
 
 
 def _register(meta, redirect_uri):
     if not meta.get("registration_endpoint"):
-        raise OAuthError("Der Anbieter bietet keine automatische Client-Registrierung an. "
-                         "Eine OAuth-App beim Anbieter anlegen und Client-ID im Server-Eintrag unter „OAuth“ hinterlegen.")
+        raise OAuthError("The provider does not offer automatic client registration. "
+                         "Create an OAuth app with the provider and enter its client ID under “OAuth” in the server entry.")
     try:
         return _request(meta["registration_endpoint"], {
         "client_name": CLIENT_NAME,
@@ -104,8 +104,8 @@ def _register(meta, redirect_uri):
         "token_endpoint_auth_method": "none",
         }, {"Content-Type": "application/json"})
     except OAuthError as e:
-        raise OAuthError(f"Automatische Client-Registrierung fehlgeschlagen ({e}). "
-                         "Eine OAuth-App beim Anbieter anlegen und Client-ID im Server-Eintrag unter „OAuth“ hinterlegen.")
+        raise OAuthError(f"Automatic client registration failed ({e}). "
+                         "Create an OAuth app with the provider and enter its client ID under “OAuth” in the server entry.")
 
 
 def start(server, server_url, redirect_uri, challenge=None, settings=None):
@@ -154,7 +154,7 @@ def _token_request(token_endpoint, client, data):
             headers["Authorization"] = "Basic " + base64.b64encode(pair).decode()
     token = _request(token_endpoint, data, headers)
     if not token.get("access_token"):
-        raise OAuthError("Keine access_token in der Antwort des Anmeldeservers")
+        raise OAuthError("No access_token in the authorization server response")
     return token
 
 
@@ -176,7 +176,7 @@ def finish(state, code):
     with _lock:
         flow = _pending.pop(state, None)
     if not flow:
-        raise OAuthError("Unbekannte oder abgelaufene Anmeldung, bitte neu starten")
+        raise OAuthError("Unknown or expired sign-in, please start again")
     token = _token_request(flow["token_endpoint"], flow["client"], {
         "grant_type": "authorization_code",
         "code": code,

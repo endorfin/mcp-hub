@@ -71,7 +71,7 @@ def reinitialize(stale_generation):
     with session_lock:
         if session["generation"] != stale_generation:
             return
-        log("Sitzung abgelaufen, melde neu an")
+        log("Session expired, signing in again")
         initialize()
         threading.Thread(target=listen, args=(session["generation"],), daemon=True).start()
     for kind in ("tools", "prompts", "resources"):
@@ -97,15 +97,15 @@ def forward(message):
             try:
                 reinitialize(generation)
             except (OSError, ValueError) as e:
-                log(f"Neuanmeldung fehlgeschlagen: {e}")
+                log(f"Re-initialization failed: {e}")
                 break
         except (OSError, ValueError) as e:
             if "id" in message:
                 write({"jsonrpc": "2.0", "id": message["id"],
-                       "error": {"code": -32000, "message": f"MCP Hub nicht erreichbar ({URL}): {e}"}})
+                       "error": {"code": -32000, "message": f"MCP Hub not reachable ({URL}): {e}"}})
             return
     if "id" in message:
-        write({"jsonrpc": "2.0", "id": message["id"], "error": {"code": -32000, "message": "Sitzung beim MCP Hub abgelaufen"}})
+        write({"jsonrpc": "2.0", "id": message["id"], "error": {"code": -32000, "message": "Session with the MCP Hub expired"}})
 
 
 def listen(generation):
@@ -128,7 +128,7 @@ def listen(generation):
                         reinitialize(generation)
                         return
                     except (OSError, ValueError) as error:
-                        log(f"Neuanmeldung fehlgeschlagen: {error}")
+                        log(f"Re-initialization failed: {error}")
                 elif e.code == 405:
                     return
         except (OSError, ValueError):
@@ -144,7 +144,7 @@ def main():
         try:
             message = json.loads(line)
         except json.JSONDecodeError:
-            log(f"Ungültiges JSON von stdin: {line[:200]}")
+            log(f"Invalid JSON on stdin: {line[:200]}")
             continue
         if message.get("method") == "initialize":
             session["init"] = message.get("params")

@@ -68,7 +68,7 @@ class Upstream:
             self.error = None
         except AuthRequired as e:
             self.challenge = e.challenge
-            self.error = "Anmeldung nötig"
+            self.error = "Sign-in required"
             self.state = "auth"
             self.close()
         except (RpcError, OSError) as e:
@@ -104,17 +104,17 @@ class Upstream:
 
     def request(self, method, params):
         if not self.alive():
-            raise RpcError(f"Server „{self.name}“ läuft nicht")
+            raise RpcError(f"Server “{self.name}” is not running")
         try:
             return self.session.request(method, params, timeout=300)
         except AuthRequired:
             self.close()
             if not oauth.access_token(self.name, force_refresh=True):
-                self.state, self.error = "auth", "Anmeldung nötig"
+                self.state, self.error = "auth", "Sign-in required"
                 raise
             self.start(self.pass_environment)
             if self.state != "running":
-                raise RpcError(f"Server „{self.name}“: {self.error}")
+                raise RpcError(f"Server “{self.name}”: {self.error}")
             return self.session.request(method, params, timeout=300)
 
     def close(self):
@@ -252,7 +252,7 @@ class Clients:
         session = self.sessions.get(session_id or "")
         if session:
             return session["name"]
-        return f"{user_agent.split('/')[0]} (ohne Sitzung)" if user_agent else "unbekannt"
+        return f"{user_agent.split('/')[0]} (no session)" if user_agent else "unknown"
 
 
 def preview(value, limit):
@@ -393,7 +393,7 @@ class Hub:
             return {u: set(u.entry.get("disabledTools") or []) for u in running}
         saved = self.load_profiles()["profiles"].get(profile)
         if saved is None:
-            raise JsonRpcError(-32602, f"Unbekanntes Profil: {profile}")
+            raise JsonRpcError(-32602, f"Unknown profile: {profile}")
         view = {}
         for upstream in running:
             wanted = saved["servers"].get(upstream.name)
@@ -407,20 +407,20 @@ class Hub:
         for upstream in sorted(running, key=lambda u: -len(u.prefix)):
             if prefixed.startswith(upstream.prefix + SEPARATOR):
                 return upstream, prefixed[len(upstream.prefix) + len(SEPARATOR):]
-        raise JsonRpcError(-32602, f"Unbekannt: {prefixed}")
+        raise JsonRpcError(-32602, f"Unknown: {prefixed}")
 
     def handle(self, method, params, client="unbekannt", profile=None):
         params = params or {}
         if method == "initialize":
             if profile and profile not in self.load_profiles()["profiles"]:
-                raise JsonRpcError(-32602, f"Unbekanntes Profil: {profile}")
+                raise JsonRpcError(-32602, f"Unknown profile: {profile}")
             requested = params.get("protocolVersion")
             return {
                 "protocolVersion": requested if requested in SUPPORTED_VERSIONS else PROTOCOL_VERSION,
                 "capabilities": {"tools": {"listChanged": True}, "resources": {"listChanged": True},
                                  "prompts": {"listChanged": True}, "logging": {}},
                 "serverInfo": {"name": "mcp-hub", "version": "1.0"},
-                "instructions": "Bündelt mehrere MCP-Server. Tool- und Prompt-Namen tragen den Servernamen als Präfix (server__tool).",
+                "instructions": "Bundles several MCP servers. Tool and prompt names carry the server name as a prefix (server__tool).",
             }
         if method in ("ping", "logging/setLevel"):
             return {}
@@ -438,7 +438,7 @@ class Hub:
         if method == "tools/call":
             upstream, name = self._route(running, params.get("name", ""))
             if name in view[upstream]:
-                raise JsonRpcError(-32602, f"Tool im Hub deaktiviert: {params.get('name')}")
+                raise JsonRpcError(-32602, f"Tool disabled in the hub: {params.get('name')}")
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)
         if method == "prompts/get":
             upstream, name = self._route(running, params.get("name", ""))
@@ -452,8 +452,8 @@ class Hub:
                 for template in upstream.catalog["resourceTemplates"]:
                     if uri.startswith(template["uriTemplate"].split("{")[0]):
                         return self._forward(upstream, "resources/read", params, uri, client)
-            raise JsonRpcError(-32002, f"Resource nicht gefunden: {uri}")
-        raise JsonRpcError(-32601, f"Methode nicht unterstützt: {method}")
+            raise JsonRpcError(-32002, f"Resource not found: {uri}")
+        raise JsonRpcError(-32601, f"Method not supported: {method}")
 
     def _forward(self, upstream, method, params, target, client):
         self.usage.record(upstream.name)

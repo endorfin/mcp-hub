@@ -19,12 +19,12 @@ def _run(args, stdin=None):
     try:
         done = subprocess.run(args, input=stdin, capture_output=True, text=True, timeout=60)
     except FileNotFoundError:
-        raise SecretError(f"{args[0]} nicht gefunden")
+        raise SecretError(f"{args[0]} not found")
     except subprocess.TimeoutExpired:
-        raise SecretError(f"{args[0]} antwortet nicht")
+        raise SecretError(f"{args[0]} is not responding")
     if done.returncode:
         message = (done.stderr or done.stdout).strip()
-        last = message.splitlines()[-1] if message else f"{args[0]} fehlgeschlagen"
+        last = message.splitlines()[-1] if message else f"{args[0]} failed"
         raise SecretError(re.sub(r"^\[ERROR\] \S+ \S+ ", "", last))
     return done.stdout
 
@@ -36,7 +36,7 @@ def _lookup(ref):
     try:
         return _run(["security", "find-generic-password", "-a", ACCOUNT, "-s", SERVICE_PREFIX + name, "-w"]).rstrip("\n")
     except SecretError:
-        raise SecretError(f"Kein Schlüsselbund-Eintrag „{name}“")
+        raise SecretError(f"No keychain entry “{name}”")
 
 
 def resolve_value(text):
@@ -67,17 +67,17 @@ def resolve_entry(entry):
 
 def store_keychain(name, value):
     if not re.fullmatch(r"[A-Za-z0-9._/-]+", name):
-        raise SecretError("Name darf nur Buchstaben, Ziffern, . _ / - enthalten")
+        raise SecretError("Name may only contain letters, digits, . _ / -")
     if not value.isascii() or not value.isprintable():
-        raise SecretError("Nur druckbare ASCII-Zeichen – security liest andere Werte als Hex aus")
-    # Wert über stdin statt als Argument, sonst steht er in der Prozessliste.
+        raise SecretError("Printable ASCII only – security returns other values as hex")
+    # Pass the value via stdin, not as an argument, or it shows up in the process list.
     quoted = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
     _run(["security", "-i"], f"add-generic-password -U -a {ACCOUNT} -s {SERVICE_PREFIX}{name} -w {quoted}\n")
     with _lock:
         _cache.pop(f"keychain:{name}", None)
         _missing.discard(name)
     if _lookup(f"keychain:{name}") != value:
-        raise SecretError("Wert im Schlüsselbund weicht ab")
+        raise SecretError("Value in the keychain does not match")
     return "${keychain:" + name + "}"
 
 

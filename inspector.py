@@ -24,7 +24,7 @@ class RpcError(Exception):
 
 class AuthRequired(RpcError):
     def __init__(self, challenge=""):
-        super().__init__("Anmeldung nötig (HTTP 401)")
+        super().__init__("Sign-in required (HTTP 401)")
         self.challenge = challenge
 
 
@@ -79,11 +79,11 @@ class BaseSession:
             reply = {"jsonrpc": "2.0", "id": message["id"], "result": {"roots": []}}
         else:
             reply = {"jsonrpc": "2.0", "id": message["id"],
-                     "error": {"code": -32601, "message": "Vom Hub nicht unterstützt"}}
+                     "error": {"code": -32601, "message": "Not supported by the hub"}}
         try:
             self._send(reply)
         except (RpcError, OSError) as e:
-            self._record("error", f"Antwort an Server fehlgeschlagen: {e}")
+            self._record("error", f"Reply to server failed: {e}")
 
     def request(self, method, params=None, timeout=60):
         with self.lock:
@@ -101,14 +101,14 @@ class BaseSession:
             raise
         except OSError as e:
             self.pending.pop(request_id, None)
-            raise RpcError(f"Verbindung fehlgeschlagen: {e}")
+            raise RpcError(f"Connection failed: {e}")
         finished = slot["event"].wait(timeout)
         self.pending.pop(request_id, None)
         if not finished:
-            raise RpcError(f"Keine Antwort auf {method} nach {timeout} s")
+            raise RpcError(f"No response to {method} after {timeout} s")
         response = slot["response"]
         if response is None:
-            raise RpcError("Verbindung zum Server wurde beendet")
+            raise RpcError("Connection to the server was closed")
         if "error" in response:
             error = response["error"]
             raise RpcError(f"{error.get('message')} (Code {error.get('code')})")
@@ -162,7 +162,7 @@ class StdioSession(BaseSession):
             self.proc.stdin.write((json.dumps(message) + "\n").encode())
             self.proc.stdin.flush()
         except (BrokenPipeError, OSError):
-            raise RpcError("Server-Prozess läuft nicht mehr")
+            raise RpcError("Server process is no longer running")
 
     def _read_stderr(self):
         for line in self.proc.stderr:
@@ -176,7 +176,7 @@ class StdioSession(BaseSession):
                 self._record("stdout", line.decode(errors="replace").rstrip())
                 continue
             self._dispatch(message)
-        self._record("exit", f"Prozess beendet (Code {self.proc.wait()})")
+        self._record("exit", f"Process exited (code {self.proc.wait()})")
         self._release_pending()
 
     def alive(self):
@@ -244,7 +244,7 @@ class HttpSession(BaseSession):
 
     def _send(self, message):
         if self.closed:
-            raise RpcError("Verbindung ist geschlossen")
+            raise RpcError("Connection is closed")
         request = urllib.request.Request(self.url, json.dumps(message).encode(), self._headers(), method="POST")
         try:
             response = urllib.request.urlopen(request, timeout=300)
@@ -274,7 +274,7 @@ class HttpSession(BaseSession):
                 except json.JSONDecodeError:
                     self._record("stdout", data[:500])
         except OSError as e:
-            self._record("error", f"Stream abgebrochen: {e}")
+            self._record("error", f"Stream aborted: {e}")
         finally:
             response.close()
 
@@ -331,21 +331,21 @@ class SseSession(BaseSession):
             self._record("error", str(http_error(e)))
         except OSError as e:
             if not self.closed:
-                self._record("error", f"SSE-Verbindung abgebrochen: {e}")
+                self._record("error", f"SSE connection aborted: {e}")
         finally:
             self.closed = True
             self.endpoint_ready.set()
             self._release_pending()
-            self._record("exit", "SSE-Verbindung beendet")
+            self._record("exit", "SSE connection closed")
 
     def _send(self, message):
         if not self.endpoint_ready.wait(30) or not self.endpoint:
             if self.auth_challenge is not None:
                 raise AuthRequired(self.auth_challenge)
             errors = [x["data"] for x in self.log if x["kind"] == "error"]
-            raise RpcError(errors[-1] if errors else "Kein Endpunkt vom SSE-Server erhalten")
+            raise RpcError(errors[-1] if errors else "No endpoint received from the SSE server")
         if self.closed:
-            raise RpcError("SSE-Verbindung ist geschlossen")
+            raise RpcError("SSE connection is closed")
         request = urllib.request.Request(self.endpoint, json.dumps(message).encode(), {
             "Content-Type": "application/json", "User-Agent": USER_AGENT, **self.headers}, method="POST")
         try:

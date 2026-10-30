@@ -80,24 +80,24 @@ def load_config():
 
 def validate_servers(servers):
     if not isinstance(servers, dict):
-        return "mcpServers muss ein Objekt sein"
+        return "mcpServers must be an object"
     for name, entry in servers.items():
         if not name or "/" in name or name.strip() != name:
-            return f"Ungültiger Name: {name!r}"
+            return f"Invalid name: {name!r}"
         if not isinstance(entry, dict):
-            return f"{name}: Eintrag muss ein Objekt sein"
+            return f"{name}: entry must be an object"
         if not entry.get("command") and not entry.get("url"):
-            return f"{name}: command oder url fehlt"
+            return f"{name}: command or url is missing"
         if not isinstance(entry.get("headers", {}), dict):
-            return f"{name}: headers muss ein Objekt sein"
+            return f"{name}: headers must be an object"
         if not isinstance(entry.get("args", []), list):
-            return f"{name}: args muss eine Liste sein"
+            return f"{name}: args must be a list"
         if not isinstance(entry.get("oauth", {}), dict):
-            return f"{name}: oauth muss ein Objekt sein"
+            return f"{name}: oauth must be an object"
         if not isinstance(entry.get("disabledTools", []), list):
-            return f"{name}: disabledTools muss eine Liste sein"
+            return f"{name}: disabledTools must be a list"
         if not isinstance(entry.get("env", {}), dict):
-            return f"{name}: env muss ein Objekt sein"
+            return f"{name}: env must be an object"
     return None
 
 
@@ -123,13 +123,13 @@ def update_profiles(action, name, new_name=None):
         sync_hub_in_background()
         data["active"] = None
     elif not name or not name.strip() or "/" in name:
-        return "Profilname fehlt oder enthält „/“"
+        return "Profile name is missing or contains “/”"
     elif action == "save":
         profiles[name] = {"servers": profile_snapshot(load_config()["mcpServers"])}
         data["active"] = name
     elif action == "apply":
         if name not in profiles:
-            return f"Unbekanntes Profil: {name}"
+            return f"Unknown profile: {name}"
         config = load_config()
         for server, wanted in profiles[name]["servers"].items():
             entry = config["mcpServers"].get(server)
@@ -146,11 +146,11 @@ def update_profiles(action, name, new_name=None):
     elif action == "rename":
         new_name = (new_name or "").strip()
         if name not in profiles:
-            return f"Unbekanntes Profil: {name}"
+            return f"Unknown profile: {name}"
         if not new_name or "/" in new_name:
-            return "Ungültiger neuer Name"
+            return "Invalid new name"
         if new_name != name and new_name in profiles:
-            return f"Profil „{new_name}“ gibt es schon"
+            return f"Profile “{new_name}” already exists"
         profiles[new_name] = profiles.pop(name)
         if data["active"] == name:
             data["active"] = new_name
@@ -159,7 +159,7 @@ def update_profiles(action, name, new_name=None):
         if data["active"] == name:
             data["active"] = None
     else:
-        return f"Unbekannte Aktion: {action}"
+        return f"Unknown action: {action}"
     write_json(PROFILES_FILE, data)
     return None
 
@@ -218,7 +218,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/hub/tools"):
             tools = hub.tools(parse_qs(urlparse(self.path).query).get("name", [""])[0])
             if tools is None:
-                return self.send({"error": "Server läuft nicht im Hub"}, HTTPStatus.NOT_FOUND)
+                return self.send({"error": "Server is not running in the hub"}, HTTPStatus.NOT_FOUND)
             return self.send(tools)
         if self.path.startswith("/api/stats"):
             days = int(parse_qs(urlparse(self.path).query).get("days", ["14"])[0])
@@ -234,9 +234,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             if not local_origin(self.headers.get("Origin")):
-                return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
+                return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
             if not hub.clients.valid(self.headers.get("Mcp-Session-Id")):
-                return self.send({"error": "Unbekannte Sitzung"}, HTTPStatus.NOT_FOUND)
+                return self.send({"error": "Unknown session"}, HTTPStatus.NOT_FOUND)
             return self.event_stream(unquote(match.group(1)) if match.group(1) else None)
         url = urlparse(self.path)
         if url.path == "/oauth/callback":
@@ -248,11 +248,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         if not local_origin(self.headers.get("Origin")):
-            return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
+            return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
         try:
             data = self.body()
         except json.JSONDecodeError as e:
-            return self.send({"error": f"Ungültiges JSON: {e}"}, HTTPStatus.BAD_REQUEST)
+            return self.send({"error": f"Invalid JSON: {e}"}, HTTPStatus.BAD_REQUEST)
         if self.path == "/api/servers":
             servers = data.get("mcpServers")
             if error := validate_servers(servers):
@@ -271,7 +271,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if not local_origin(self.headers.get("Origin")):
-            return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
+            return self.send({"error": "Origin not allowed"}, HTTPStatus.FORBIDDEN)
         if match := MCP_PATH.match(self.path):
             return self.mcp(unquote(match.group(1)) if match.group(1) else None)
         if self.path == "/api/profiles":
@@ -283,7 +283,7 @@ class Handler(BaseHTTPRequestHandler):
             name = self.body().get("name", "")
             entry = load_config()["mcpServers"].get(name)
             if not entry or not entry.get("url"):
-                return self.send({"error": f"Kein entfernter Server: {name}"}, HTTPStatus.NOT_FOUND)
+                return self.send({"error": f"Not a remote server: {name}"}, HTTPStatus.NOT_FOUND)
             if self.path.endswith("logout"):
                 oauth.logout(name)
                 hub.reconnect(name)
@@ -316,12 +316,12 @@ class Handler(BaseHTTPRequestHandler):
                 hub.reconnect(server)
             except (oauth.OAuthError, secrets_store.SecretError) as e:
                 error = str(e)
-        title = "Anmeldung fehlgeschlagen" if error else "Angemeldet"
-        text = error or f"„{server}“ ist verbunden."
+        title = "Sign-in failed" if error else "Signed in"
+        text = error or f"“{server}” is connected."
         message = json.dumps({"type": "mcp-hub-oauth", "server": server, "error": error or None}).replace("<", "\\u003c")
-        page = f"""<!doctype html><html lang="de"><meta charset="utf-8"><title>{title} · MCP Hub</title>
+        page = f"""<!doctype html><html lang="en"><meta charset="utf-8"><title>{title} · MCP Hub</title>
 <style>:root{{--bg:#f6f6f4;--ink:#1c1c1a;--muted:#6b6b66;--tone:{"#c0362c" if error else "#1f8a4c"}}}@media (prefers-color-scheme:dark){{:root{{--bg:#141413;--ink:#ecebe6;--muted:#9a998f;--tone:{"#ff7366" if error else "#4cc27f"}}}}}body{{margin:0;min-height:100vh;display:grid;place-items:center;font:14px/1.45 -apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink)}}main{{max-width:420px;padding:24px;text-align:center;display:grid;gap:14px}}h1{{font-size:16px;margin:0;color:var(--tone)}}p{{margin:0;color:var(--muted)}}a{{color:var(--ink);text-underline-offset:3px}}</style>
-<main><h1>{title}</h1><p>{html.escape(text)}</p><a href="/">Zurück zum MCP Hub</a></main>
+<main><h1>{title}</h1><p>{html.escape(text)}</p><a href="/">Back to MCP Hub</a></main>
 <script>if (window.opener) {{ window.opener.postMessage({message}, location.origin); {"" if error else "setTimeout(() => window.close(), 1200);"} }}</script></html>"""
         self.send(page.encode(), HTTPStatus.BAD_REQUEST if error else HTTPStatus.OK, "text/html; charset=utf-8")
 
@@ -361,7 +361,7 @@ class Handler(BaseHTTPRequestHandler):
         headers = {}
         if message["method"] != "initialize" and not hub.clients.valid(self.headers.get("Mcp-Session-Id")):
             return self.send({"jsonrpc": "2.0", "id": message["id"],
-                              "error": {"code": -32001, "message": "Unbekannte Sitzung, bitte neu initialisieren"}},
+                              "error": {"code": -32001, "message": "Unknown session, please initialize again"}},
                              HTTPStatus.NOT_FOUND)
         if message["method"] == "initialize":
             client_info = (message.get("params") or {}).get("clientInfo")
@@ -394,7 +394,7 @@ class Handler(BaseHTTPRequestHandler):
             if action == "connect":
                 entry = load_config()["mcpServers"].get(name)
                 if not entry:
-                    return self.send({"error": f"Unbekannter Server: {name}"}, HTTPStatus.NOT_FOUND)
+                    return self.send({"error": f"Unknown server: {name}"}, HTTPStatus.NOT_FOUND)
                 return self.send(inspector.connect(name, entry, load_settings()["passEnvironment"]))
             if action == "call":
                 return self.send({"result": inspector.call(name, data["method"], data.get("params"))})
@@ -404,7 +404,7 @@ class Handler(BaseHTTPRequestHandler):
         except inspector.RpcError as e:
             return self.send({"error": str(e)}, HTTPStatus.BAD_GATEWAY)
         except OSError as e:
-            return self.send({"error": f"Start fehlgeschlagen: {e}"}, HTTPStatus.BAD_GATEWAY)
+            return self.send({"error": f"Start failed: {e}"}, HTTPStatus.BAD_GATEWAY)
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
 
@@ -415,7 +415,7 @@ def main():
     atexit.register(hub.close)
     sync_hub_in_background()
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
-    print(f"MCP Hub läuft auf http://127.0.0.1:{port}", flush=True)
+    print(f"MCP Hub running at http://127.0.0.1:{port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
