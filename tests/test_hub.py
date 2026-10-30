@@ -634,6 +634,27 @@ class RestartPolicyTest(unittest.TestCase):
         self.assertEqual(self.hub.restarts["x"]["failures"], 1)
 
 
+@unittest.skipIf(sys.platform == "win32", "os.execv starts a separate process on Windows, which the test could not stop")
+class RestartTest(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory()
+        self.base = f"http://127.0.0.1:{free_port()}"
+        Path(self.home.name, "servers.json").write_text(json.dumps({"mcpServers": {}}))
+        env = {**os.environ, "MCP_HUB_HOME": self.home.name, "PORT": self.base.rsplit(":", 1)[1], "MCP_HUB_UPDATE_API": "http://127.0.0.1:9"}
+        self.hub = subprocess.Popen([sys.executable, str(ROOT / "app.py")], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        HubTest.wait_for(lambda: fetch(self.base + "/api/state"))
+
+    def tearDown(self):
+        self.hub.terminate()
+        self.hub.wait(10)
+        self.home.cleanup()
+
+    def test_restart_starts_a_fresh_process(self):
+        before = fetch(self.base + "/api/state")["startedAt"]
+        self.assertEqual(fetch(self.base + "/api/restart", b"{}", "POST"), {"ok": True})
+        HubTest.wait_for(lambda: fetch(self.base + "/api/state")["startedAt"] != before)
+
+
 class RuntimeKeyTest(unittest.TestCase):
     def test_tags_and_description_do_not_restart(self):
         entry = {"command": "x", "args": ["y"]}

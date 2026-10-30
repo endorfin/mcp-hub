@@ -297,7 +297,7 @@ Design rules and components of the interface are documented in [DESIGN.md](DESIG
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
 - **Clients:** every session since the last hub start with client name and version, profile endpoint, compact mode, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
-- **Settings:** grouped by topic with a list on the left. *Clients* has three cards: the hub endpoint with the compact switch, “Connect clients”, and “Set up by hand” with snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code. *Server* holds the path to the server file and `passEnvironment`, *Updates* the update check, *Interface* the language and the appearance (system, light or dark).
+- **Settings:** grouped by topic with a list on the left. *Clients* has three cards: the hub endpoint with the compact switch, “Connect clients”, and “Set up by hand” with snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code. *Server* holds the path to the server file, `passEnvironment` and “Restart hub” (for example after a manual `git pull`), *Updates* the update check, *Interface* the language and the appearance (system, light or dark).
 
 **Language:** English or German, chosen under Settings → Language. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 
@@ -353,6 +353,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `GET` | `/api/update` | Installed and latest version, release notes, install method; checks GitHub in the background when the last check is older than 12 hours |
 | `POST` | `/api/update/check` | Check GitHub now |
 | `POST` | `/api/update/apply` | Install the latest release and restart the hub |
+| `POST` | `/api/restart` | Restart the hub process, for example after a manual `git pull` |
 | `GET` | `/api/usage` | Usage counter |
 | `GET` | `/api/calls?limit=300` | Recent calls (max. 1,000) |
 | `GET` | `/api/stats?days=14` | Call statistics (key figures, per day, per server, slowest tools) |

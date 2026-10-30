@@ -195,7 +195,7 @@
           <label class="f"><span data-i18n="s.configFile"><b>Konfigurationsdatei</b></span><input name="configPath" form="settingsForm"></label>
           <label class="check"><input type="checkbox" name="passEnvironment" form="settingsForm"> <span data-i18n="s.passEnv">Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</span></label>
           <span class="hint check-hint" data-i18n="s.passEnvHint">An: Lokale Server erben alle Umgebungsvariablen des Hubs, etwa PATH für npx und uvx oder Tokens aus der Shell. Aus: Sie bekommen nur Grundvariablen wie PATH und HOME und das, was im Eintrag unter env steht.</span>
-          <div><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button></div>
+          <div class="update-line"><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button><button type="button" class="btn" id="hubRestart" data-i18n="s.hubRestart">Hub neu starten</button></div>
         </div>
       </div>
       <div class="settings-group" data-sec-panel="updates" hidden>
@@ -2028,6 +2028,30 @@ $("#updateCheck").onclick = async () => {
   $("#updateInfo").textContent = t("updateChecking");
   update = await api("POST", "/api/update/check").catch(err => { toast(err.message, true); return update; });
   renderUpdate();
+};
+
+$("#hubRestart").onclick = async () => {
+  if (!confirm(t("hubRestartConfirm"))) return;
+  const button = $("#hubRestart");
+  const before = state.startedAt;
+  button.disabled = true;
+  button.textContent = t("hubRestarting");
+  try {
+    await api("POST", "/api/restart");
+  } catch (err) {
+    button.disabled = false;
+    button.textContent = t("s.hubRestart");
+    return toast(err.message, true);
+  }
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 1000));
+    const fresh = await api("GET", "/api/state").catch(() => null);
+    if (fresh && fresh.startedAt !== before) return location.reload();
+  }
+  button.disabled = false;
+  button.textContent = t("s.hubRestart");
+  toast(t("hubRestartTimeout"), true);
 };
 
 $("#updateChip").onclick = openUpdateDialog;

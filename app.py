@@ -30,6 +30,7 @@ from config_store import (STATE_DIR, config_path, load_config, load_profiles, lo
 from version import VERSION
 
 ROOT = Path(__file__).resolve().parent
+STARTED_AT = time.time()
 CALLBACK_TEXT = {
     "en": {"ok": "Signed in", "fail": "Sign-in failed", "connected": "“{server}” is connected.", "back": "Back to MCP Hub"},
     "de": {"ok": "Angemeldet", "fail": "Anmeldung fehlgeschlagen", "connected": "„{server}“ ist verbunden.", "back": "Zurück zum MCP Hub"},
@@ -145,6 +146,7 @@ class Handler(BaseHTTPRequestHandler):
             "profiles": load_profiles(),
             "bridge": bridge_info(),
             "platform": sys.platform,
+            "startedAt": STARTED_AT,
         }
 
     def get(self):
@@ -252,6 +254,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({"error": f"Unknown server: {name}"}, HTTPStatus.NOT_FOUND)
             hub.reconnect(name)
             return self.send({})
+        if self.path == "/api/restart":
+            threading.Thread(target=restart, daemon=True).start()
+            return self.send({"ok": True})
         if self.path == "/api/update/check":
             return self.send({**updater.check(), "enabled": load_settings()["checkUpdates"]})
         if self.path == "/api/update/apply":
