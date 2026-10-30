@@ -27,9 +27,10 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
 .spacer { flex: 1; }
-.profile { display: flex; align-items: stretch; position: relative; }
-.picker { display: flex; align-items: center; gap: 8px; min-width: 170px; max-width: 260px; padding: 5px 10px; border-radius: 7px 0 0 7px; text-align: left; }
-.picker:hover { border-color: var(--line); background: var(--chip); }
+.profile { display: flex; align-items: stretch; position: relative; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+.profile:hover { border-color: var(--muted); }
+.profile .picker { display: flex; align-items: center; gap: 8px; min-width: 170px; max-width: 260px; padding: 5px 10px; border: 0; border-radius: 6px 0 0 6px; background: none; text-align: left; }
+.profile .picker:hover { background: var(--chip); }
 .picker-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .picker-label.none { color: var(--muted); }
 .picker-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex: none; }
@@ -43,9 +44,9 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .opt.none span { color: var(--muted); }
 .opt svg { color: var(--accent); }
 .picker-empty { padding: 6px 8px; color: var(--muted); font-size: 13px; }
-.profile .group-btn { display: grid; place-items: center; width: 34px; padding: 0; margin-left: -1px; border-radius: 0 7px 7px 0; color: var(--muted); }
-.profile .group-btn:hover, .profile .group-btn[aria-expanded="true"] { color: var(--ink); background: var(--chip); border-color: var(--line); }
-.profile .picker:focus-visible, .profile .group-btn:focus-visible { position: relative; z-index: 1; outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
+.profile .group-btn { display: grid; place-items: center; flex: none; width: 34px; padding: 0; border: 0; border-left: 1px solid var(--line); border-radius: 0 6px 6px 0; background: none; color: var(--muted); }
+.profile .group-btn:hover, .profile .group-btn[aria-expanded="true"] { color: var(--ink); background: var(--chip); }
+.profile .picker:focus-visible, .profile .group-btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: -2px; }
 nav { display: flex; gap: 2px; background: var(--chip); padding: 3px; border-radius: 8px; }
 nav button { border: 0; background: none; padding: 5px 12px; border-radius: 6px; color: var(--muted); font: inherit; cursor: pointer; }
 nav button.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
