@@ -27,9 +27,25 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
 .spacer { flex: 1; }
-.profile { display: flex; align-items: center; gap: 6px; position: relative; }
-.profile select { width: auto; min-width: 170px; padding-top: 5px; padding-bottom: 5px; }
-.profile .dirty { white-space: nowrap; }
+.profile { display: flex; align-items: stretch; position: relative; }
+.picker { display: flex; align-items: center; gap: 8px; min-width: 170px; max-width: 260px; padding: 5px 10px; border-radius: 7px 0 0 7px; text-align: left; }
+.picker:hover { border-color: var(--line); background: var(--chip); }
+.picker-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.picker-label.none { color: var(--muted); }
+.picker-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex: none; }
+.picker svg { color: var(--muted); flex: none; }
+.picker-pop { position: absolute; left: 0; top: calc(100% + 4px); z-index: 6; width: 260px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: grid; gap: 4px; }
+.picker-pop input { padding: 6px 9px; font-size: 13px; }
+.picker-options { display: grid; max-height: 260px; overflow: auto; }
+.opt { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: center; text-align: left; font: inherit; background: none; border: 0; color: var(--ink); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.opt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opt.hi { background: var(--chip); }
+.opt.none span { color: var(--muted); }
+.opt svg { color: var(--accent); }
+.picker-empty { padding: 6px 8px; color: var(--muted); font-size: 13px; }
+.profile .group-btn { display: grid; place-items: center; width: 34px; padding: 0; margin-left: -1px; border-radius: 0 7px 7px 0; color: var(--muted); }
+.profile .group-btn:hover, .profile .group-btn[aria-expanded="true"] { color: var(--ink); background: var(--chip); border-color: var(--line); }
+.profile .picker:focus-visible, .profile .group-btn:focus-visible { position: relative; z-index: 1; outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); border-color: var(--accent); }
 nav { display: flex; gap: 2px; background: var(--chip); padding: 3px; border-radius: 8px; }
 nav button { border: 0; background: none; padding: 5px 12px; border-radius: 6px; color: var(--muted); font: inherit; cursor: pointer; }
 nav button.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
@@ -59,7 +75,7 @@ textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
 .dots { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; }
 .dots[aria-expanded="true"] { background: var(--chip); color: var(--ink); }
 .menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: grid; }
-.menu button { font: inherit; text-align: left; background: none; border: 0; color: var(--ink); padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.menu button { white-space: nowrap; font: inherit; text-align: left; background: none; border: 0; color: var(--ink); padding: 7px 10px; border-radius: 6px; cursor: pointer; }
 .menu button:hover, .menu button:focus-visible { background: var(--chip); outline: none; }
 .menu button.danger { color: var(--bad); }
 .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
@@ -189,9 +205,16 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
     <div class="spacer"></div>
     <div class="profile actions">
-      <span class="dirty" id="profileDirty" hidden title="Server oder Tools weichen vom gespeicherten Profil ab">geändert</span>
-      <select id="profileSelect" aria-label="Profil"></select>
-      <button class="btn ghost dots" id="profileMenuBtn" aria-label="Profil-Optionen" aria-haspopup="menu" aria-expanded="false">
+      <button class="btn picker" id="profilePicker" aria-haspopup="listbox" aria-expanded="false">
+        <span class="picker-label" id="profileLabel"></span>
+        <span class="picker-dot" id="profileDot" hidden></span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+      </button>
+      <div class="picker-pop" id="profilePop" hidden>
+        <input type="search" id="profileFilter" placeholder="Profil suchen…" role="combobox" aria-controls="profileOptions" aria-expanded="true" aria-autocomplete="list" aria-label="Profil suchen">
+        <div class="picker-options" role="listbox" id="profileOptions" aria-label="Profile"></div>
+      </div>
+      <button class="btn group-btn" id="profileMenuBtn" aria-label="Profil-Optionen" aria-haspopup="menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
       </button>
       <div class="menu" role="menu" id="profileMenu" hidden>
@@ -368,7 +391,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   <form method="dialog" id="toolsForm">
     <div class="dhead" id="toolsTitle">Tools</div>
     <div class="dbody">
-      <span class="hint">Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Clients sehen die Änderung nach einem Reconnect.</span>
+      <span class="hint">Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Verbundene Clients bekommen die neue Liste automatisch, Claude Desktop erst nach einem Neustart.</span>
       <div class="tool-bar">
         <input type="search" id="toolsFilter" placeholder="Tools filtern…" aria-label="Tools filtern">
         <button type="button" class="btn" id="toolsAll">Alle an</button>
@@ -459,14 +482,18 @@ function profileDirty() {
 function renderProfiles() {
   const { active, profiles } = state.profiles;
   const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
-  const sel = $("#profileSelect");
-  sel.replaceChildren(el("option", { value: "", textContent: names.length ? "Kein Profil" : "Noch kein Profil" }),
-    ...names.map(n => el("option", { value: n, textContent: n })));
-  sel.value = active && profiles[active] ? active : "";
+  const current = active && profiles[active] ? active : "";
   const dirty = profileDirty();
-  $("#profileDirty").hidden = !dirty;
-  $("#profileUpdate").hidden = !sel.value;
-  $("#profileUpdate").textContent = `„${sel.value}“ aktualisieren`;
+  const label = $("#profileLabel");
+  label.textContent = current || (names.length ? "Kein Profil" : "Noch kein Profil");
+  label.classList.toggle("none", !current);
+  $("#profileDot").hidden = !dirty;
+  const picker = $("#profilePicker");
+  picker.title = dirty ? "Ungespeicherte Änderungen: Server oder Tools weichen vom Profil ab" : "";
+  picker.setAttribute("aria-label", `Profil: ${label.textContent}` + (dirty ? ", ungespeicherte Änderungen" : ""));
+  $("#profileUpdate").hidden = !current;
+  $("#profileUpdate").textContent = `„${current}“ aktualisieren`;
+  if (!$("#profilePop").hidden) renderPickerOptions();
   $("#profileManage").hidden = !names.length;
   $("#profileManage").previousElementSibling.hidden = !names.length;
   if ($("#profilesDialog").open) renderProfileList();
@@ -484,14 +511,97 @@ async function profileAction(action, name, message, extra = {}) {
   }
 }
 
-$("#profileSelect").onchange = e => {
-  const name = e.target.value;
-  if (profileDirty() && !confirm(`Die Änderungen an „${state.profiles.active}“ sind nicht gespeichert und gehen verloren. Trotzdem wechseln?`)) return renderProfiles();
+const CHECK_ICON = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>`;
+let pickerItems = [];
+let pickerIndex = 0;
+
+function renderPickerOptions() {
+  const { active, profiles } = state.profiles;
+  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const q = $("#profileFilter").value.trim().toLowerCase();
+  const none = { value: "", label: names.length ? "Kein Profil" : "Noch kein Profil" };
+  pickerItems = q ? names.filter(n => n.toLowerCase().includes(q)).map(n => ({ value: n, label: n }))
+    : [none, ...names.map(n => ({ value: n, label: n }))];
+  pickerIndex = Math.min(pickerIndex, Math.max(pickerItems.length - 1, 0));
+  const current = active && profiles[active] ? active : "";
+  const list = $("#profileOptions");
+  list.replaceChildren(...pickerItems.map((item, i) => {
+    const option = el("button", { type: "button", className: "opt" + (item.value ? "" : " none") + (i === pickerIndex ? " hi" : ""), id: `profile-opt-${i}`, tabIndex: -1 });
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(item.value === current));
+    option.innerHTML = item.value === current ? CHECK_ICON : "<i></i>";
+    option.append(el("span", { textContent: item.label }));
+    option.onmouseenter = () => { pickerIndex = i; highlightPicker(); };
+    option.onclick = () => chooseProfile(item.value);
+    return option;
+  }));
+  if (!pickerItems.length) list.append(el("div", { className: "picker-empty", textContent: "Keine Treffer" }));
+  highlightPicker();
+}
+
+function highlightPicker() {
+  [...$("#profileOptions").querySelectorAll(".opt")].forEach((node, i) => node.classList.toggle("hi", i === pickerIndex));
+  const hi = $(`#profile-opt-${pickerIndex}`);
+  $("#profileFilter").setAttribute("aria-activedescendant", hi ? hi.id : "");
+  hi?.scrollIntoView({ block: "nearest" });
+}
+
+function openPicker() {
+  closeMenus();
+  const { active, profiles } = state.profiles;
+  $("#profileFilter").value = "";
+  pickerIndex = 0;
+  $("#profilePop").hidden = false;
+  $("#profilePicker").setAttribute("aria-expanded", "true");
+  renderPickerOptions();
+  pickerIndex = Math.max(pickerItems.findIndex(item => item.value === (active && profiles[active] ? active : "")), 0);
+  highlightPicker();
+  $("#profileFilter").focus();
+}
+
+function closePicker(focus = false) {
+  if ($("#profilePop").hidden) return;
+  $("#profilePop").hidden = true;
+  $("#profilePicker").setAttribute("aria-expanded", "false");
+  if (focus) $("#profilePicker").focus();
+}
+
+function chooseProfile(name) {
+  closePicker(true);
+  const current = state.profiles.profiles[state.profiles.active] ? state.profiles.active : "";
+  if (name === current) return;
+  if (profileDirty() && !confirm(`Die Änderungen an „${state.profiles.active}“ sind nicht gespeichert und gehen verloren. Trotzdem wechseln?`)) return;
   if (!name) return profileAction("clear", null);
-  profileAction("apply", name, `Profil „${name}“ aktiv – Clients sehen die Tools nach einem Reconnect`);
+  profileAction("apply", name, `Profil „${name}“ aktiv`);
+}
+
+$("#profilePicker").onclick = e => {
+  e.stopPropagation();
+  $("#profilePop").hidden ? openPicker() : closePicker();
 };
+$("#profilePop").onclick = e => e.stopPropagation();
+$("#profileFilter").oninput = () => { pickerIndex = 0; renderPickerOptions(); };
+$("#profileFilter").onkeydown = e => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    if (!pickerItems.length) return;
+    pickerIndex = (pickerIndex + (e.key === "ArrowDown" ? 1 : -1) + pickerItems.length) % pickerItems.length;
+    highlightPicker();
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (pickerItems[pickerIndex]) chooseProfile(pickerItems[pickerIndex].value);
+  } else if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    closePicker(true);
+  } else if (e.key === "Tab") {
+    closePicker();
+  }
+};
+document.addEventListener("click", () => closePicker());
 $("#profileMenuBtn").onclick = e => {
   e.stopPropagation();
+  closePicker();
   const menu = $("#profileMenu");
   closeMenus(menu);
   menu.hidden = !menu.hidden;

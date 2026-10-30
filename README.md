@@ -124,8 +124,8 @@ prun restart mcp-hub
 Ein Profil merkt sich je Server, ob er aktiviert ist und welche Tools abgewählt sind. Es dient dazu, schnell zwischen Setups zu wechseln, etwa „Frontend“ mit nuxt, nuxt-ui und chrome-devtools oder „Ops“ mit grafana und glitchtip.
 
 - **Speichern:** Server und Tools einstellen, dann oben über ⋯ → „Als neues Profil speichern…“.
-- **Wechseln:** In der Auswahl oben ein Profil wählen. Der Hub schreibt An/Aus und `disabledTools` in `servers.json`, startet oder stoppt die betroffenen Server und blendet Tools aus. Clients sehen die neue Tool-Liste nach einem Reconnect.
-- **Geändert:** Weicht der Stand vom aktiven Profil ab, steht „geändert“ neben der Auswahl. Über ⋯ → „… aktualisieren“ übernimmt das Profil den aktuellen Stand. Beim Wechsel mit ungespeicherten Änderungen fragt die GUI nach.
+- **Wechseln:** Oben die Profilauswahl öffnen (mit Suchfeld, Pfeiltasten und Enter) und ein Profil wählen. Der Hub schreibt An/Aus und `disabledTools` in `servers.json`, startet oder stoppt die betroffenen Server und blendet Tools aus. Verbundene Clients bekommen die neue Tool-Liste automatisch (siehe „Live-Aktualisierung“).
+- **Geändert:** Weicht der Stand vom aktiven Profil ab, zeigt die Auswahl einen orangefarbenen Punkt (Tooltip: ungespeicherte Änderungen). Über ⋯ → „… aktualisieren“ übernimmt das Profil den aktuellen Stand. Beim Wechsel mit ungespeicherten Änderungen fragt die GUI nach.
 - **Neue Server:** Server, die ein Profil nicht kennt, lässt der Wechsel unverändert. Mit „aktualisieren“ kommen sie ins Profil.
 - **Verwalten:** Unter ⋯ → „Profile verwalten…“ lassen sich Profile umbenennen und löschen, ohne sie vorher anzuwenden. Server und Tools bleiben dabei, wie sie sind. Namen dürfen kein `/` enthalten.
 
