@@ -1,0 +1,79 @@
+import re
+import subprocess
+import threading
+
+PATTERN = re.compile(r"\$\{(op://[^}]+|keychain:[^}]+)\}")
+SERVICE_PREFIX = "mcp-hub/"
+ACCOUNT = "mcp-hub"
+
+_cache = {}
+_lock = threading.Lock()
+
+
+class SecretError(Exception):
+    pass
+
+
+def _run(args, stdin=None):
+    try:
+        done = subprocess.run(args, input=stdin, capture_output=True, text=True, timeout=60)
+    except FileNotFoundError:
+        raise SecretError(f"{args[0]} nicht gefunden")
+    except subprocess.TimeoutExpired:
+        raise SecretError(f"{args[0]} antwortet nicht")
+    if done.returncode:
+        message = (done.stderr or done.stdout).strip()
+        last = message.splitlines()[-1] if message else f"{args[0]} fehlgeschlagen"
+        raise SecretError(re.sub(r"^\[ERROR\] \S+ \S+ ", "", last))
+    return done.stdout
+
+
+def _lookup(ref):
+    if ref.startswith("op://"):
+        return _run(["op", "read", "--no-newline", ref])
+    name = ref.removeprefix("keychain:")
+    try:
+        return _run(["security", "find-generic-password", "-a", ACCOUNT, "-s", SERVICE_PREFIX + name, "-w"]).rstrip("\n")
+    except SecretError:
+        raise SecretError(f"Kein Schlüsselbund-Eintrag „{name}“")
+
+
+def resolve_value(text):
+    if not isinstance(text, str) or "${" not in text:
+        return text
+
+    def replace(match):
+        ref = match.group(1)
+        with _lock:
+            if ref not in _cache:
+                _cache[ref] = _lookup(ref)
+            return _cache[ref]
+
+    return PATTERN.sub(replace, text)
+
+
+def resolve_entry(entry):
+    resolved = dict(entry)
+    for key in ("env", "headers"):
+        if entry.get(key):
+            resolved[key] = {k: resolve_value(v) for k, v in entry[key].items()}
+    if entry.get("args"):
+        resolved["args"] = [resolve_value(a) for a in entry["args"]]
+    if entry.get("url"):
+        resolved["url"] = resolve_value(entry["url"])
+    return resolved
+
+
+def store_keychain(name, value):
+    if not re.fullmatch(r"[A-Za-z0-9._/-]+", name):
+        raise SecretError("Name darf nur Buchstaben, Ziffern, . _ / - enthalten")
+    if not value.isascii() or not value.isprintable():
+        raise SecretError("Nur druckbare ASCII-Zeichen – security liest andere Werte als Hex aus")
+    # Wert über stdin statt als Argument, sonst steht er in der Prozessliste.
+    quoted = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    _run(["security", "-i"], f"add-generic-password -U -a {ACCOUNT} -s {SERVICE_PREFIX}{name} -w {quoted}\n")
+    with _lock:
+        _cache.pop(f"keychain:{name}", None)
+    if _lookup(f"keychain:{name}") != value:
+        raise SecretError("Wert im Schlüsselbund weicht ab")
+    return "${keychain:" + name + "}"

@@ -82,7 +82,10 @@ label.f { display: grid; gap: 5px; font-size: 12.5px; color: var(--muted); }
 label.f > span b { color: var(--ink); font-weight: 600; }
 .hint { font-size: 12px; color: var(--muted); }
 .env { display: grid; gap: 6px; }
-.envrow { display: grid; grid-template-columns: 1fr 1.6fr auto; gap: 6px; }
+.envrow { display: grid; grid-template-columns: 1fr 1.6fr auto auto; gap: 6px; }
+.urlrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.lock { display: grid; place-items: center; padding: 4px 8px; }
+.lock[hidden] { display: grid !important; visibility: hidden; }
 .envrow input { font-family: var(--mono); font-size: 12.5px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 14px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -163,7 +166,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
 @media (max-width: 760px) { .insp { grid-template-columns: 1fr; } }
 @media (max-width: 640px) {
   .grid2 { grid-template-columns: 1fr; }
-  .envrow { grid-template-columns: 1fr 1fr auto; }
+  .envrow { grid-template-columns: 1fr 1fr auto auto; }
 }
 </style>
 </head>
@@ -294,13 +297,14 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         </div>
       </div>
       <div class="fields" id="urlFields" hidden>
-        <label class="f"><span><b>URL</b></span><input name="url" type="url" placeholder="https://example.com/mcp" style="font-family:var(--mono)"></label>
+        <label class="f"><span><b>URL</b></span><span class="urlrow"><input name="url" inputmode="url" placeholder="https://example.com/mcp" style="font-family:var(--mono)"><button type="button" class="btn ghost lock" id="urlLock"></button></span></label>
         <div class="f">
           <span style="font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)">Header</b> – z. B. Authorization: Bearer …</span>
           <div class="env" id="headerRows"></div>
           <div><button type="button" class="btn" id="addHeader">+ Header</button></div>
         </div>
       </div>
+      <span class="hint">Geheime Werte mit dem Schloss in den macOS-Schlüsselbund verschieben. Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password geht ebenso.</span>
       <label class="check"><input type="checkbox" name="enabled"> Aktiviert</label>
       <p class="error" id="editError"></p>
     </div>
@@ -553,14 +557,40 @@ function transportOf(entry) {
   return "stdio";
 }
 
+const LOCK_ICON = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>`;
+
+function lockButton(button, input, keyOf) {
+  button.innerHTML = LOCK_ICON;
+  button.title = "In den Schlüsselbund verschieben";
+  button.setAttribute("aria-label", button.title);
+  const update = () => { button.hidden = !input.value || /\$\{(keychain:|op:\/\/)/.test(input.value); };
+  input.addEventListener("input", update);
+  update();
+  button.onclick = async () => {
+    const server = $("#editForm").name.value.trim();
+    const key = keyOf();
+    if (!server || !key) return toast("Erst Name und Schlüssel ausfüllen", true);
+    try {
+      const { ref } = await api("POST", "/api/secrets", { name: `${server}/${key}`.replace(/[^A-Za-z0-9._\/-]/g, "_"), value: input.value });
+      input.value = ref;
+      update();
+      toast("Im Schlüsselbund – zum Übernehmen speichern");
+    } catch (e) {
+      toast(e.message, true);
+    }
+  };
+  return update;
+}
+
 function kvRow(container, k = "", v = "", keyLabel = "NAME") {
   const row = document.createElement("div");
   row.className = "envrow";
-  row.innerHTML = `<input class="k"><input placeholder="Wert" class="v"><button type="button" class="btn ghost">✕</button>`;
+  row.innerHTML = `<input class="k"><input placeholder="Wert" class="v"><button type="button" class="btn ghost lock"></button><button type="button" class="btn ghost del">✕</button>`;
   $(".k", row).placeholder = keyLabel;
   $(".k", row).value = k;
   $(".v", row).value = v;
-  $("button", row).onclick = () => row.remove();
+  lockButton($(".lock", row), $(".v", row), () => $(".k", row).value.trim());
+  $(".del", row).onclick = () => row.remove();
   container.append(row);
 }
 const envRow = (k, v) => kvRow($("#envRows"), k, v);
@@ -583,6 +613,7 @@ function showTransportFields() {
   $("#editForm").url.required = kind !== "stdio";
 }
 $("#editForm").transport.onchange = showTransportFields;
+const updateUrlLock = lockButton($("#urlLock"), $("#editForm").url, () => "url");
 
 function openEditor(name, duplicate = false) {
   const f = $("#editForm");
@@ -595,6 +626,7 @@ function openEditor(name, duplicate = false) {
   f.command.value = s.command || "";
   f.args.value = (s.args || []).join("\n");
   f.url.value = s.url || "";
+  updateUrlLock();
   f.enabled.checked = s.enabled !== false;
   $("#envRows").replaceChildren();
   Object.entries(s.env || {}).forEach(([k, v]) => envRow(k, v));

@@ -20,7 +20,7 @@ Alles liegt in `~/.config/mcp-proxy/` (änderbar per `MCP_PROXY_GUI_HOME`), nich
 | `calls.jsonl` | Aufrufprotokoll, die letzten 1.000 Einträge |
 | `clients.json` | Zuordnung Sitzungs-ID → Client, die letzten 300 Sitzungen |
 
-Tokens und Header stehen nur in `servers.json` und gehören nicht ins Repo.
+Tokens stehen in `servers.json` oder, besser, als Referenz im Schlüsselbund bzw. in 1Password (siehe „Secrets“). `servers.json` gehört nicht ins Repo.
 
 ## Server-Einträge
 
@@ -43,6 +43,23 @@ Ein Eintrag mit `url` und ohne `type` gilt als Streamable HTTP. Optional:
 - `enabled: false`: Server bleibt eingetragen, der Hub startet ihn aber nicht.
 - `disabledTools`: Liste von Tool-Namen (ohne Präfix), die der Hub ausblendet und deren Aufruf er ablehnt. Pflege am einfachsten über ⋯ → „Tools auswählen…“: Der Dialog listet alle Tools mit Kurzbeschreibung, lässt sich filtern, und „Alle an“ / „Alle aus“ wirken nur auf die gefilterten Tools (z. B. „incident“ filtern, „Alle aus“). Der Status-Chip zeigt dann „Hub: 73 von 79 Tools“. Eine Änderung startet den Server nicht neu.
 - `env` (stdio) bzw. `headers` (HTTP/SSE).
+
+### Secrets
+
+Statt Tokens im Klartext können Werte in `env`, `headers`, `url` und `args` Referenzen enthalten, die der Hub erst beim Start eines Servers auflöst:
+
+```json
+"glitchtip": { "type": "http", "url": "https://…/mcp", "headers": { "Authorization": "${keychain:glitchtip/Authorization}" } },
+"grafana": { "command": "uvx", "args": ["mcp-grafana"], "env": { "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${op://Private/Grafana/token}" } }
+```
+
+Welche Quelle gilt, entscheidet allein die Schreibweise, pro Wert. Es gibt keine Einstellung und keinen Fallback: Ist `op` nicht angemeldet, sucht der Hub nicht ersatzweise im Schlüsselbund. Ein Server kann beide Quellen mischen.
+
+- `${keychain:name}` liest den macOS-Schlüsselbund (Account `mcp-hub`, Dienst `mcp-hub/<name>`; die Suche nach `mcp-hub` in der Schlüsselbundverwaltung zeigt alle Einträge). Am einfachsten über das Schloss neben einem Wert im Editor: Es legt den Eintrag an und ersetzt den Wert durch die Referenz, gespeichert wird erst mit „Speichern“. Von Hand geht es mit `security add-generic-password -a mcp-hub -s mcp-hub/<name> -w`. Nur druckbare ASCII-Werte, andere gibt `security` als Hex aus.
+- `${op://Tresor/Eintrag/Feld}` liest per 1Password-CLI (`op read`). `op` muss dafür in der Umgebung des Hubs angemeldet sein, z. B. über die Integration mit der 1Password-App. Der Hub legt in 1Password nichts an, das Schloss schreibt immer in den Schlüsselbund. Sinnvoll für Tokens, die ohnehin in 1Password gepflegt, geteilt oder rotiert werden; sonst ist der Schlüsselbund einfacher.
+- Referenzen dürfen in einem längeren Wert stehen, etwa `Bearer ${keychain:…}` oder `?key=${keychain:…}`.
+- Aufgelöste Werte bleiben bis zum Neustart des Hubs im Speicher. Nach einer Änderung im Schlüsselbund oder in 1Password den Hub neu starten (`prun restart mcp-hub`); den Server aus- und einzuschalten reicht nicht. Nur das Schloss in der GUI aktualisiert den Speicher für seinen Eintrag sofort.
+- Fehlt ein Eintrag, startet der Server nicht. Der Tooltip am Status-Chip zeigt dann z. B. „Secret: Kein Schlüsselbund-Eintrag …“.
 
 Mit `passEnvironment` (Einstellungen) erben lokale Server die Umgebung des Hubs, sonst nur `env`.
 
@@ -112,6 +129,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `GET` | `/api/hub/tools?name=` | Alle Tools eines Servers mit Status `enabled` |
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
+| `POST` | `/api/secrets` | `{"name", "value"}` im Schlüsselbund ablegen, liefert `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |
 | `POST` | `/api/inspect/call` | `{"name", "method", "params"}` an den Server schicken |
 | `POST` | `/api/inspect/disconnect` | Sitzung schließen |
@@ -128,7 +146,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 ## Ideen und nächste Schritte
 
 1. **Remote und Backup:** Den Code in ein privates Git-Repo pushen und `servers.json` verschlüsselt sichern, etwa per Time Machine oder als 1Password-Dokument.
-2. **Tokens aus der JSON holen:** Header-Werte als Verweis auf den macOS-Schlüsselbund oder 1Password (`op://…`) hinterlegen. Der Hub löst sie erst beim Start auf, dann steht kein Geheimnis mehr in `servers.json`.
+2. **Tokens aus der JSON holen:** Erledigt, siehe „Secrets“. Offen ist noch, die vorhandenen Tokens umzuziehen.
 3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
 4. **Änderungen an Clients melden:** `notifications/tools/list_changed` per SSE an verbundene Clients schicken, damit neue Server ohne Reconnect erscheinen.
 5. **Statistik im Protokoll:** Aufrufe pro Tag, langsamste Tools und Fehlerquote je Server, berechnet aus `calls.jsonl`.

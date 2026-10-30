@@ -10,6 +10,8 @@ import urllib.request
 from collections import deque
 from urllib.parse import urljoin
 
+from secrets_store import SecretError, resolve_entry
+
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_ENV_KEYS = ("HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER", "LANG", "TMPDIR")
 USER_AGENT = "mcp-hub/1.0"
@@ -360,6 +362,10 @@ def transport(entry):
 
 
 def open_session(name, entry, pass_environment, client_name):
+    try:
+        entry = resolve_entry(entry)
+    except SecretError as e:
+        raise RpcError(f"Secret: {e}")
     kind = transport(entry)
     if kind == "http":
         return HttpSession(name, entry, client_name)

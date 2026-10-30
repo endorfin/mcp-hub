@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlparse
 
 import hub as hub_module
 import inspector
+import secrets_store
 
 ROOT = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("MCP_PROXY_GUI_HOME", Path.home() / ".config" / "mcp-proxy"))
@@ -172,6 +173,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
         if self.path == "/mcp":
             return self.mcp()
+        if self.path == "/api/secrets":
+            data = self.body()
+            try:
+                return self.send({"ref": secrets_store.store_keychain(data.get("name", ""), data.get("value", ""))})
+            except secrets_store.SecretError as e:
+                return self.send({"error": str(e)}, HTTPStatus.BAD_REQUEST)
         if self.path.startswith("/api/inspect/"):
             return self.inspect(self.path.removeprefix("/api/inspect/"))
         self.send({"error": "not found"}, HTTPStatus.NOT_FOUND)
