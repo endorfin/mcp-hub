@@ -256,6 +256,7 @@ Replaces every native select.
 ### Navigation
 - Main tabs: text tabs sitting on the header’s bottom seam, 22 px apart, `muted`; the active tab is `ink` with a 2 px `ink` underline that covers the seam.
 - Tabs inside a card (the connect snippets) use the same text tabs on a 1 px Seam line.
+- Keyboard focus on text tabs: a 2 px ring in Switch Green at 50 % around the label, 6 px radius, with a little room on both sides; it ends above the underline. Only phones let the tab row scroll sideways.
 - Small mode switches (Inspector: tools, prompts, resources): segmented tabs in a Keycap (8 px radius, 3 px inner padding); the active tab is Console with the “Raised” shadow, the others `muted`.
 
 ## Do's and Don'ts
