@@ -121,6 +121,8 @@ Log: `~/Library/Logs/mcp-hub.log`. Pfad zu `python3`, `PATH` und `PORT` werden b
 
 ## GUI
 
+Gestaltungsregeln und Komponenten der Oberfläche stehen in [DESIGN.md](DESIGN.md), Zielgruppe, Zweck und Grundsätze des Produkts in [PRODUCT.md](PRODUCT.md).
+
 - **Server:** Liste mit An/Aus-Schalter, Hub-Status je Server (Tools, Fehler), Nutzung und Sortierung nach zuletzt verwendet, Name oder Datei. Über das Menü ⋯ lassen sich Server inspizieren, Tools für den Hub an- und abwählen, bearbeiten, duplizieren und löschen. Import nimmt `mcpServers`-JSON aus anderen Konfigurationen an.
 - **Protokoll:** Jeder Aufruf über den Hub mit Zeit, Client, Server, Tool, Argumenten, Ergebnisvorschau, Dauer und Fehlerstatus. Filterbar nach Server, Client und Fehlern.
 - **Inspector:** Verbindet sich direkt mit einem Server (unabhängig vom Hub) und listet Tools, Resources, Templates und Prompts. Alles lässt sich mit Formular- oder JSON-Eingabe aufrufen, stderr und Notifications erscheinen darunter.
