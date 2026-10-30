@@ -207,7 +207,7 @@ class Handler(BaseHTTPRequestHandler):
         }
 
     def do_GET(self):
-        if self.path in ("/", "/index.html"):
+        if self.path.split("?")[0] in ("/", "/index.html"):
             return self.send((ROOT / "index.html").read_bytes(), content_type="text/html; charset=utf-8")
         if self.path == "/api/state":
             return self.send(self.state())
