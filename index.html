@@ -313,6 +313,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
     <nav class="line-tabs" id="tabs">
       <button data-tab="servers" class="active" data-i18n="s.tabServers">Server</button>
       <button data-tab="calls" data-i18n="s.tabLog">Protokoll</button>
+      <button data-tab="clients">Clients</button>
       <button data-tab="inspector">Inspector</button>
       <button data-tab="settings" data-i18n="s.tabSettings">Einstellungen</button>
     </nav>
@@ -425,6 +426,14 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       </div>
     </details>
     <div class="list" id="calls"></div>
+  </section>
+
+  <section data-panel="clients" hidden>
+    <div class="toolbar">
+      <span class="hint" data-i18n="s.clientsHint">Sitzungen seit dem letzten Hub-Start. Clients ohne Live-Stream melden sich nicht immer ab und bleiben dann bis zum Neustart stehen.</span>
+      <span class="hint" id="clientCount" style="margin-left:auto"></span>
+    </div>
+    <div class="list" id="clients"></div>
   </section>
 
   <section data-panel="inspector" hidden>
@@ -594,6 +603,7 @@ const I18N = {
   "s.manageProfiles": ["Profile verwalten…", "Manage profiles…"],
   "s.tabServers": ["Server", "Servers"],
   "s.tabLog": ["Protokoll", "Log"],
+  "s.clientsHint": ["Sitzungen seit dem letzten Hub-Start. Clients ohne Live-Stream melden sich nicht immer ab und bleiben dann bis zum Neustart stehen.", "Sessions since the last hub start. Clients without a live stream do not always sign off and then stay listed until the restart."],
   "s.tabSettings": ["Einstellungen", "Settings"],
   "s.filter": ["Filtern…", "Filter…"],
   "s.filterServers": ["Server filtern", "Filter servers"],
@@ -817,6 +827,14 @@ const I18N = {
   noCallsYetDot: ["Noch keine Aufrufe.", "No calls yet."],
   callCount: ["{n} von {total} Aufrufen", "{n} of {total} calls"],
   noHubCalls: ["Noch keine Aufrufe über den Hub.", "No calls through the hub yet."],
+  noClients: ["Seit dem Hub-Start hat sich noch kein Client verbunden.", "No client has connected since the hub started."],
+  clientLive: ["Live-Stream", "live stream"],
+  clientIdle: ["inaktiv", "idle"],
+  clientSince: ["verbunden {when}", "connected {when}"],
+  clientSeen: ["aktiv {when}", "active {when}"],
+  clientCalls: [v => pl(v.n, "1 Aufruf", "{n} Aufrufe"), v => pl(v.n, "1 call", "{n} calls")],
+  clientRequests: [v => pl(v.n, "1 Anfrage", "{n} Anfragen"), v => pl(v.n, "1 request", "{n} requests")],
+  showInLog: ["Im Protokoll", "Show in log"],
   arguments: ["Argumente", "Arguments"],
   responseStart: ["Antwort (Anfang)", "Response (beginning)"],
   empty: ["(leer)", "(empty)"],
@@ -1731,6 +1749,7 @@ function showTab(name) {
   for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== name;
   if (name === "inspector") fillInspServers();
   if (name === "calls") refreshCalls();
+  if (name === "clients") refreshClients();
 }
 $("#tabs").onclick = e => {
   const b = e.target.closest("button");
@@ -2169,7 +2188,8 @@ async function refreshCalls() {
 
 function renderCalls() {
   fillSelect($("#callServer"), [...new Set(calls.map(c => c.server))].sort(), t("allServers"));
-  fillSelect($("#callClient"), [...new Set(calls.map(c => c.client))].sort(), t("allClients"), clientName);
+  fillSelect($("#callClient"), [...new Set([...calls.map(c => c.client), ...(logClient ? [logClient] : [])])].sort(), t("allClients"), clientName);
+  if (logClient) { $("#callClient").value = logClient; logClient = null; }
   const server = $("#callServer").value, client = $("#callClient").value, errors = $("#callErrors").checked;
   const shown = calls.filter(c => (!server || c.server === server) && (!client || c.client === client) && (!errors || !c.ok));
   $("#callCount").textContent = t("callCount", { n: shown.length, total: calls.length });
@@ -2195,6 +2215,44 @@ function renderCalls() {
   }));
 }
 for (const id of ["#callServer", "#callClient", "#callErrors"]) $(id).onchange = renderCalls;
+
+let clients = [];
+let logClient = null;
+const IDLE_AFTER = 10 * 60;
+
+async function refreshClients() {
+  const fresh = await api("GET", "/api/clients").catch(() => null);
+  if (!fresh) return;
+  const minute = Math.floor(Date.now() / 60000);
+  if (JSON.stringify(fresh) === JSON.stringify(clients) && minute === refreshClients.minute && $("#clients").children.length) return;
+  clients = fresh;
+  refreshClients.minute = minute;
+  renderClients();
+}
+
+function renderClients() {
+  $("#clientCount").textContent = clients.length ? t("clientsN", { n: clients.length }) : "";
+  const box = $("#clients");
+  if (!clients.length) return box.replaceChildren(el("div", { className: "empty", textContent: t("noClients") }));
+  box.replaceChildren(...clients.map(c => {
+    const idle = !c.streams && Date.now() / 1000 - c.lastSeen > IDLE_AFTER;
+    const label = c.profile ? `${c.name} · ${c.profile}` : c.name;
+    const log = c.calls ? el("button", { className: "btn", textContent: t("showInLog") }) : null;
+    if (log) log.onclick = () => { logClient = label; showTab("calls"); };
+    return el("div", { className: "row" + (idle ? " off" : "") },
+      el("span", { className: "dot " + (idle ? "" : "ok"), title: c.streams ? t("clientLive") : idle ? t("clientIdle") : "" }),
+      el("div", {},
+        el("div", {}, el("span", { className: "name", textContent: clientName(c.name) }), c.version ? el("span", { className: "cmd", textContent: `  ${c.version}` }) : null),
+        el("div", { className: "meta" },
+          c.profile ? el("span", { className: "chip", textContent: c.profile }) : null,
+          c.streams ? el("span", { className: "chip ok", textContent: t("clientLive") }) : null,
+          idle ? el("span", { className: "chip", textContent: t("clientIdle") }) : null,
+          el("span", { className: "chip", textContent: t("clientSince", { when: ago(c.since) }), title: new Date(c.since * 1000).toLocaleString(LOCALE) }),
+          el("span", { className: "chip", textContent: t("clientSeen", { when: ago(c.lastSeen) }), title: new Date(c.lastSeen * 1000).toLocaleString(LOCALE) }),
+          el("span", { className: "chip", textContent: t("clientCalls", { n: c.calls }), title: t("clientRequests", { n: c.requests }) }))),
+      log);
+  }));
+}
 
 function showSnip(name) {
   if (!$(`[data-snip-panel="${name}"]`)) name = "code";
@@ -2225,6 +2283,7 @@ async function poll() {
     }
     renderHubStatus();
     if (tab === "calls") refreshCalls();
+    if (tab === "clients") refreshClients();
     const fresh = await api("GET", "/api/state");
     const modal = $("#editor").open || $("#importer").open;
     if (!modal && JSON.stringify([fresh.config, fresh.profiles]) !== JSON.stringify([state?.config, state?.profiles])) {

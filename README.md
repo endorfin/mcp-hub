@@ -218,6 +218,7 @@ Design rules and components of the interface are documented in [DESIGN.md](DESIG
 
 - **Servers:** list with on/off switch, hub status per server (tools, errors), usage, and sorting by recently used, name or file order in both directions. The ⋯ menu inspects a server, chooses its tools for the hub, edits, duplicates and deletes it. Import accepts `mcpServers` JSON from other configurations.
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
+- **Clients:** every session since the last hub start with client name and version, profile endpoint, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
 - **Settings:** path to the server file, language, `passEnvironment`, and below that the complete `mcpServers` definition as JSON for direct editing.
 
@@ -264,6 +265,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `GET` | `/api/hub` | Status per server (state, error, number of tools/prompts/resources, OAuth status) |
 | `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state |
 | `GET` | `/api/live` | Clients with an open notification stream |
+| `GET` | `/api/clients` | Sessions since the hub start: name, version, profile, `since`, `lastSeen`, `requests`, `calls`, `streams` |
 | `GET` | `/api/usage` | Usage counter |
 | `GET` | `/api/calls?limit=300` | Recent calls (max. 1,000) |
 | `GET` | `/api/stats?days=14` | Call statistics (key figures, per day, per server, slowest tools) |

@@ -246,6 +246,22 @@ class HubTest(unittest.TestCase):
         self.request("DELETE", "/mcp", None, headers)
         self.assertEqual(self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 3, "method": "tools/list"}, headers)[0], 404)
 
+    def test_clients_endpoint_tracks_sessions(self):
+        req = urllib.request.Request(self.base + "/mcp", json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+             "params": {"protocolVersion": "2025-06-18", "clientInfo": {"name": "tester", "version": "1.2"}}}).encode(),
+            {"Content-Type": "application/json"})
+        with urllib.request.urlopen(req) as response:
+            session_id = response.headers["Mcp-Session-Id"]
+        headers = {"Mcp-Session-Id": session_id}
+        self.request("POST", "/mcp", {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                                      "params": {"name": "alpha__echo", "arguments": {"text": "x"}}}, headers)
+        row = next(c for c in self.get("/api/clients") if c["id"] == session_id[:8])
+        self.assertEqual((row["name"], row["version"], row["calls"], row["requests"], row["streams"], row["profile"]),
+                         ("tester", "1.2", 1, 2, 0, None))
+        self.request("DELETE", "/mcp", None, headers)
+        self.assertFalse(any(c["id"] == session_id[:8] for c in self.get("/api/clients")))
+
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
 

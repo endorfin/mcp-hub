@@ -215,6 +215,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(hub.status())
         if self.path == "/api/live":
             return self.send(hub.live_clients())
+        if self.path == "/api/clients":
+            return self.send(hub.clients.snapshot())
         if self.path == "/api/usage":
             return self.send(hub.usage.snapshot())
         if self.path.startswith("/api/hub/tools"):
@@ -343,8 +345,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        client = hub.clients.lookup(self.headers.get("Mcp-Session-Id"), self.headers.get("User-Agent", ""))
+        session_id = self.headers.get("Mcp-Session-Id")
+        client = hub.clients.lookup(session_id, self.headers.get("User-Agent", ""))
         listener = hub.subscribe(f"{client} · {profile}" if profile else client)
+        hub.clients.stream(session_id, 1)
         try:
             while True:
                 try:
@@ -357,6 +361,7 @@ class Handler(BaseHTTPRequestHandler):
             pass
         finally:
             hub.unsubscribe(listener)
+            hub.clients.stream(session_id, -1)
 
     def mcp(self, profile=None):
         try:
@@ -378,10 +383,12 @@ class Handler(BaseHTTPRequestHandler):
                              HTTPStatus.NOT_FOUND)
         if message["method"] == "initialize":
             client_info = (message.get("params") or {}).get("clientInfo")
-            headers["Mcp-Session-Id"] = hub.clients.register(client_info, user_agent)
+            headers["Mcp-Session-Id"] = hub.clients.register(client_info, user_agent, profile)
             client = hub.clients.lookup(headers["Mcp-Session-Id"], user_agent)
         else:
-            client = hub.clients.lookup(self.headers.get("Mcp-Session-Id"), user_agent)
+            session_id = self.headers.get("Mcp-Session-Id")
+            hub.clients.touch(session_id, message["method"] in ("tools/call", "prompts/get", "resources/read"))
+            client = hub.clients.lookup(session_id, user_agent)
         if profile:
             client = f"{client} · {profile}"
         try:

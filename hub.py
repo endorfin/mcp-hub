@@ -227,21 +227,22 @@ class Clients:
         self.path = Path(path)
         self.keep = keep
         self.lock = threading.Lock()
-        self.active = set()
+        self.active = {}
         try:
             self.sessions = json.loads(self.path.read_text())
         except (FileNotFoundError, json.JSONDecodeError):
             self.sessions = {}
 
-    def register(self, client_info, user_agent):
+    def register(self, client_info, user_agent, profile=None):
         session_id = uuid.uuid4().hex
+        now = time.time()
         with self.lock:
             self.sessions[session_id] = {
                 "name": (client_info or {}).get("name") or user_agent or "unbekannt",
                 "version": (client_info or {}).get("version"),
-                "since": time.time(),
+                "since": now,
             }
-            self.active.add(session_id)
+            self.active[session_id] = {"profile": profile, "lastSeen": now, "requests": 1, "calls": 0, "streams": 0}
             while len(self.sessions) > self.keep:
                 self.sessions.pop(next(iter(self.sessions)))
             self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -252,7 +253,30 @@ class Clients:
         return not session_id or session_id in self.active
 
     def end(self, session_id):
-        self.active.discard(session_id)
+        with self.lock:
+            self.active.pop(session_id, None)
+
+    def touch(self, session_id, call=False):
+        with self.lock:
+            activity = self.active.get(session_id or "")
+            if activity:
+                activity["lastSeen"] = time.time()
+                activity["requests"] += 1
+                activity["calls"] += call
+
+    def stream(self, session_id, delta):
+        with self.lock:
+            activity = self.active.get(session_id or "")
+            if activity:
+                activity["streams"] = max(0, activity["streams"] + delta)
+                activity["lastSeen"] = time.time()
+
+    def snapshot(self):
+        with self.lock:
+            rows = [{"id": sid[:8], "name": self.sessions[sid]["name"], "version": self.sessions[sid].get("version"),
+                     "since": self.sessions[sid]["since"], **activity}
+                    for sid, activity in self.active.items() if sid in self.sessions]
+        return sorted(rows, key=lambda r: (not r["streams"], -r["lastSeen"]))
 
     def lookup(self, session_id, user_agent):
         session = self.sessions.get(session_id or "")
