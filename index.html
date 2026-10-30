@@ -135,6 +135,12 @@ label.f > span b { color: var(--ink); font-weight: 600; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .check { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 13.5px; }
 .check input { width: auto; }
+input[type=checkbox]:not(.switch input) { appearance: none; -webkit-appearance: none; flex: none; display: grid; place-content: center; width: 16px; height: 16px; margin: 0; padding: 0; border: 1px solid var(--muted); border-radius: 4px; background: var(--field); cursor: pointer; transition: background-color .12s, border-color .12s; }
+input[type=checkbox]:not(.switch input)::before { content: ""; width: 4px; height: 8px; margin-top: -2px; border: solid var(--on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); transition: transform .12s ease-out; }
+input[type=checkbox]:not(.switch input):hover { border-color: var(--ink); }
+input[type=checkbox]:not(.switch input):checked { background: var(--accent); border-color: var(--accent); }
+input[type=checkbox]:not(.switch input):checked::before { transform: rotate(45deg) scale(1); }
+input[type=checkbox]:not(.switch input):focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 2px; }
 pre.log { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; font: 12px/1.5 var(--mono); max-height: 65vh; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
 code { font-family: var(--mono); font-size: 12px; background: var(--chip); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
 .error { color: var(--bad); font-size: 13px; }
@@ -146,7 +152,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .tool-list { display: grid; border: 1px solid var(--line); border-radius: 9px; max-height: 50vh; overflow: auto; }
 .tool { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 8px 12px; border-top: 1px solid var(--line); cursor: pointer; }
 .tool:first-child { border-top: 0; }
-.tool input { width: auto; margin: 3px 0 0; accent-color: var(--accent); }
+.tool input[type=checkbox]:not(.switch input) { margin-top: 2px; }
 .tool b { font: 500 12.5px var(--mono); }
 .tool small { display: block; color: var(--muted); font-size: 12.5px; }
 .tool-bar { display: flex; gap: 8px; align-items: center; }
