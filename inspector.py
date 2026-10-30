@@ -14,7 +14,7 @@ import oauth
 from secrets_store import SecretError, resolve_entry
 
 PROTOCOL_VERSION = "2025-06-18"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 DEFAULT_ENV_KEYS = ("HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER", "LANG", "TMPDIR")
 USER_AGENT = "mcp-hub/1.0"
 
