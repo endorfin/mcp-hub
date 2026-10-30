@@ -18,6 +18,7 @@ Alles liegt in `~/.config/mcp-proxy/` (änderbar per `MCP_PROXY_GUI_HOME`), nich
 | `gui-settings.json` | Pfad zur Serverdatei, `passEnvironment` |
 | `usage.json` | Nutzungszähler je Server (Anzahl, letzter Aufruf) |
 | `calls.jsonl` | Aufrufprotokoll, die letzten 1.000 Einträge |
+| `profiles.json` | gespeicherte Profile und das aktive Profil |
 | `clients.json` | Zuordnung Sitzungs-ID → Client, die letzten 300 Sitzungen |
 
 Tokens stehen in `servers.json` oder, besser, als Referenz im Schlüsselbund bzw. in 1Password (siehe „Secrets“). `servers.json` gehört nicht ins Repo.
@@ -112,6 +113,18 @@ prun restart mcp-hub
 - **JSON:** Die Serverdatei direkt bearbeiten.
 - **Einstellungen:** Pfad zur Serverdatei, `passEnvironment`.
 
+### Profile
+
+Ein Profil merkt sich je Server, ob er aktiviert ist und welche Tools abgewählt sind. Es dient dazu, schnell zwischen Setups zu wechseln, etwa „Frontend“ mit nuxt, nuxt-ui und chrome-devtools oder „Ops“ mit grafana und glitchtip.
+
+- **Speichern:** Server und Tools einstellen, dann oben über ⋯ → „Als neues Profil speichern…“.
+- **Wechseln:** In der Auswahl oben ein Profil wählen. Der Hub schreibt An/Aus und `disabledTools` in `servers.json`, startet oder stoppt die betroffenen Server und blendet Tools aus. Clients sehen die neue Tool-Liste nach einem Reconnect.
+- **Geändert:** Weicht der Stand vom aktiven Profil ab, steht „geändert“ neben der Auswahl. Über ⋯ → „… aktualisieren“ übernimmt das Profil den aktuellen Stand. Beim Wechsel mit ungespeicherten Änderungen fragt die GUI nach.
+- **Neue Server:** Server, die ein Profil nicht kennt, lässt der Wechsel unverändert. Mit „aktualisieren“ kommen sie ins Profil.
+- **Löschen:** über ⋯ → „… löschen“ für das aktive Profil. Server und Tools bleiben dabei, wie sie sind.
+
+Das Profil gilt für den ganzen Hub, also für alle Clients gleichzeitig.
+
 ### Nutzung und Protokoll
 
 Gezählt werden nur echte Aufrufe (`tools/call`, `prompts/get`, `resources/read`), keine Listenabfragen. Im Protokoll sind Argumente auf 4.000 und Ergebnisse auf 600 Zeichen gekürzt.
@@ -129,6 +142,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `GET` | `/api/hub/tools?name=` | Alle Tools eines Servers mit Status `enabled` |
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
+| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "delete" \| "clear", "name"}` |
 | `POST` | `/api/secrets` | `{"name", "value"}` im Schlüsselbund ablegen, liefert `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |
 | `POST` | `/api/inspect/call` | `{"name", "method", "params"}` an den Server schicken |

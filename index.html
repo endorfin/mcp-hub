@@ -27,6 +27,9 @@ h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
 .spacer { flex: 1; }
+.profile { display: flex; align-items: center; gap: 6px; position: relative; }
+.profile select { width: auto; min-width: 170px; padding-top: 5px; padding-bottom: 5px; }
+.profile .dirty { white-space: nowrap; }
 nav { display: flex; gap: 2px; background: var(--chip); padding: 3px; border-radius: 8px; }
 nav button { border: 0; background: none; padding: 5px 12px; border-radius: 6px; color: var(--muted); font: inherit; cursor: pointer; }
 nav button.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
@@ -176,6 +179,19 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
     <h1>MCP Hub</h1>
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
     <div class="spacer"></div>
+    <div class="profile actions">
+      <span class="dirty" id="profileDirty" hidden title="Server oder Tools weichen vom gespeicherten Profil ab">geändert</span>
+      <select id="profileSelect" aria-label="Profil"></select>
+      <button class="btn ghost dots" id="profileMenuBtn" aria-label="Profil-Optionen" aria-haspopup="menu" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
+      </button>
+      <div class="menu" role="menu" id="profileMenu" hidden>
+        <button role="menuitem" id="profileSave">Als neues Profil speichern…</button>
+        <button role="menuitem" id="profileUpdate">Profil aktualisieren</button>
+        <hr>
+        <button role="menuitem" class="danger" id="profileDelete">Profil löschen</button>
+      </div>
+    </div>
     <nav id="tabs">
       <button data-tab="servers" class="active">Server</button>
       <button data-tab="calls">Protokoll</button>
@@ -409,8 +425,74 @@ function shellQuote(s) {
 
 function servers() { return state.config.mcpServers; }
 
+function profileDirty() {
+  const { active, profiles } = state.profiles;
+  const saved = profiles[active]?.servers;
+  if (!saved) return false;
+  return Object.entries(saved).some(([name, want]) => {
+    const s = servers()[name];
+    if (!s) return false;
+    const tools = [...(s.disabledTools || [])].sort();
+    return (s.enabled !== false) !== want.enabled || JSON.stringify(tools) !== JSON.stringify(want.disabledTools);
+  });
+}
+
+function renderProfiles() {
+  const { active, profiles } = state.profiles;
+  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const sel = $("#profileSelect");
+  sel.replaceChildren(el("option", { value: "", textContent: names.length ? "Kein Profil" : "Noch kein Profil" }),
+    ...names.map(n => el("option", { value: n, textContent: n })));
+  sel.value = active && profiles[active] ? active : "";
+  const dirty = profileDirty();
+  $("#profileDirty").hidden = !dirty;
+  $("#profileUpdate").hidden = !sel.value;
+  $("#profileUpdate").textContent = `„${sel.value}“ aktualisieren`;
+  $("#profileDelete").hidden = !sel.value;
+  $("#profileDelete").textContent = `„${sel.value}“ löschen`;
+  $("#profileDelete").previousElementSibling.hidden = !sel.value;
+}
+
+async function profileAction(action, name, message) {
+  try {
+    state = await api("POST", "/api/profiles", { action, name });
+    syncJson();
+    render();
+    if (message) toast(message);
+  } catch (e) {
+    toast(e.message, true);
+    renderProfiles();
+  }
+}
+
+$("#profileSelect").onchange = e => {
+  const name = e.target.value;
+  if (profileDirty() && !confirm(`Die Änderungen an „${state.profiles.active}“ sind nicht gespeichert und gehen verloren. Trotzdem wechseln?`)) return renderProfiles();
+  if (!name) return profileAction("clear", null);
+  profileAction("apply", name, `Profil „${name}“ aktiv – Clients sehen die Tools nach einem Reconnect`);
+};
+$("#profileMenuBtn").onclick = e => {
+  e.stopPropagation();
+  const menu = $("#profileMenu");
+  closeMenus(menu);
+  menu.hidden = !menu.hidden;
+  e.currentTarget.setAttribute("aria-expanded", String(!menu.hidden));
+};
+$("#profileSave").onclick = () => {
+  const name = prompt("Name des Profils:", "")?.trim();
+  if (!name) return;
+  if (state.profiles.profiles[name] && !confirm(`Profil „${name}“ gibt es schon. Überschreiben?`)) return;
+  profileAction("save", name, `Profil „${name}“ gespeichert`);
+};
+$("#profileUpdate").onclick = () => profileAction("save", state.profiles.active, `Profil „${state.profiles.active}“ aktualisiert`);
+$("#profileDelete").onclick = () => {
+  const name = state.profiles.active;
+  if (confirm(`Profil „${name}“ löschen? Server und Tools bleiben, wie sie gerade sind.`)) profileAction("delete", name, `Profil „${name}“ gelöscht`);
+};
+
 function render() {
   renderHubStatus();
+  renderProfiles();
   $("#cfgPath").textContent = state.configPath;
   const hubUrl = `http://127.0.0.1:${location.port}/mcp`;
   $("#hubUrl").textContent = hubUrl;
@@ -1158,7 +1240,7 @@ async function poll() {
     if (tab === "calls") refreshCalls();
     const fresh = await api("GET", "/api/state");
     const modal = $("#editor").open || $("#importer").open;
-    if (!modal && JSON.stringify(fresh.config) !== JSON.stringify(state?.config)) {
+    if (!modal && JSON.stringify([fresh.config, fresh.profiles]) !== JSON.stringify([state?.config, state?.profiles])) {
       const jsonDirty = state && $("#jsonText").value !== JSON.stringify(servers(), null, 2);
       state = fresh;
       if (!jsonDirty) syncJson();

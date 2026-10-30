@@ -18,6 +18,7 @@ import secrets_store
 ROOT = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("MCP_PROXY_GUI_HOME", Path.home() / ".config" / "mcp-proxy"))
 SETTINGS_FILE = STATE_DIR / "gui-settings.json"
+PROFILES_FILE = STATE_DIR / "profiles.json"
 
 DEFAULT_SETTINGS = {
     "configPath": str(STATE_DIR / "servers.json"),
@@ -79,6 +80,52 @@ def validate_servers(servers):
     return None
 
 
+def load_profiles():
+    data = read_json(PROFILES_FILE, {})
+    return {"active": data.get("active"), "profiles": data.get("profiles") or {}}
+
+
+def profile_snapshot(servers):
+    return {name: {"enabled": entry.get("enabled", True), "disabledTools": sorted(entry.get("disabledTools") or [])}
+            for name, entry in servers.items()}
+
+
+def update_profiles(action, name):
+    data = load_profiles()
+    profiles = data["profiles"]
+    if action == "clear":
+        data["active"] = None
+    elif not name or not name.strip():
+        return "Profilname fehlt"
+    elif action == "save":
+        profiles[name] = {"servers": profile_snapshot(load_config()["mcpServers"])}
+        data["active"] = name
+    elif action == "apply":
+        if name not in profiles:
+            return f"Unbekanntes Profil: {name}"
+        config = load_config()
+        for server, wanted in profiles[name]["servers"].items():
+            entry = config["mcpServers"].get(server)
+            if entry is None:
+                continue
+            entry["enabled"] = wanted["enabled"]
+            if wanted["disabledTools"]:
+                entry["disabledTools"] = wanted["disabledTools"]
+            else:
+                entry.pop("disabledTools", None)
+        write_json(config_path(), config)
+        sync_hub_in_background()
+        data["active"] = name
+    elif action == "delete":
+        profiles.pop(name, None)
+        if data["active"] == name:
+            data["active"] = None
+    else:
+        return f"Unbekannte Aktion: {action}"
+    write_json(PROFILES_FILE, data)
+    return None
+
+
 hub = hub_module.Hub(load_config, load_settings, STATE_DIR)
 
 
@@ -114,6 +161,7 @@ class Handler(BaseHTTPRequestHandler):
             "configPath": str(config_path()),
             "config": load_config(),
             "settings": load_settings(),
+            "profiles": load_profiles(),
         }
 
     def do_GET(self):
@@ -173,6 +221,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": "Origin nicht erlaubt"}, HTTPStatus.FORBIDDEN)
         if self.path == "/mcp":
             return self.mcp()
+        if self.path == "/api/profiles":
+            data = self.body()
+            if error := update_profiles(data.get("action"), data.get("name")):
+                return self.send({"error": error}, HTTPStatus.BAD_REQUEST)
+            return self.send(self.state())
         if self.path == "/api/secrets":
             data = self.body()
             try:
