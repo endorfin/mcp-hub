@@ -4,6 +4,7 @@ import queue
 import statistics
 import re
 import threading
+import traceback
 import uuid
 from collections import deque
 import time
@@ -12,7 +13,7 @@ from pathlib import Path
 import compact
 from fsutil import append_private, atomic_write
 import oauth
-from inspector import PROTOCOL_VERSION, VERSION, AuthRequired, RpcError, open_session
+from inspector import PROTOCOL_VERSION, VERSION, AuthRequired, RpcError, SessionExpired, open_session
 
 SEPARATOR = "__"
 SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
@@ -36,6 +37,10 @@ def labelled(upstream, item):
     return result
 
 
+def prefix_of(name):
+    return re.sub(r"[^A-Za-z0-9_-]", "_", name)
+
+
 def summary(upstream):
     tools = upstream.catalog["tools"]
     return upstream.server_info.get("description") or upstream.instructions.strip().split("\n")[0][:300] \
@@ -54,7 +59,7 @@ class Upstream:
         self.on_change = on_change
         self.entry = entry
         self.key = key
-        self.prefix = re.sub(r"[^A-Za-z0-9_-]", "_", name)
+        self.prefix = prefix_of(name)
         self.session = None
         self.state = "starting"
         self.error = None
@@ -66,6 +71,7 @@ class Upstream:
         self.challenge = None
         self.pass_environment = True
         self.started_at = None
+        self.restart_lock = threading.Lock()
 
     def start(self, pass_environment):
         self.pass_environment = pass_environment
@@ -85,11 +91,14 @@ class Upstream:
             self.error = "Sign-in required"
             self.state = "auth"
             self.close()
-        except (RpcError, OSError) as e:
-            stderr = [x["data"] for x in self.session.log if x["kind"] in ("stderr", "error")] if self.session else []
-            self.error = str(e).splitlines()[0] + (f" – {stderr[-1]}" if stderr else "")
+        except Exception as e:
+            self.error = (str(e).splitlines() or [type(e).__name__])[0] + self._stderr_tail()
             self.state = "error"
             self.close()
+
+    def _stderr_tail(self):
+        stderr = [x["data"] for x in self.session.log if x["kind"] in ("stderr", "error")] if self.session else []
+        return f" – {stderr[-1]}" if stderr else ""
 
     def _on_notification(self, message):
         if message["method"].endswith("/list_changed"):
@@ -105,8 +114,8 @@ class Upstream:
             if capability in self.capabilities:
                 try:
                     self.catalog[key] = self.session.list_all(method, key)
-                except RpcError:
-                    self.catalog[key] = []
+                except (RpcError, AttributeError, TypeError):
+                    pass
 
     def blocked(self, disabled=None):
         names = set((self.entry.get("disabledTools") or []) if disabled is None else disabled)
@@ -123,25 +132,33 @@ class Upstream:
         return self.session is not None and self.session.alive()
 
     def mark_crashed(self):
-        stderr = [x["data"] for x in self.session.log if x["kind"] in ("stderr", "error")] if self.session else []
         self.state = "error"
-        self.error = "Server stopped unexpectedly" + (f" – {stderr[-1]}" if stderr else "")
+        self.error = "Server stopped unexpectedly" + self._stderr_tail()
         self.close()
 
     def request(self, method, params):
         if not self.alive():
             raise RpcError(f"Server “{self.name}” is not running")
+        session = self.session
         try:
-            return self.session.request(method, params, timeout=300)
+            return session.request(method, params, timeout=300)
         except AuthRequired:
-            self.close()
             if not oauth.access_token(self.name, force_refresh=True):
+                self.close()
                 self.state, self.error = "auth", "Sign-in required"
                 raise
-            self.start(self.pass_environment)
-            if self.state != "running":
-                raise RpcError(f"Server “{self.name}”: {self.error}")
-            return self.session.request(method, params, timeout=300)
+            self._restart_session(session)
+        except SessionExpired:
+            self._restart_session(session)
+        return self.session.request(method, params, timeout=300)
+
+    def _restart_session(self, failed):
+        with self.restart_lock:
+            if self.session is failed:
+                failed.close()
+                self.start(self.pass_environment)
+        if self.state != "running":
+            raise RpcError(f"Server “{self.name}”: {self.error}")
 
     def close(self):
         if self.session:
@@ -253,7 +270,7 @@ class Clients:
         now = time.time()
         with self.lock:
             self.sessions[session_id] = {
-                "name": (client_info or {}).get("name") or user_agent or "unbekannt",
+                "name": (client_info or {}).get("name") or user_agent or "unknown",
                 "version": (client_info or {}).get("version"),
                 "since": now,
             }
@@ -326,6 +343,8 @@ class Hub:
         self.upstreams = {}
         self.restarts = {}
         self.on_demand = {}
+        self.demand_lock = threading.Lock()
+        self.notify_lock = threading.Lock()
         self.idle_after = float(os.environ.get("MCP_HUB_ON_DEMAND_IDLE") or ON_DEMAND_IDLE)
 
     def _demand(self, profile):
@@ -334,16 +353,18 @@ class Hub:
             return
         config = self.load_config()["mcpServers"]
         now = time.time()
-        for name, wanted in saved["servers"].items():
-            entry = config.get(name) or {}
-            if wanted.get("enabled") and entry.get("enabled", True) is False and (entry.get("command") or entry.get("url")):
-                self.on_demand[name] = now
+        with self.demand_lock:
+            for name, wanted in saved["servers"].items():
+                entry = config.get(name) or {}
+                if wanted.get("enabled") and entry.get("enabled", True) is False and (entry.get("command") or entry.get("url")):
+                    self.on_demand[name] = now
 
     def _expire_on_demand(self):
         cutoff = time.time() - self.idle_after
-        expired = [name for name, used in list(self.on_demand.items()) if used < cutoff]
-        for name in expired:
-            self.on_demand.pop(name, None)
+        with self.demand_lock:
+            expired = [name for name, used in self.on_demand.items() if used < cutoff]
+            for name in expired:
+                del self.on_demand[name]
         return bool(expired)
 
     def _schedule_restart(self, upstream, now):
@@ -375,25 +396,26 @@ class Hub:
                 if self._expire_on_demand() or self._needs_attention():
                     self.sync()
             except Exception:
-                pass
+                traceback.print_exc()
 
     def supervise_in_background(self):
         threading.Thread(target=self.supervise, daemon=True).start()
 
-    def sync(self):
-        pass_environment = self.load_settings()["passEnvironment"]
-        config = self.load_config()["mcpServers"]
-        wanted = {
-            name: entry for name, entry in config.items()
-            if entry.get("enabled", True) and (entry.get("command") or entry.get("url"))
-        }
-        for name in list(self.on_demand):
-            entry = config.get(name) or {}
-            if name in wanted or not (entry.get("command") or entry.get("url")):
-                self.on_demand.pop(name, None)
-            else:
-                wanted[name] = entry
+    def sync(self, wait=150):
         with self.lock:
+            pass_environment = self.load_settings()["passEnvironment"]
+            config = self.load_config()["mcpServers"]
+            wanted = {
+                name: entry for name, entry in config.items()
+                if entry.get("enabled", True) and (entry.get("command") or entry.get("url"))
+            }
+            with self.demand_lock:
+                for name in list(self.on_demand):
+                    entry = config.get(name) or {}
+                    if name in wanted or not (entry.get("command") or entry.get("url")):
+                        del self.on_demand[name]
+                    else:
+                        wanted[name] = entry
             now = time.time()
             for name, upstream in list(self.upstreams.items()):
                 key = runtime_key(wanted.get(name), pass_environment)
@@ -421,17 +443,42 @@ class Hub:
                 else:
                     upstream = Upstream(name, entry, runtime_key(entry, pass_environment), self.sync_in_background)
                     self.upstreams[name] = upstream
-                    thread = threading.Thread(target=upstream.start, args=(pass_environment,), daemon=True)
-                    thread.start()
-                    starting.append(thread)
-            for thread in starting:
-                thread.join(150)
-            for upstream in self.upstreams.values():
-                if upstream.state == "running" and upstream.stale:
-                    upstream.refresh()
-            running = [u for u in self.upstreams.values() if u.state == "running"]
-            self._notify_if_changed([u for u in running if u.name not in self.on_demand])
-            return running
+                    starting.append(upstream)
+            stale = [u for u in self.upstreams.values() if u.state == "running" and u.stale]
+        threads = [threading.Thread(target=self._start, args=(u, pass_environment), daemon=True) for u in starting]
+        for thread in threads:
+            thread.start()
+        deadline = time.monotonic() + wait
+        for thread in threads:
+            thread.join(max(0, deadline - time.monotonic()))
+        for upstream in stale:
+            upstream.refresh()
+        running = self._running()
+        self._notify_if_changed(running)
+        return running
+
+    def _await_start(self, prefixed, running, timeout=60):
+        if prefixed in (compact.SEARCH, compact.DESCRIBE, compact.CALL):
+            prefixed = ""
+        if not prefixed or any(prefixed.startswith(u.prefix + SEPARATOR) for u in running):
+            return False
+        starting = [u for u in list(self.upstreams.values())
+                    if u.state == "starting" and prefixed.startswith(u.prefix + SEPARATOR)]
+        deadline = time.monotonic() + timeout
+        while starting and any(u.state == "starting" for u in starting) and time.monotonic() < deadline:
+            time.sleep(0.2)
+        return bool(starting)
+
+    def _running(self):
+        return [u for u in list(self.upstreams.values()) if u.state == "running"]
+
+    def _start(self, upstream, pass_environment):
+        upstream.start(pass_environment)
+        with self.lock:
+            if self.upstreams.get(upstream.name) is not upstream:
+                upstream.close()
+                return
+        self._notify_if_changed(self._running())
 
     def reconnect(self, name):
         with self.lock:
@@ -463,6 +510,11 @@ class Hub:
             return sorted(self.listeners.values())
 
     def _notify_if_changed(self, running):
+        running = [u for u in running if u.name not in self.on_demand]
+        with self.notify_lock:
+            self._notify(running)
+
+    def _notify(self, running):
         signature = json.dumps([
             [(u.name, sorted(t["name"] for t in u.tools()), sorted(p["name"] for p in u.catalog["prompts"]),
               sorted(r["uri"] for r in u.catalog["resources"]), len(u.catalog["resourceTemplates"]))
@@ -497,7 +549,7 @@ class Hub:
                 **({"onDemand": True} if name in self.on_demand else {}),
                 **({"oauth": oauth.status(name)} if u.entry.get("url") else {}),
             }
-            for name, u in self.upstreams.items()
+            for name, u in list(self.upstreams.items())
         }
 
     def _restart_status(self, name):
@@ -539,7 +591,7 @@ class Hub:
                 return upstream, prefixed[len(upstream.prefix) + len(SEPARATOR):]
         raise JsonRpcError(-32602, f"Unknown: {prefixed}")
 
-    def handle(self, method, params, client="unbekannt", profile=None, mode=None):
+    def handle(self, method, params, client="unknown", profile=None, mode=None):
         params = params or {}
         if profile and method not in ("ping", "logging/setLevel"):
             self._demand(profile)
@@ -563,7 +615,10 @@ class Hub:
         if method in ("ping", "logging/setLevel"):
             return {}
 
-        view = self._view(self.sync(), profile)
+        running = self.sync()
+        if method in ("tools/call", "prompts/get") and self._await_start(params.get("name", ""), running):
+            running = self._running()
+        view = self._view(running, profile)
         running = list(view)
         if method == "tools/list" and mode == "compact":
             return {"tools": compact.meta_tools(sorted(u.name for u in running))}

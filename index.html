@@ -962,6 +962,11 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^Internal error: (.*)$/, "Interner Fehler: $1"],
+  [/^Not connected$/, "Nicht verbunden"],
+  [/^(.*): values in (args|env|headers) must be strings$/, "$1: Werte in $2 müssen Text sein"],
+  [/^(.*) and (.*) would share the tool prefix (.*)$/, "$1 und $2 hätten dasselbe Tool-Präfix $3"],
+  [/^The server ended the session \(HTTP 404\)$/, "Der Server hat die Sitzung beendet (HTTP 404)"],
   [/^Host not allowed$/, "Host nicht erlaubt"],
   [/^Content-Type must be application\/json$/, "Content-Type muss application/json sein"],
   [/^(.+) must use https: (.*)$/, "$1 muss https verwenden: $2"],

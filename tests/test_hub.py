@@ -379,6 +379,31 @@ class HubTest(unittest.TestCase):
         caught.exception.close()
         self.assertEqual(self.request("GET", "/api/stats?days=abc")[0], 200)
 
+    def test_a_slow_server_does_not_block_other_requests(self):
+        servers = self.servers()
+        servers["slow"] = {"command": DUMMY[0], "args": DUMMY[1:], "env": {"DUMMY_DELAY": "4"}}
+        self.save_servers(servers)
+        try:
+            started = time.monotonic()
+            names = self.tool_names()
+            self.assertLess(time.monotonic() - started, 2.5)
+            self.assertIn("alpha__echo", names)
+            self.assertEqual(self.call_text("slow__echo"), "")
+            self.assertIn("slow__echo", self.tool_names())
+        finally:
+            del servers["slow"]
+            self.save_servers(servers)
+            self.wait_for(lambda: "slow" not in self.get("/api/hub"))
+
+    def test_server_entries_are_validated(self):
+        servers = self.servers()
+        bad_args = {**servers, "gamma": {"command": DUMMY[0], "args": [8080]}}
+        status, body = self.request("PUT", "/api/servers", {"mcpServers": bad_args})
+        self.assertEqual((status, body["error"]), (400, "gamma: values in args must be strings"))
+        twins = {**servers, "my server": {"command": "x"}, "my_server": {"command": "y"}}
+        status, body = self.request("PUT", "/api/servers", {"mcpServers": twins})
+        self.assertEqual((status, body["error"]), (400, "my server and my_server would share the tool prefix my_server"))
+
     def call_text(self, tool):
         return self.rpc("tools/call", {"name": tool})["result"]["content"][0]["text"]
 
@@ -598,3 +623,39 @@ class RestartPolicyTest(unittest.TestCase):
         self.hub.restarts["x"] = {"count": 3, "failures": 3, "retryAt": None, "gaveUp": False}
         self.hub._schedule_restart(self.Fake("x", started_at=0), hub_module.STABLE_AFTER + 1)
         self.assertEqual(self.hub.restarts["x"]["failures"], 1)
+
+
+class UpstreamTest(unittest.TestCase):
+    def test_any_start_failure_ends_in_error(self):
+        upstream = hub_module.Upstream("broken", {"command": sys.executable, "args": [1]}, "key")
+        upstream.start(True)
+        self.assertEqual(upstream.state, "error")
+        self.assertTrue(upstream.error)
+
+    def test_an_expired_session_is_restarted_once(self):
+        class Session:
+            def __init__(self, fail):
+                self.fail, self.closed = fail, False
+
+            def request(self, method, params, timeout):
+                if self.fail:
+                    raise hub_module.SessionExpired("gone")
+                return {"ok": True}
+
+            def alive(self):
+                return not self.closed
+
+            def close(self):
+                self.closed = True
+
+        upstream = hub_module.Upstream("remote", {"url": "https://example.com/mcp"}, "key")
+        upstream.session, upstream.state = Session(fail=True), "running"
+        starts = []
+
+        def start(pass_environment):
+            starts.append(1)
+            upstream.session, upstream.state = Session(fail=False), "running"
+
+        upstream.start = start
+        self.assertEqual(upstream.request("tools/call", {}), {"ok": True})
+        self.assertEqual(len(starts), 1)

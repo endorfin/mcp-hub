@@ -265,10 +265,9 @@ def _parse_commands(text):
     return (labels.pop() if len(labels) == 1 else "cli-mixed"), servers, warnings, []
 
 
-def _points_to_hub(entry, port):
-    needles = (f"127.0.0.1:{port}", f"localhost:{port}")
+def points_to_hub(entry, port):
     haystack = " ".join([entry.get("url") or "", *entry.get("args", [])])
-    return any(n in haystack for n in needles)
+    return re.search(rf"(127\.0\.0\.1|localhost):{port}(?!\d)", haystack) is not None
 
 
 def parse(text, hub_port=None):
@@ -293,7 +292,7 @@ def parse(text, hub_port=None):
     else:
         raise ImportError_("Unrecognized format: expected JSON, Codex TOML or `claude mcp add` / `codex mcp add` commands")
     if hub_port:
-        for name in [n for n, e in servers.items() if _points_to_hub(e, hub_port)]:
+        for name in [n for n, e in servers.items() if points_to_hub(e, hub_port)]:
             del servers[name]
             warnings.append({"server": name, "key": "", "reason": "self"})
     if not servers:

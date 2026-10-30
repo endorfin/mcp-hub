@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import time
 
 TOOLS = [
     {"name": "echo", "description": "Returns the text", "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}}}},
@@ -28,6 +29,7 @@ for line in sys.stdin:
         continue
     params = message.get("params") or {}
     if method == "initialize":
+        time.sleep(float(os.environ.get("DUMMY_DELAY", "0")))
         reply(message_id, {"protocolVersion": params.get("protocolVersion"), "capabilities": {"tools": {}},
                            "serverInfo": {"name": "dummy", "version": "1"}})
     elif method == "tools/list":
