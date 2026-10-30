@@ -238,6 +238,10 @@ The tests start their own hub with its own configuration folder on a free port a
 - **Linux and Windows:** secrets, OAuth tokens and autostart currently rely on the macOS keychain and LaunchAgents.
 - **Profile endpoint starts servers on demand:** a server switched off in the hub is currently missing from profile endpoints as well.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, code style and the translation rules.
+
 ## License
 
 [MIT](LICENSE)
