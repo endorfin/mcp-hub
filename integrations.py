@@ -84,7 +84,7 @@ def _servers(client):
 
 
 def _points_to_hub(entry, port):
-    return isinstance(entry, dict) and importer._points_to_hub(
+    return isinstance(entry, dict) and importer.points_to_hub(
         {"url": entry.get("url") or entry.get("serverUrl") or "", "args": [str(a) for a in entry.get("args") or []]}, port)
 
 

@@ -144,6 +144,11 @@ class GeneralTest(unittest.TestCase):
         self.assertEqual(list(result["servers"]), ["other"])
         self.assertEqual({w["server"] for w in result["warnings"] if w["reason"] == "self"}, {"mcp-hub", "bridge"})
 
+    def test_hub_detection_respects_the_port(self):
+        self.assertTrue(importer.points_to_hub({"url": "http://127.0.0.1:4747/mcp"}, 4747))
+        self.assertFalse(importer.points_to_hub({"url": "http://127.0.0.1:47470/mcp"}, 4747))
+        self.assertTrue(importer.points_to_hub({"args": ["bridge.py", "http://localhost:4747/mcp"]}, 4747))
+
     def test_unrecognized_and_empty(self):
         with self.assertRaisesRegex(importer.ImportError_, "Unrecognized format"):
             importer.parse("hello world")

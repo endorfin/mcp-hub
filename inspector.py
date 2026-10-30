@@ -29,6 +29,10 @@ class RpcError(Exception):
     pass
 
 
+class SessionExpired(RpcError):
+    pass
+
+
 class AuthRequired(RpcError):
     def __init__(self, challenge=""):
         super().__init__("Sign-in required (HTTP 401)")
@@ -272,6 +276,9 @@ class HttpSession(BaseSession):
             if e.code == 401:
                 with e:
                     raise AuthRequired(e.headers.get("WWW-Authenticate", ""))
+            if e.code == 404 and self.session_id:
+                with e:
+                    raise SessionExpired("The server ended the session (HTTP 404)")
             raise http_error(e)
         self.session_id = response.headers.get("Mcp-Session-Id") or self.session_id
         content_type = response.headers.get("Content-Type", "")
@@ -382,7 +389,7 @@ class SseSession(BaseSession):
 
     def close(self):
         self.closed = True
-        # response.close() blockiert, solange _listen noch liest; shutdown weckt den Leser auf.
+        # response.close() blocks while _listen is still reading; shutting the socket down wakes the reader.
         sock = getattr(getattr(getattr(self.stream, "fp", None), "raw", None), "_sock", None)
         if sock:
             try:
@@ -428,6 +435,8 @@ def connect(name, entry, pass_environment):
     try:
         info = session.initialize()
     except RpcError as e:
+        sessions.pop(name, None)
+        session.close()
         raise RpcError(f"{e}\n\n" + "\n".join(
             str(x["data"]) for x in session.log if x["kind"] in ("stderr", "stdout", "exit", "error"))[-4000:])
     capabilities = info.get("capabilities", {})
@@ -448,7 +457,7 @@ def connect(name, entry, pass_environment):
 def call(name, method, params):
     session = sessions.get(name)
     if not session or not session.alive():
-        raise RpcError("Nicht verbunden")
+        raise RpcError("Not connected")
     return session.request(method, params, timeout=300)
 
 
