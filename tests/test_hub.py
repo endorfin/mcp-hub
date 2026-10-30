@@ -645,7 +645,7 @@ class RevealTest(unittest.TestCase):
         import config_store
         self.assertEqual(config_store.reveal_command("/x/servers.json", "darwin"), ["open", "-R", "/x/servers.json"])
         self.assertEqual(config_store.reveal_command("C:/x/servers.json", "win32"), ["explorer", "/select,C:/x/servers.json"])
-        self.assertEqual(config_store.reveal_command("/x/servers.json", "linux"), ["xdg-open", "/x"])
+        self.assertEqual(config_store.reveal_command("/x/servers.json", "linux"), ["xdg-open", str(Path("/x"))])
 
 
 class UpstreamTest(unittest.TestCase):
