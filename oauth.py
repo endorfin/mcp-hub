@@ -11,8 +11,9 @@ import urllib.request
 
 import net
 import secrets_store
+from version import VERSION
 
-USER_AGENT = "mcp-hub/1.0"
+USER_AGENT = f"mcp-hub/{VERSION}"
 CLIENT_NAME = "MCP Hub"
 REFRESH_MARGIN = 60
 

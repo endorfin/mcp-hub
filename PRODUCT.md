@@ -31,7 +31,7 @@ One local endpoint for all clients instead of per-client configuration, with no 
 
 ## Capabilities and Constraints
 
-- Python 3.11+ without third-party packages; server and GUI in one process (`app.py`), interface as a single file (`index.html`) without a build step.
+- Python 3.11+ without third-party packages; server and GUI in one process (`app.py`), interface as plain files (`index.html`, `app.css`, `i18n.js`) without a build step.
 - Local only: listens on `127.0.0.1`, rejects write requests with a foreign `Origin`.
 - Tool and prompt names carry the server name as a prefix (`server__tool`), titles read `server: Name`.
 - Secrets as references: `${keychain:…}` (macOS keychain, Secret Service on Linux, Credential Manager on Windows), `${op://…}` (1Password CLI) and `${env:…}`.
