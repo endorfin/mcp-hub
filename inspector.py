@@ -16,7 +16,7 @@ import oauth
 from secrets_store import SecretError, resolve_entry
 
 PROTOCOL_VERSION = "2025-06-18"
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 WINDOWS = sys.platform == "win32"
 DEFAULT_ENV_KEYS = ("HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER", "LANG", "TMPDIR")
 WINDOWS_ENV_KEYS = ("APPDATA", "COMSPEC", "LOCALAPPDATA", "PATHEXT", "PROGRAMDATA", "PROGRAMFILES", "SYSTEMDRIVE",
