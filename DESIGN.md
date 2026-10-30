@@ -25,6 +25,10 @@ colors:
   muted: "#6b6b66"
   muted-dark: "#9a998f"
   scrim: "rgb(0 0 0 / .35)"
+  series: "#85847d"
+  series-dark: "#96958e"
+  series-error: "#c0362c"
+  series-error-dark: "#d9493f"
 typography:
   title:
     fontFamily: "-apple-system, system-ui, sans-serif"
@@ -45,6 +49,11 @@ typography:
     fontFamily: "-apple-system, system-ui, sans-serif"
     fontSize: "12.5px"
     fontWeight: 400
+  kpi:
+    fontFamily: "-apple-system, system-ui, sans-serif"
+    fontSize: "24px"
+    fontWeight: 600
+    letterSpacing: "-0.02em"
   mono:
     fontFamily: "ui-monospace, SF Mono, Menlo, monospace"
     fontSize: "12.5px"
@@ -96,6 +105,10 @@ components:
     padding: "6px 8px"
   listbox-option-active:
     backgroundColor: "{colors.chip}"
+  kpi:
+    backgroundColor: "{colors.field}"
+    rounded: "{rounded.segment}"
+    padding: "12px 14px"
   card:
     backgroundColor: "{colors.panel}"
     rounded: "{rounded.card}"
@@ -140,6 +153,10 @@ Neutrale, leicht warme Grautöne mit einem einzigen Akzent; jede Farbe außerhal
 - **Signalorange** (`warn`): Abweichungen, die keine Fehler sind: „Tools deaktiviert“, ungespeicherte Profiländerung (Punkt), Server startet.
 - **Signalrot** (`bad`): Fehler und destruktive Menüeinträge („Löschen“).
 
+### Diagramme
+- **Datenreihe** (`series`): neutrales Grau für die Menge, z. B. erfolgreiche Aufrufe. Geprüft mit dem Dataviz-Validator: Kontrast ≥ 3:1 zur Pultfläche in beiden Schemata.
+- **Fehlerreihe** (`series-error`): Signalrot für Flächen, im dunklen Schema etwas gedämpft (`series-error-dark`), damit es sich auch bei Rot-Schwäche vom Grau abhebt (ΔE ≥ 8).
+
 ### Named Rules
 **The Meaning-Only Rule.** Grün, Orange und Rot erscheinen nur, wenn sie einen Zustand oder die Hauptaktion bezeichnen. Dekorative Farbe gibt es nicht.
 
@@ -154,6 +171,7 @@ Neutrale, leicht warme Grautöne mit einem einzigen Akzent; jede Farbe außerhal
 
 ### Hierarchy
 - **Title** (650, 16 px, −0.01em): Produktname in der Kopfleiste.
+- **KPI** (600, 24 px, −0.02em, Ziffern gleicher Breite): Werte in den Kennzahl-Kacheln der Statistik.
 - **Item Name** (600, 15,5 px, −0.01em): Servernamen in der Liste.
 - **Section** (600, 14 px): Überschriften in Karten und Dialogköpfen.
 - **Body** (400, 14 px, 1.45): Fließtext und Bedienelemente.
@@ -221,6 +239,11 @@ Ersetzt jedes native Auswahlfeld.
 - **Einträge:** 6 px × 8 px, 6 px Radius; hervorgehoben in Kappe; der gewählte Eintrag trägt ein Häkchen in Tinte (`ink`) rechts außen; Grün bleibt Zuständen und Hauptaktionen vorbehalten.
 - **Tastatur:** ↑/↓ öffnet und bewegt (umlaufend), Enter oder Leertaste übernimmt, Esc schließt und gibt den Fokus an den Auslöser zurück, Tab schließt. Ein Klick daneben schließt.
 
+### Statistik
+- **Kennzahl-Kachel:** Mulde als Fläche, 8 px Radius, Beschriftung `muted` 12,5 px, Wert 24 px / 600 mit Ziffern gleicher Breite, Zusatz 12 px `muted`. Vier nebeneinander, unter 760 px zwei.
+- **Säulen je Tag:** höchstens 24 px breit, oben 4 px gerundet, unten gerade auf der Grundlinie; Fehler oben auf den erfolgreichen Aufrufen mit 2 px Abstand. Eine gestrichelte Linie markiert das Maximum, beschriftet rechts. Legende rechts über dem Diagramm. Beim Überfahren hebt sich die Spalte in Kappe ab, der Tooltip (Tinte auf Werkstattgrau, invertiert) nennt Datum, Aufrufe und Fehler.
+- **Tabellen:** rechtsbündige Zahlen mit gleicher Ziffernbreite, Namen in Monospace, Trennlinien in Fuge; die Server-Tabelle zeigt den Anteil als dünnen Balken in `series`, ein Klick auf die Zeile filtert das Protokoll.
+
 ### Menüs
 - Gleiches Popover wie die Listbox; Einträge ohne Häkchen, destruktive Einträge in Signalrot nach einer Trennlinie. Auslöser ist ein Ghost-Button mit ⋯ oder ein Icon-Button.
 
@@ -241,6 +264,7 @@ Ersetzt jedes native Auswahlfeld.
 - **Do** sekundäre und destruktive Aktionen in ein ⋯-Menü legen; „Löschen“ zuletzt, rot, nach einer Trennlinie.
 - **Do** neue Farben als Token-Paar auf `:root` anlegen, hell und dunkel.
 - **Do** Felder in Dialogen und Karten in der Mulde (`field`) zeigen, damit sie sich abheben.
+- **Do** Diagrammfarben mit dem Dataviz-Validator für beide Schemata prüfen, bevor sie eingesetzt werden.
 
 ### Don't:
 - **Don't** native `<select>`, Checkboxen oder Browser-Fokusringe sichtbar lassen.

@@ -83,6 +83,16 @@
         "role": "neutral",
         "displayName": "Beschriftung",
         "canonical": "#6b6b66"
+      },
+      "series": {
+        "role": "data",
+        "displayName": "Datenreihe",
+        "canonical": "#85847d"
+      },
+      "series-error": {
+        "role": "data",
+        "displayName": "Fehlerreihe",
+        "canonical": "#c0362c"
       }
     },
     "typographyMeta": {
@@ -109,6 +119,10 @@
       "chip": {
         "displayName": "Chip",
         "purpose": "Status- und Zähler-Chips."
+      },
+      "kpi": {
+        "displayName": "KPI",
+        "purpose": "Werte in den Kennzahl-Kacheln der Statistik."
       }
     },
     "shadows": [
@@ -265,7 +279,8 @@
       "Do zusammengehörige Bedienelemente als FieldGroup mit gemeinsamem Rahmen zeigen.",
       "Do sekundäre und destruktive Aktionen in ein ⋯-Menü legen; „Löschen“ zuletzt, rot, nach einer Trennlinie.",
       "Do neue Farben als Token-Paar auf :root anlegen, hell und dunkel.",
-      "Do Felder in Dialogen und Karten in der Mulde (field) zeigen, damit sie sich abheben."
+      "Do Felder in Dialogen und Karten in der Mulde (field) zeigen, damit sie sich abheben.",
+      "Do Diagrammfarben mit dem Dataviz-Validator für beide Schemata prüfen, bevor sie eingesetzt werden."
     ],
     "donts": [
       "Don't native <select>, Checkboxen oder Browser-Fokusringe sichtbar lassen.",

@@ -216,6 +216,9 @@ class Handler(BaseHTTPRequestHandler):
             if tools is None:
                 return self.send({"error": "Server läuft nicht im Hub"}, HTTPStatus.NOT_FOUND)
             return self.send(tools)
+        if self.path.startswith("/api/stats"):
+            days = int(parse_qs(urlparse(self.path).query).get("days", ["14"])[0])
+            return self.send(hub.calls.stats(max(1, min(days, 90))))
         if self.path.startswith("/api/calls"):
             limit = int(parse_qs(urlparse(self.path).query).get("limit", ["300"])[0])
             return self.send(hub.calls.recent(min(limit, 1000)))

@@ -17,7 +17,7 @@ Alles liegt in `~/.config/mcp-hub/` (änderbar per `MCP_HUB_HOME`), nicht im Rep
 | `servers.json` | Server-Definitionen im Format `mcpServers`; vor jedem Schreiben entsteht `servers.json.bak` |
 | `gui-settings.json` | Pfad zur Serverdatei, `passEnvironment` |
 | `usage.json` | Nutzungszähler je Server (Anzahl, letzter Aufruf) |
-| `calls.jsonl` | Aufrufprotokoll, die letzten 1.000 Einträge |
+| `calls.jsonl` | Aufrufprotokoll, die letzten 5.000 Einträge |
 | `profiles.json` | gespeicherte Profile und das aktive Profil |
 | `clients.json` | Zuordnung Sitzungs-ID → Client, die letzten 300 Sitzungen |
 
@@ -149,6 +149,10 @@ claude mcp add --scope user --transport http mcp-hub-frontend http://127.0.0.1:4
 
 Der Profil-Endpunkt filtert nur: Server, die im Hub ausgeschaltet sind, fehlen auch dort. Server, die das Profil nicht kennt, erscheinen mit ihrer aktuellen Einstellung. Im Protokoll steht hinter dem Client das Profil, z. B. `claude-code · Frontend`.
 
+### Statistik
+
+Über dem Aufrufprotokoll zeigt eine einklappbare Statistik die Kennzahlen (Aufrufe, Fehlerquote, typische Dauer, Clients), die Aufrufe pro Tag der letzten 14 Tage mit Fehleranteil, eine Tabelle je Server (Aufrufe, Fehler, Median, p95, zuletzt; ein Klick filtert das Protokoll) und die fünf langsamsten Tools nach p95. Grundlage sind die letzten 5.000 Aufrufe aus `calls.jsonl`.
+
 ### Nutzung und Protokoll
 
 Gezählt werden nur echte Aufrufe (`tools/call`, `prompts/get`, `resources/read`), keine Listenabfragen. Im Protokoll sind Argumente auf 4.000 und Ergebnisse auf 600 Zeichen gekürzt.
@@ -167,6 +171,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 | `GET` | `/api/live` | Clients mit offenem Benachrichtigungs-Stream |
 | `GET` | `/api/usage` | Nutzungszähler |
 | `GET` | `/api/calls?limit=300` | Letzte Aufrufe (max. 1.000) |
+| `GET` | `/api/stats?days=14` | Auswertung der Aufrufe (Kennzahlen, je Tag, je Server, langsamste Tools) |
 | `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}`; `clear` schaltet alles ein |
 | `POST` | `/api/secrets` | `{"name", "value"}` im Schlüsselbund ablegen, liefert `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Inspector-Sitzung öffnen (`{"name": …}`) |
@@ -183,7 +188,7 @@ Den Client ermittelt der Hub aus `clientInfo` beim `initialize` und vergibt daf�
 python3 -m unittest discover -s tests -v
 ```
 
-Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz und (nur macOS) die Auflösung aus dem Schlüsselbund. Die echte Konfiguration bleibt unberührt; der Schlüsselbund-Test legt `mcp-hub/selftest/hub-tests` an und löscht ihn wieder.
+Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem freien Port und zwei Instanzen eines kleinen stdio-Servers (`tests/dummy_server.py`). Geprüft werden Präfixe und Titel, Sitzungen (404 nach Ende), die Brücke samt Hub-Neustart, Weiterleitung und Protokoll, Fehler, `disabledTools`, Profile samt Profil-Endpunkt, Benachrichtigungen, Origin-Schutz, die Statistik und (nur macOS) die Auflösung aus dem Schlüsselbund. Die echte Konfiguration bleibt unberührt; der Schlüsselbund-Test legt `mcp-hub/selftest/hub-tests` an und löscht ihn wieder.
 
 ## Fehlersuche
 
@@ -198,7 +203,7 @@ Die Tests starten einen eigenen Hub mit eigenem Konfigurationsordner auf einem f
 2. **Tokens aus der JSON holen:** Erledigt, siehe „Secrets“.
 3. **Tools pro Server ein- und ausschalten:** Erledigt, siehe `disabledTools`.
 4. **Änderungen an Clients melden:** Erledigt, siehe „Live-Aktualisierung“.
-5. **Statistik im Protokoll:** Aufrufe pro Tag, langsamste Tools und Fehlerquote je Server, berechnet aus `calls.jsonl`.
+5. **Statistik im Protokoll:** Erledigt, siehe „Statistik“.
 6. **OAuth für entfernte Server:** Für gehostete MCPs, die nur OAuth anbieten.
 7. **Alte Reste entfernen:** Erledigt.
 8. **Tests:** Erledigt, siehe „Tests“.

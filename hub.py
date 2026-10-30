@@ -1,5 +1,6 @@
 import json
 import queue
+import statistics
 import re
 import threading
 import uuid
@@ -126,7 +127,7 @@ class Usage:
 
 
 class CallLog:
-    def __init__(self, path, keep=1000):
+    def __init__(self, path, keep=5000):
         self.path = Path(path)
         self.lock = threading.Lock()
         self.entries = deque(maxlen=keep)
@@ -154,6 +155,45 @@ class CallLog:
     def recent(self, limit):
         with self.lock:
             return list(self.entries)[-limit:][::-1]
+
+    def stats(self, days=14):
+        with self.lock:
+            entries = list(self.entries)
+        today = time.localtime()
+        midnight = time.mktime((today.tm_year, today.tm_mon, today.tm_mday, 0, 0, 0, 0, 0, -1))
+        buckets = [time.strftime("%Y-%m-%d", time.localtime(midnight - 86400 * i)) for i in reversed(range(days))]
+        per_day = {day: {"day": day, "ok": 0, "errors": 0} for day in buckets}
+        servers, tools = {}, {}
+        for entry in entries:
+            day = time.strftime("%Y-%m-%d", time.localtime(entry["t"]))
+            if day in per_day:
+                per_day[day]["ok" if entry.get("ok") else "errors"] += 1
+            for group, key in ((servers, entry["server"]), (tools, (entry["server"], entry["target"]))):
+                bucket = group.setdefault(key, {"calls": 0, "errors": 0, "ms": [], "last": 0})
+                bucket["calls"] += 1
+                bucket["errors"] += 0 if entry.get("ok") else 1
+                bucket["ms"].append(entry.get("ms", 0))
+                bucket["last"] = max(bucket["last"], entry["t"])
+
+        def summary(bucket):
+            ms = sorted(bucket["ms"])
+            return {"calls": bucket["calls"], "errors": bucket["errors"], "last": bucket["last"],
+                    "median": round(statistics.median(ms)) if ms else 0,
+                    "p95": ms[min(len(ms) - 1, int(len(ms) * 0.95))] if ms else 0}
+
+        durations = [entry.get("ms", 0) for entry in entries]
+        return {
+            "since": entries[0]["t"] if entries else None,
+            "kept": self.entries.maxlen,
+            "total": len(entries),
+            "errors": sum(1 for entry in entries if not entry.get("ok")),
+            "median": round(statistics.median(durations)) if durations else 0,
+            "clients": len({entry.get("client") for entry in entries}),
+            "days": list(per_day.values()),
+            "servers": sorted(({"server": name, **summary(b)} for name, b in servers.items()), key=lambda s: -s["calls"]),
+            "slowest": sorted(({"server": key[0], "tool": key[1], **summary(b)} for key, b in tools.items()),
+                              key=lambda t: -t["p95"])[:5],
+        }
 
 
 class Clients:

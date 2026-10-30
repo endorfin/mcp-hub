@@ -108,6 +108,18 @@ class HubTest(unittest.TestCase):
         self.assertEqual((last["server"], last["target"], last["ok"]), ("beta", "echo", True))
         self.assertGreaterEqual(self.get("/api/usage")["beta"]["count"], 1)
 
+    def test_stats_summarize_calls(self):
+        self.rpc("tools/call", {"name": "alpha__echo", "arguments": {"text": "x"}})
+        self.rpc("tools/call", {"name": "alpha__fail"})
+        stats = self.get("/api/stats?days=7")
+        self.assertEqual(len(stats["days"]), 7)
+        self.assertGreaterEqual(stats["total"], 2)
+        self.assertGreaterEqual(stats["errors"], 1)
+        alpha = next(s for s in stats["servers"] if s["server"] == "alpha")
+        self.assertGreaterEqual(alpha["errors"], 1)
+        self.assertEqual(sum(d["ok"] + d["errors"] for d in stats["days"]), stats["total"])
+        self.assertTrue(any(t["tool"] == "fail" for t in stats["slowest"]) or len(stats["slowest"]) == 5)
+
     def test_upstream_error_becomes_tool_error(self):
         result = self.rpc("tools/call", {"name": "alpha__fail"})["result"]
         self.assertTrue(result["isError"])
