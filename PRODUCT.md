@@ -8,59 +8,59 @@ web
 
 ## Users
 
-Entwicklerinnen und Entwickler, die mit mehreren KI-Clients (Claude Code, Claude Desktop, VS Code/Copilot) und vielen MCP-Servern arbeiten. Ihre Aufgabe: Server einmal pflegen, statt dieselben Einträge, Tokens und Pfade in jedem Client einzeln zu verwalten, und jederzeit sehen, welche Tools gerade aktiv sind und wer sie benutzt.
+Developers who work with several AI clients (Claude Code, Claude Desktop, VS Code/Copilot) and many MCP servers. Their job: maintain each server once instead of managing the same entries, tokens and paths in every client separately, and see at any time which tools are active and who uses them.
 
-Das Projekt ist als Open Source gedacht. Die Oberfläche läuft lokal auf dem eigenen Rechner unter `http://127.0.0.1:4747`.
+The project is open source. The interface runs locally on the user’s own machine at `http://127.0.0.1:4747`.
 
 ## Product Purpose
 
-MCP Hub ist ein lokaler Hub für MCP-Server: Er startet lokale (stdio) und bindet entfernte (Streamable HTTP, SSE) Server an und liefert alle gebündelt unter einem einzigen MCP-Endpunkt aus. Dazu kommt eine Web-Oberfläche zum Verwalten, Testen und Beobachten.
+MCP Hub is a local hub for MCP servers: it starts local (stdio) servers, connects remote (Streamable HTTP, SSE) servers and serves all of them bundled behind a single MCP endpoint. A web interface for managing, testing and observing comes with it.
 
-Erfolg heißt: Jeder Client braucht genau einen Eintrag (`mcp-hub`), neue Server stehen sofort überall zur Verfügung, und es liegen keine Tokens mehr im Klartext in Konfigurationsdateien.
+Success means: every client needs exactly one entry (`mcp-hub`), new servers are available everywhere immediately, and no plain-text tokens remain in configuration files.
 
 ## Positioning
 
-Ein einziger lokaler Endpunkt für alle Clients statt Konfiguration pro Client, ohne Abhängigkeiten außer Python. Der Hub ist zugleich Verwaltung (GUI, Profile, Tool-Auswahl), Prüfstand (Inspector) und Beobachtung (Aufrufprotokoll mit Client-Zuordnung, Live-Clients). Clients erfahren Änderungen live über `list_changed`, auch Claude Desktop über die mitgelieferte stdio-Brücke.
+One local endpoint for all clients instead of per-client configuration, with no dependencies besides Python. The hub is management (GUI, profiles, tool selection), test bench (inspector) and observation (call log with client attribution, live clients) at once. Clients learn about changes live via `list_changed`, Claude Desktop included through the bundled stdio bridge.
 
 ## Operating Context
 
-- Läuft dauerhaft im Hintergrund, gestartet über `autostart.sh` (LaunchAgent) oder ein eigenes Werkzeug; die GUI wird zwischendurch geöffnet, oft neben Terminal und Editor.
-- Typische Abläufe: Server hinzufügen oder importieren, Token im Schlüsselbund ablegen, Tools eines Servers abwählen, zwischen Profilen wechseln, einen Server im Inspector testen, im Protokoll nachsehen, welcher Agent welches Tool wann aufgerufen hat.
-- Konfiguration liegt außerhalb des Repos in `~/.config/mcp-hub/` (`servers.json`, `profiles.json`, `usage.json`, `calls.jsonl`, `clients.json`).
-- Clients: Claude Code (HTTP), VS Code/Copilot (HTTP), Claude Desktop (stdio über `bridge.py`), beliebige weitere MCP-Clients über `/mcp` oder `/p/<profil>/mcp`.
+- Runs permanently in the background, started via `autostart.sh` (LaunchAgent) or a tool of the user’s choice; the GUI is opened now and then, often next to a terminal and an editor.
+- Typical tasks: add or import a server, store a token in the keychain, deselect a server’s tools, switch between profiles, test a server in the inspector, look up in the log which agent called which tool when.
+- Configuration lives outside the repository in `~/.config/mcp-hub/` (`servers.json`, `profiles.json`, `usage.json`, `calls.jsonl`, `clients.json`).
+- Clients: Claude Code (HTTP), VS Code/Copilot (HTTP), Claude Desktop (stdio via `bridge.py`), any other MCP client via `/mcp` or `/p/<profile>/mcp`.
 
 ## Capabilities and Constraints
 
-- Python 3.11+ ohne Fremdpakete; Server und GUI in einem Prozess (`app.py`), Oberfläche als eine Datei (`index.html`) ohne Build-Schritt.
-- Nur lokal: lauscht auf `127.0.0.1`, lehnt schreibende Anfragen mit fremdem `Origin` ab.
-- Tool- und Prompt-Namen tragen den Servernamen als Präfix (`server__tool`), Titel `server: Name`.
-- Secrets als Referenz: `${keychain:…}` (macOS-Schlüsselbund) und `${op://…}` (1Password-CLI).
-- OAuth für entfernte Server nach MCP-Spezifikation (Discovery, automatische Client-Registrierung, PKCE); Tokens im Schlüsselbund, automatische Erneuerung.
-- Statistik über die letzten 5.000 Aufrufe: Kennzahlen, Verlauf je Tag, je Server, langsamste Tools.
-- Profile speichern An/Aus und abgewählte Tools je Server; jedes Profil hat einen eigenen Endpunkt.
-- macOS ist die einzige getestete Plattform (Schlüsselbund, LaunchAgent).
-- Lizenz: MIT. Oberfläche auf Deutsch und Englisch (wählbar in den Einstellungen, Standard: Browsersprache); README und Meldungen von Hub und API auf Englisch.
-- **Offen:** neutrale Defaults statt persönlicher Werte (z. B. LaunchAgent-Label `de.tpwd.mcp-hub`); Unterstützung für Linux und Windows.
+- Python 3.11+ without third-party packages; server and GUI in one process (`app.py`), interface as a single file (`index.html`) without a build step.
+- Local only: listens on `127.0.0.1`, rejects write requests with a foreign `Origin`.
+- Tool and prompt names carry the server name as a prefix (`server__tool`), titles read `server: Name`.
+- Secrets as references: `${keychain:…}` (macOS keychain) and `${op://…}` (1Password CLI).
+- OAuth for remote servers per the MCP specification (discovery, automatic client registration, PKCE), also with fixed client credentials; tokens in the keychain, refreshed automatically.
+- Statistics over the last 5,000 calls: key figures, daily history, per server, slowest tools.
+- Profiles store on/off and deselected tools per server; every profile has its own endpoint.
+- macOS is the only tested platform (keychain, LaunchAgent).
+- License: MIT. Interface in German and English (selectable in Settings, default: browser language); README, design documents and messages from hub and API in English.
+- **Open:** support for Linux and Windows.
 
 ## Brand Commitments
 
 - Name: **MCP Hub**.
-- Keine Bindung an ein persönliches Werkzeug: Projektdateien setzen kein bestimmtes Startwerkzeug voraus.
+- No tie to a personal tool: project files do not assume a particular launcher.
 
 ## Evidence on Hand
 
-- Funktionierende Implementierung mit Tests (`tests/`, 13 Smoke-Tests inklusive Brücke und Hub-Neustart).
-- README mit Eintragsformaten, Client-Anbindung, API und Fehlersuche.
-- Es gibt keine Nutzerzahlen, Erfahrungsberichte, Screenshots für Marketing oder Release-Notes; nichts davon erfinden.
+- Working implementation with tests (`tests/`, smoke tests including the bridge, a hub restart and the complete OAuth flow).
+- README with entry formats, client setup, API and troubleshooting.
+- There are no user numbers, testimonials, marketing screenshots or release notes; do not invent any.
 
 ## Product Principles
 
-1. **Eine Stelle pflegen.** Jede Einstellung existiert genau einmal im Hub; Clients bekommen nur den Endpunkt.
-2. **Sichtbar statt vermutet.** Was läuft, was abgewählt ist, wer verbunden ist und wer was aufruft, steht in der Oberfläche, nicht in Logdateien.
-3. **Keine Geheimnisse im Klartext.** Tokens gehören in Schlüsselbund oder Passwortmanager; Dateien enthalten nur Referenzen.
-4. **Ohne Ballast.** Keine Abhängigkeiten, kein Build, ein Prozess; neue Funktionen müssen diesen Rahmen halten.
-5. **Änderungen wirken sofort.** Speichern synchronisiert den Hub, Clients werden live benachrichtigt, Neustarts nur dort, wo nötig.
+1. **Maintain in one place.** Every setting exists exactly once in the hub; clients only get the endpoint.
+2. **Visible, not guessed.** What runs, what is deselected, who is connected and who calls what is shown in the interface, not buried in log files.
+3. **No secrets in plain text.** Tokens belong in the keychain or a password manager; files only hold references.
+4. **No baggage.** No dependencies, no build, one process; new features must stay within that frame.
+5. **Changes take effect immediately.** Saving syncs the hub, clients are notified live, restarts only where needed.
 
 ## Accessibility & Inclusion
 
-Bedienbar per Tastatur (eigene Listboxen und Menüs mit Pfeiltasten, Enter, Esc), sichtbare Fokusringe, Rollen und Labels für Screenreader, helles und dunkles Farbschema nach Systemeinstellung.
+Keyboard operable (custom listboxes and menus with arrow keys, Enter, Esc), visible focus rings, roles and labels for screen readers, light and dark color scheme following the system setting, interface in German and English.

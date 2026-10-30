@@ -1,6 +1,6 @@
 ---
 name: MCP Hub
-description: Lokale Schaltzentrale für alle MCP-Server
+description: A local control panel for all MCP servers
 colors:
   accent: "#1f8a4c"
   accent-dark: "#4cc27f"
@@ -119,156 +119,157 @@ components:
 
 ## Overview
 
-**Creative North Star: "Das Schaltpult"**
+**Creative North Star: "The Control Panel"**
 
-Eine ruhige Steuerzentrale, die man nebenbei öffnet und in Sekunden versteht. Die Fläche ist zurückhaltend und warm-grau, Inhalt steht in klaren Listen, und Farbe trägt fast immer eine Bedeutung: Grün heißt „läuft“ oder „Hauptaktion“, Orange „abweichend“, Rot „Fehler“. Alles Weitere liegt hinter einem ⋯-Menü oder einer Liste, nicht offen auf der Fläche.
+A calm control center you open in passing and understand in seconds. The surface is restrained and warm gray, content sits in clear lists, and color almost always carries meaning: green means “running” or “primary action”, orange “deviating”, red “error”. Everything else lives behind a ⋯ menu or a list, not out on the surface.
 
-Die Dichte ist die eines Werkzeugs, nicht einer Marketingseite: 14 px Grundschrift, technische Werte in Monospace, Status als kleine Chips. Helles und dunkles Schema sind gleichwertig und folgen der Systemeinstellung; das dunkle Schema ist der Alltag neben Terminal und Editor.
+The density is that of a tool, not a marketing page: 14 px base type, technical values in monospace, status as small chips. Light and dark schemes are equal and follow the system setting; the dark scheme is the everyday one, next to terminal and editor.
 
-Native Bedienelemente des Betriebssystems kommen nicht vor. Auswahlfelder, Checkboxen und Menüs sind eigene Komponenten, damit sie in beiden Schemata gleich aussehen und sich gleich bedienen lassen.
+There are no native operating-system controls. Selects, checkboxes and menus are custom components so they look and behave the same in both schemes.
 
 **Key Characteristics:**
-- Ein Akzent (Grün) mit Bedeutung, sonst neutrale, leicht warme Grautöne
-- Flach: Tiefe durch Flächentöne, Schatten nur bei schwebenden Elementen
-- Zusammengehörige Bedienelemente als FieldGroup mit gemeinsamem Rahmen
-- Sekundäre Aktionen hinter ⋯-Menüs, Auswahl über eigene Listboxen
-- Systemschrift für Text, Monospace für Befehle, URLs, Namen und Chips
+- One accent (green) with meaning, otherwise neutral, slightly warm grays
+- Flat: depth through surface tones, shadows only on floating elements
+- Related controls as a FieldGroup with a shared border
+- Secondary actions behind ⋯ menus, choices through custom listboxes
+- System font for text, monospace for commands, URLs, names and chips
 
 ## Colors
 
-Neutrale, leicht warme Grautöne mit einem einzigen Akzent; jede Farbe außerhalb der Grautöne meldet einen Zustand.
+Neutral, slightly warm grays with a single accent; every color outside the grays reports a state.
 
 ### Primary
-- **Schaltgrün** (`accent`, dunkel `accent-dark`): Primärbuttons, aktive Schalter und Checkboxen, Fokusringe (40–50 % gemischt), Status „läuft“. Text auf Grün nutzt `on-accent`.
+- **Switch Green** (`accent`, dark `accent-dark`): primary buttons, active switches and checkboxes, focus rings (mixed at 40–50 %), status “running”. Text on green uses `on-accent`.
 
 ### Neutral
-- **Werkstattgrau** (`bg`): Seitenhintergrund und Kopfleiste.
-- **Pultfläche** (`panel`): Listen, Karten, Dialoge, Popover und Bedienelemente auf dem Seitenhintergrund.
-- **Mulde** (`field`): Eingabefelder innerhalb von Dialogen, Karten, Inspector und Popover; etwas dunkler als die Pultfläche, damit Felder eingelassen wirken.
-- **Kappe** (`chip`): Chips, Hover- und Auswahlflächen in Menüs und Listen, aktiver Tab.
-- **Fuge** (`line`): Rahmen und Trennlinien, 1 px.
-- **Tinte** (`ink`) und **Beschriftung** (`muted`): Text und Sekundärtext, Icons im Ruhezustand.
+- **Workshop Gray** (`bg`): page background and header.
+- **Console** (`panel`): lists, cards, dialogs, popovers and controls on the page background.
+- **Well** (`field`): input fields inside dialogs, cards, the inspector and popovers; slightly darker than the console so fields look recessed.
+- **Keycap** (`chip`): chips, hover and selection surfaces in menus and lists, the active tab.
+- **Seam** (`line`): borders and dividers, 1 px.
+- **Ink** (`ink`) and **Label** (`muted`): text and secondary text, icons at rest.
 
 ### Status
-- **Signalorange** (`warn`): Abweichungen, die keine Fehler sind: „Tools deaktiviert“, ungespeicherte Profiländerung (Punkt), Server startet.
-- **Signalrot** (`bad`): Fehler und destruktive Menüeinträge („Löschen“).
+- **Signal Orange** (`warn`): deviations that are not errors: “tools disabled”, unsaved profile change (dot), server starting.
+- **Signal Red** (`bad`): errors and destructive menu items (“Delete”).
 
-### Diagramme
-- **Datenreihe** (`series`): neutrales Grau für die Menge, z. B. erfolgreiche Aufrufe. Geprüft mit dem Dataviz-Validator: Kontrast ≥ 3:1 zur Pultfläche in beiden Schemata.
-- **Fehlerreihe** (`series-error`): Signalrot für Flächen, im dunklen Schema etwas gedämpft (`series-error-dark`), damit es sich auch bei Rot-Schwäche vom Grau abhebt (ΔE ≥ 8).
+### Charts
+- **Data Series** (`series`): neutral gray for quantity, e.g. successful calls. Checked with the dataviz validator: contrast ≥ 3:1 against the console in both schemes.
+- **Error Series** (`series-error`): Signal Red for areas, slightly muted in the dark scheme (`series-error-dark`) so it stays distinct from the gray under red-weak vision too (ΔE ≥ 8).
 
 ### Named Rules
-**The Meaning-Only Rule.** Grün, Orange und Rot erscheinen nur, wenn sie einen Zustand oder die Hauptaktion bezeichnen. Dekorative Farbe gibt es nicht.
+**The Meaning-Only Rule.** Green, orange and red only appear when they denote a state or the primary action. There is no decorative color.
 
-**The Twin Scheme Rule.** Jede Farbe existiert als helles und dunkles Paar (`-dark`); neue Farben werden immer für beide Schemata als Token auf `:root` angelegt, nie direkt im Element.
+**The Twin Scheme Rule.** Every color exists as a light and dark pair (`-dark`); new colors are always added as tokens on `:root` for both schemes, never directly on an element.
 
 ## Typography
 
-**Body Font:** System-UI (`-apple-system, system-ui, sans-serif`)
+**Body Font:** System UI (`-apple-system, system-ui, sans-serif`)
 **Mono Font:** `ui-monospace, SF Mono, Menlo, monospace`
 
-**Character:** Die Systemschrift lässt das Werkzeug wie Teil des Betriebssystems wirken; Monospace markiert alles, was man kopieren oder in eine Konfiguration übernehmen könnte.
+**Character:** The system font makes the tool feel like part of the operating system; monospace marks everything you might copy or put into a configuration.
 
 ### Hierarchy
-- **Title** (650, 16 px, −0.01em): Produktname in der Kopfleiste.
-- **KPI** (600, 24 px, −0.02em, Ziffern gleicher Breite): Werte in den Kennzahl-Kacheln der Statistik.
-- **Item Name** (600, 15,5 px, −0.01em): Servernamen in der Liste.
-- **Section** (600, 14 px): Überschriften in Karten und Dialogköpfen.
-- **Body** (400, 14 px, 1.45): Fließtext und Bedienelemente.
-- **Label** (400, 12,5–13 px, muted): Feldbeschriftungen mit fettem Begriff, Hinweise, Beschreibungen.
-- **Mono** (12–12,5 px): Befehle, URLs, Tool-Namen, Codefragmente.
-- **Chip** (Mono, 11,5 px): Status- und Zähler-Chips.
+- **Title** (650, 16 px, −0.01em): product name in the header.
+- **KPI** (600, 24 px, −0.02em, tabular figures): values in the statistics tiles.
+- **Item Name** (600, 15.5 px, −0.01em): server names in the list.
+- **Section** (600, 14 px): headings in cards and dialog headers.
+- **Body** (400, 14 px, 1.45): running text and controls.
+- **Label** (400, 12.5–13 px, muted): field labels with a bold term, hints, descriptions.
+- **Mono** (12–12.5 px): commands, URLs, tool names, code fragments.
+- **Chip** (mono, 11.5 px): status and counter chips.
 
 ### Named Rules
-**The Copyable Is Mono Rule.** Was in eine Konfiguration, ein Terminal oder eine URL-Zeile gehört, steht in Monospace; Beschreibungen nie.
+**The Copyable Is Mono Rule.** Anything that belongs in a configuration, a terminal or a URL bar is set in monospace; descriptions never are.
 
 ## Layout
 
-Eine zentrierte Spalte mit maximal 1040 px Breite und 20 px Rand. Darüber eine haftende Kopfleiste mit Produktname, Hub-Status, Profilauswahl und Tabs (Server, Protokoll, Inspector, Einstellungen). Unter der Kopfleiste steht je Tab eine Werkzeugleiste (Filter, Sortierung, +-Menü) über einer Liste oder Karten.
+A centered column, at most 1040 px wide with a 20 px margin. Above it, a sticky header with product name, hub status, profile picker and tabs (Servers, Log, Inspector, Settings). Below the header, each tab has a toolbar (filter, sort, + menu) above a list or cards.
 
-Abstände folgen einem kleinen Raster: 6 px innerhalb von Feldgruppen, 8 px zwischen Bedienelementen einer Leiste, 14 px zwischen Feldern in Dialogen und Karten, 16–24 px zwischen Karten und Abschnitten. Bei unter 760 px fällt der Inspector auf eine Spalte und das Protokoll blendet Nebenspalten aus; bei unter 640 px stapeln sich zweispaltige Formulare.
+Spacing follows a small grid: 6 px inside field groups, 8 px between controls in a toolbar, 14 px between fields in dialogs and cards, 16–24 px between cards and sections. Below 760 px the inspector collapses to one column and the log hides secondary columns; below 640 px two-column forms stack.
 
 ## Elevation & Depth
 
-Flach. Ebenen entstehen durch Flächentöne (`bg` → `panel` → `field`) und 1-px-Fugen. Schatten tragen nur schwebende Elemente.
+Flat. Layers come from surface tones (`bg` → `panel` → `field`) and 1 px seams. Only floating elements carry shadows.
 
 ### Shadow Vocabulary
-- **Schwebend** (`box-shadow: 0 8px 24px rgb(0 0 0 / .18)`): Menüs, Listboxen, Popover.
-- **Angehoben** (`box-shadow: 0 1px 2px rgb(0 0 0 / .08)`): aktiver Tab im Segment.
-- **Abdunklung** (`scrim`): Hintergrund hinter Dialogen.
+- **Floating** (`box-shadow: 0 8px 24px rgb(0 0 0 / .18)`): menus, listboxes, popovers.
+- **Raised** (`box-shadow: 0 1px 2px rgb(0 0 0 / .08)`): the active tab in the segment.
+- **Scrim** (`scrim`): backdrop behind dialogs.
 
 ### Named Rules
-**The Float-Only Shadow Rule.** Ein Schatten bedeutet „schwebt über dem Inhalt und verschwindet wieder“. Karten, Listen und Felder bekommen keinen.
+**The Float-Only Shadow Rule.** A shadow means “floats above the content and goes away again”. Cards, lists and fields get none.
 
-**The One Height Rule.** Felder, Listbox-Auslöser und Buttons sind gleich hoch (36 px: 20 px Zeilenhöhe, 7 px Polsterung, 1 px Rahmen), damit sie in jeder Zeile bündig nebeneinanderstehen. Felder setzen ihre Schrift selbst auf 14 px und erben nicht die kleinere Beschriftung.
+**The One Height Rule.** Fields, listbox triggers and buttons share one height (36 px: 20 px line height, 7 px padding, 1 px border) so they line up in every row. Fields set their own 14 px type instead of inheriting the smaller label size.
 
 ## Shapes
 
-Weich, aber nicht rund: Radien wachsen mit der Größe des Elements. Checkboxen 4 px, Menüeinträge 6 px, Bedienelemente 7 px, Tab-Segment und Rückmeldung unten 8 px, Popover 9 px, Karten und Listen 10 px, Dialoge 12 px. Chips und Schalter sind Pillen (99 px).
+Soft but not round: radii grow with the size of the element. Checkboxes 4 px, menu items 6 px, controls 7 px, tab segment and toast 8 px, popovers 9 px, cards and lists 10 px, dialogs 12 px. Chips and switches are pills (99 px).
 
-**The Shared Edge Rule.** In einer FieldGroup sind nur die äußeren Ecken gerundet (7 px außen, innen 6 px); innen trennt eine gerade 1-px-Fuge. Kein Element überlappt das andere mit negativem Abstand.
+**The Shared Edge Rule.** In a FieldGroup only the outer corners are rounded (7 px outside, 6 px inside); inside, a straight 1 px seam separates the parts. No element overlaps another with a negative margin.
 
 ## Components
 
 ### Buttons
-- **Shape:** 7 px Radius, 7 px × 12 px Polsterung, 1 px Rahmen, 36 px hoch.
-- **Primary:** Schaltgrün mit `on-accent`, Schrift 550; nur für die Hauptaktion einer Ansicht (Speichern, +).
-- **Secondary:** Pultfläche, Tinte, Fuge als Rahmen; beim Überfahren Rahmen in `muted`.
-- **Ghost:** ohne Rahmen und Fläche, `muted`; beim Überfahren Kappe und Tinte. Für ⋯-Menüs und Zeilenaktionen.
-- **Icon-Button:** quadratisch, Icon exakt mittig, Höhe der benachbarten Gruppe.
+- **Shape:** 7 px radius, 7 px × 12 px padding, 1 px border, 36 px tall.
+- **Primary:** Switch Green with `on-accent`, weight 550; only for the primary action of a view (Save, +).
+- **Secondary:** Console, Ink, Seam as border; border turns `muted` on hover.
+- **Ghost:** no border or fill, `muted`; Keycap and Ink on hover. For ⋯ menus and row actions.
+- **Icon button:** square, icon exactly centered, height of the neighboring group.
 
 ### Inputs / Fields
-- **Style:** 1 px Fuge, 7 px Radius, 7 px × 10 px Polsterung, 14 px Schrift (Monospace 12,5 px) auf 20 px Zeilenhöhe; auf dem Seitenhintergrund in Pultfläche, in Dialogen und Karten in Mulde.
-- **Focus:** Rahmen in Schaltgrün plus 2 px Ring (Schaltgrün 40 %).
-- **Labels:** über dem Feld, Begriff fett in Tinte, Erläuterung in `muted` nach einem Gedankenstrich.
+- **Style:** 1 px Seam, 7 px radius, 7 px × 10 px padding, 14 px type (mono 12.5 px) on a 20 px line height; Console on the page background, Well in dialogs and cards.
+- **Focus:** Switch Green border plus a 2 px ring (Switch Green at 40 %).
+- **Labels:** above the field, the term bold in Ink, an explanation in `muted` after a dash.
 
 ### Checkbox
-- 16 px, 4 px Radius, Rahmen `muted`, Fläche Mulde. Angehakt: Schaltgrün mit Häkchen in `on-accent`, das in 120 ms einblendet. Fokus: 2 px Ring mit 2 px Abstand.
+- 16 px, 4 px radius, `muted` border, Well fill. Checked: Switch Green with a check mark in `on-accent` that fades in over 120 ms. Focus: 2 px ring with a 2 px offset.
 
 ### Switch
-- 32 × 18 px Pille für An/Aus direkt in Listen; an = Schaltgrün. Nur für sofort wirksame Zustände, nicht in Formularen.
+- 32 × 18 px pill for on/off directly in lists; on = Switch Green. Only for states that take effect immediately, not in forms.
 
 ### FieldGroup
-- Mehrere Bedienelemente teilen einen Rahmen (Filter + Sortierung, Richtung + Sortierart, Profilauswahl + ⋯). Innen keine eigenen Rahmen und Fokusringe; die Gruppe zeigt Hover und Fokus gemeinsam.
+- Several controls share one border (filter + sort, direction + sort type, profile picker + ⋯). No borders or focus rings of their own inside; the group shows hover and focus as a whole.
 
 ### Listbox (Signature Component)
-Ersetzt jedes native Auswahlfeld.
-- **Auslöser:** Button mit Wert und Pfeil (10 × 6 px, `muted`); allein mit Rahmen wie ein Feld, in einer FieldGroup ohne.
-- **Popover:** Pultfläche, 9 px Radius, Fuge, Schatten „Schwebend“, 4 px Innenabstand. Fuge und Schatten zusammen sind hier gewollt: Im dunklen Schema trägt der Schatten allein keine Kante; öffnet unter dem Auslöser, linksbündig oder rechtsbündig je nach Platz.
-- **Suchfeld:** nur bei Listen, die lang werden können (Profile, Server, Clients), oben im Popover.
-- **Einträge:** 6 px × 8 px, 6 px Radius; hervorgehoben in Kappe; der gewählte Eintrag trägt ein Häkchen in Tinte (`ink`) rechts außen; Grün bleibt Zuständen und Hauptaktionen vorbehalten.
-- **Tastatur:** ↑/↓ öffnet und bewegt (umlaufend), Enter oder Leertaste übernimmt, Esc schließt und gibt den Fokus an den Auslöser zurück, Tab schließt. Ein Klick daneben schließt.
+Replaces every native select.
+- **Trigger:** button with value and chevron (10 × 6 px, `muted`); bordered like a field when standalone, borderless inside a FieldGroup.
+- **Popover:** Console, 9 px radius, Seam, “Floating” shadow, 4 px inner padding. Seam and shadow together are intentional here: in the dark scheme the shadow alone carries no edge. Opens below the trigger, left- or right-aligned depending on space.
+- **Search field:** only for lists that can grow long (profiles, servers, clients), at the top of the popover.
+- **Items:** 6 px × 8 px, 6 px radius; highlighted in Keycap; the selected item carries a check mark in Ink (`ink`) at the far right; green stays reserved for states and primary actions.
+- **Keyboard:** ↑/↓ opens and moves (wrapping), Enter or Space selects, Esc closes and returns focus to the trigger, Tab closes. A click outside closes.
 
-### Statistik
-- **Kennzahl-Kachel:** Mulde als Fläche, 8 px Radius, Beschriftung `muted` 12,5 px, Wert 24 px / 600 mit Ziffern gleicher Breite, Zusatz 12 px `muted`. Vier nebeneinander, unter 760 px zwei.
-- **Säulen je Tag:** höchstens 24 px breit, oben 4 px gerundet, unten gerade auf der Grundlinie; Fehler oben auf den erfolgreichen Aufrufen mit 2 px Abstand. Eine gestrichelte Linie markiert das Maximum, beschriftet rechts. Legende rechts über dem Diagramm. Beim Überfahren hebt sich die Spalte in Kappe ab, der Tooltip (Tinte auf Werkstattgrau, invertiert) nennt Datum, Aufrufe und Fehler.
-- **Tabellen:** rechtsbündige Zahlen mit gleicher Ziffernbreite, Namen in Monospace, Trennlinien in Fuge; die Server-Tabelle zeigt den Anteil als dünnen Balken in `series`, ein Klick auf die Zeile filtert das Protokoll.
+### Statistics
+- **KPI tile:** Well as fill, 8 px radius, label `muted` 12.5 px, value 24 px / 600 with tabular figures, note 12 px `muted`. Four side by side, two below 760 px.
+- **Daily columns:** at most 24 px wide, 4 px rounded on top, square on the baseline; errors stacked on top of successful calls with a 2 px gap. A dashed line marks the maximum, labeled on the right. Legend at the top right of the chart. On hover the column lifts in Keycap and the tooltip (Ink on Workshop Gray, inverted) shows date, calls and errors.
+- **Tables:** right-aligned tabular figures, names in monospace, Seam dividers; the server table shows the share as a thin bar in `series`, a click on a row filters the log.
 
-### Menüs
-- Gleiches Popover wie die Listbox; Einträge ohne Häkchen, destruktive Einträge in Signalrot nach einer Trennlinie. Auslöser ist ein Ghost-Button mit ⋯ oder ein Icon-Button.
+### Menus
+- Same popover as the listbox; items without check marks, destructive items in Signal Red after a divider. The trigger is a ghost button with ⋯ or an icon button.
 
 ### Chips
-- Pille, Monospace 11,5 px, Kappe als Fläche, Text `muted`. Statusfarbe nur im Text: grün „Hub: 18 Tools“, orange „2 Tools deaktiviert“, rot „Hub: Fehler“. Klickbar nur, wenn sie eine Aktion öffnen.
+- Pill, mono 11.5 px, Keycap fill, `muted` text. Status color only in the text: green “Hub: 18 tools”, orange “2 tools disabled”, red “Hub: error”. Clickable only when they open an action.
 
 ### Cards / Containers
-- **Corner Style:** 10 px; **Background:** Pultfläche; **Border:** 1 px Fuge; **Internal Padding:** 18 px × 20 px; keine Schatten. Listen sind Karten mit 1-px-Fugen zwischen den Zeilen.
+- **Corner Style:** 10 px; **Background:** Console; **Border:** 1 px Seam; **Internal Padding:** 18 px × 20 px; no shadows. Lists are cards with 1 px seams between rows.
 
 ### Navigation
-- Segmentierte Tabs in einer Kappe (8 px Radius, 3 px Innenabstand); aktiver Tab als Pultfläche mit Schatten „Angehoben“, sonst `muted`.
+- Segmented tabs in a Keycap (8 px radius, 3 px inner padding); the active tab is Console with the “Raised” shadow, the others `muted`.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** jede Auswahl als eigene Listbox bauen; Häkchen rechts, Tastatur wie oben.
-- **Do** zusammengehörige Bedienelemente als FieldGroup mit gemeinsamem Rahmen zeigen.
-- **Do** sekundäre und destruktive Aktionen in ein ⋯-Menü legen; „Löschen“ zuletzt, rot, nach einer Trennlinie.
-- **Do** neue Farben als Token-Paar auf `:root` anlegen, hell und dunkel.
-- **Do** Felder in Dialogen und Karten in der Mulde (`field`) zeigen, damit sie sich abheben.
-- **Do** Diagrammfarben mit dem Dataviz-Validator für beide Schemata prüfen, bevor sie eingesetzt werden.
+- **Do** build every choice as a custom listbox; check mark on the right, keyboard as above.
+- **Do** show related controls as a FieldGroup with a shared border.
+- **Do** put secondary and destructive actions into a ⋯ menu; “Delete” last, red, after a divider.
+- **Do** add new colors as a token pair on `:root`, light and dark.
+- **Do** show fields in dialogs and cards in the Well (`field`) so they stand out.
+- **Do** check chart colors with the dataviz validator for both schemes before using them.
+- **Do** keep every interface string in the translation dictionary in German and English.
 
 ### Don't:
-- **Don't** native `<select>`, Checkboxen oder Browser-Fokusringe sichtbar lassen.
-- **Don't** Grün, Orange oder Rot dekorativ einsetzen.
-- **Don't** Karten, Listen oder Felder mit Schatten versehen.
-- **Don't** Elemente einer Gruppe mit negativem Abstand überlappen lassen; die Trennlinie gehört einem Element.
-- **Don't** Kommentare ins HTML schreiben; die Datei wird ausgeliefert.
+- **Don't** leave native `<select>`, checkboxes or browser focus rings visible.
+- **Don't** use green, orange or red decoratively.
+- **Don't** give cards, lists or fields a shadow.
+- **Don't** let elements of a group overlap with negative margins; the divider belongs to one element.
+- **Don't** write comments into the HTML; the file is shipped to the browser.
