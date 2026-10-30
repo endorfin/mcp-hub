@@ -9,11 +9,42 @@ A local hub for MCP servers: manage all your servers in one place, test them, an
   <img alt="MCP Hub server list with profiles, tool counts, usage and an OAuth sign-in prompt" src="docs/screenshot-light.png">
 </picture>
 
+No dependencies besides Python 3.11+. The server only listens on `127.0.0.1`. The interface is available in English and German (see “GUI”).
+
+## Getting started
+
+**Requirements:** Python 3.11 or newer. macOS is the tested platform; on Linux everything except keychain secrets, OAuth tokens and autostart works.
+
+**1. Install** – clone the repository (or download the [latest release](https://github.com/endorfin/mcp-hub/releases/latest)). There is nothing to build and nothing to install with pip.
+
 ```bash
-python3 app.py   # GUI: http://127.0.0.1:4747, hub: http://127.0.0.1:4747/mcp
+git clone https://github.com/endorfin/mcp-hub.git
+cd mcp-hub
 ```
 
-No dependencies besides Python 3.11+. The server only listens on `127.0.0.1`. The interface is available in English and German (see “GUI”).
+**2. Run**
+
+```bash
+python3 app.py
+```
+
+Then open the GUI at http://127.0.0.1:4747. The hub endpoint for your clients is `http://127.0.0.1:4747/mcp`. Use `PORT=…` for a different port.
+
+**3. Add servers** – click **+** → “Add server…”, or “Import…” and paste the `mcpServers` block from an existing Claude Desktop, Cursor or VS Code configuration.
+
+**4. Connect your clients** – each client only needs this one entry, see [Connecting clients](#connecting-clients):
+
+```bash
+claude mcp add --scope user --transport http mcp-hub http://127.0.0.1:4747/mcp
+```
+
+**5. Start at login** – so your clients find the hub after a reboot, stop the hub from step 2 (Ctrl+C) and register it as a LaunchAgent with [`autostart.sh`](#autostart); it starts right away and on every login:
+
+```bash
+./autostart.sh install
+```
+
+Update later with `git pull` followed by `./autostart.sh restart` (or restart `python3 app.py` yourself).
 
 ## Files
 
