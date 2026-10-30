@@ -31,7 +31,6 @@ h1 .version { margin-left: 4px; font-size: 12.5px; font-weight: 400; letter-spac
 .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
-.spacer { flex: 1; }
 .bar .profile { grid-row: 1; grid-column: 3; }
 #tabs { grid-row: 2; grid-column: 1 / -1; margin-bottom: -1px; }
 @media (max-width: 600px) {
@@ -167,7 +166,7 @@ input[type=checkbox]:not(.switch input):focus-visible { outline: 2px solid color
 pre.log { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; font: 12px/1.5 var(--mono); max-height: 65vh; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
 code { font-family: var(--mono); font-size: 12px; background: var(--chip); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
 .error { color: var(--bad); font-size: 13px; }
-#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; transition: .2s; pointer-events: none; }
+#toast { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; transition: .2s; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%); }
 #toast.err { background: var(--bad); color: #fff; }
 .dirty { color: var(--warn); font-size: 12.5px; }
@@ -362,7 +361,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
         <button type="button" class="sortdir" id="sortDir"></button>
         <select id="sort" aria-label="Sortierung" data-i18n-aria="s.sort">
           <option value="recent" data-i18n="s.sortRecent">Zuletzt verwendet</option>
-          <option value="name">Name</option>
+          <option value="name" data-i18n="s.sortName">Name</option>
           <option value="config" data-i18n="s.sortConfig">Reihenfolge der Datei</option>
         </select>
       </div>
@@ -522,7 +521,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
       <label class="f"><span data-i18n="s.typeLabel"><b>Art</b></span>
         <select name="transport" aria-label="Art" data-i18n-aria="s.type">
           <option value="stdio" data-i18n="s.typeStdio">Lokaler Befehl (stdio)</option>
-          <option value="http">URL – Streamable HTTP</option>
+          <option value="http" data-i18n="s.typeHttp">URL – Streamable HTTP</option>
           <option value="sse" data-i18n="s.typeSse">URL – SSE (älteres Protokoll)</option>
         </select>
       </label>
@@ -636,7 +635,7 @@ details.raw pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break:
   </form>
 </dialog>
 
-<div id="toast"></div>
+<div id="toast" popover="manual"></div>
 
 <script>
 const $ = (s, el = document) => el.querySelector(s);
@@ -835,7 +834,6 @@ const I18N = {
   serverExists: ["Es gibt bereits einen Server „{name}“.", "A server named “{name}” already exists."],
   toolsCount: ["{n} von {total} aktiv", "{n} of {total} enabled"],
   toolsOf: ["Tools von „{name}“", "Tools of “{name}”"],
-  noServersFound: ["Keine Server gefunden.", "No servers found."],
   imported: ["{n} importiert", "{n} imported"],
   skipped: [", übersprungen: {list}", ", skipped: {list}"],
   settingsSaved: ["Einstellungen gespeichert", "Settings saved"],
@@ -962,6 +960,16 @@ function applyStaticTranslations() {
 }
 
 const BACKEND_DE = [
+  [/^Server “(.*)” is not running$/, "Server „$1“ läuft nicht"],
+  [/^Server “(.*)”: (.*)$/, "Server „$1“: $2"],
+  [/^Connection is closed$/, "Verbindung ist geschlossen"],
+  [/^SSE connection is closed$/, "SSE-Verbindung ist geschlossen"],
+  [/^Value in the keychain does not match$/, "Wert im Schlüsselbund stimmt nicht überein"],
+  [/^No access_token in the authorization server response$/, "Kein access_token in der Antwort des Anmeldeservers"],
+  [/^(.*) is not responding$/, "$1 antwortet nicht"],
+  [/^security not found$/, "security nicht gefunden"],
+  [/^Unknown session$/, "Unbekannte Sitzung"],
+  [/^not found$/, "nicht gefunden"],
   [/^Internal error: (.*)$/, "Interner Fehler: $1"],
   [/^Not connected$/, "Nicht verbunden"],
   [/^(.*): values in (args|env|headers) must be strings$/, "$1: Werte in $2 müssen Text sein"],
@@ -1021,7 +1029,6 @@ const BACKEND_DE = [
   [/^Environment variable (.*) is not set$/, "Umgebungsvariable $1 ist nicht gesetzt"],
   [/^Secret: Environment variable (.*) is not set$/, "Secret: Umgebungsvariable $1 ist nicht gesetzt"],
   [/^Not a remote server: (.*)$/, "Kein entfernter Server: $1"],
-  [/^Unknown server: (.*)$/, "Unbekannter Server: $1"],
   [/^Start failed: (.*)$/, "Start fehlgeschlagen: $1"],
   [/^Sign-in required.*$/, "Anmeldung nötig"],
   [/^Server process is no longer running$/, "Server-Prozess läuft nicht mehr"],
@@ -1065,17 +1072,26 @@ let editing = null;
 
 async function api(method, path, body) {
   const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json();
+  let data = {};
+  try { data = await res.json(); }
+  catch { if (res.ok) throw new Error(res.statusText || "Invalid response"); }
   if (!res.ok) throw new Error(fromBackend(data.error) || res.statusText);
   return data;
 }
 
 function toast(msg, err = false) {
-  const t = $("#toast");
-  t.textContent = msg;
-  t.className = "show" + (err ? " err" : "");
+  const box = $("#toast");
+  box.textContent = msg;
+  if (box.showPopover) {
+    if (box.matches(":popover-open")) box.hidePopover();
+    box.showPopover();
+  }
+  box.className = "show" + (err ? " err" : "");
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.className = ""), 2400);
+  toast.timer = setTimeout(() => {
+    box.className = "";
+    setTimeout(() => { if (!box.className && box.matches?.(":popover-open")) box.hidePopover(); }, 250);
+  }, err ? 4000 : 2400);
 }
 
 function splitCommand(line) {
@@ -1136,8 +1152,9 @@ function renderProfiles() {
 
 async function profileAction(action, name, message, extra = {}) {
   try {
+    const dirty = jsonDirty();
     state = await api("POST", "/api/profiles", { action, name, ...extra });
-    syncJson();
+    if (!dirty) syncJson();
     render();
     if (message) toast(message);
   } catch (e) {
@@ -1352,7 +1369,7 @@ function renderProfileList() {
     const on = saved.filter(x => x.enabled).length;
     const off = saved.filter(x => x.enabled).reduce((n, x) => n + x.disabledTools.length, 0);
     const url = profileUrl(name);
-    const copyUrl = async () => { await navigator.clipboard.writeText(url); toast(t("urlCopied")); };
+    const copyUrl = () => navigator.clipboard.writeText(url).then(() => toast(t("urlCopied")), err => toast(err.message, true));
     const row = el("div", { className: "prof" },
       el("div", { className: "prof-main" },
         el("div", {}, el("b", { textContent: name }), name === active ? el("span", { className: "chip ok", textContent: t("active"), style: "margin-left:8px;cursor:default" }) : null),
@@ -1443,6 +1460,8 @@ function renderList() {
   if (sort === "recent") entries.sort((x, y) => dir * ((usage[x[0]]?.last || 0) - (usage[y[0]]?.last || 0)) || byName(x, y));
   if (sort === "config" && dir < 0) entries.reverse();
   const list = $("#list");
+  const active = list.contains(document.activeElement) ? document.activeElement : null;
+  const focus = active && { name: active.closest(".row")?.dataset.name, control: active.matches("input") ? "input" : active.matches(".dots") ? ".dots" : null };
   list.replaceChildren();
   if (!entries.length) {
     list.innerHTML = `<div class="empty">${t(q ? "noMatches" : "noServers")}</div>`;
@@ -1452,6 +1471,7 @@ function renderList() {
     const on = s.enabled !== false;
     const row = document.createElement("div");
     row.className = "row" + (on ? "" : " off");
+    row.dataset.name = name;
     row.innerHTML = `
       <label class="switch" title="${t(on ? "disable" : "enable")}"><input type="checkbox" ${on ? "checked" : ""}><span></span></label>
       <div style="min-width:0">
@@ -1529,7 +1549,9 @@ function renderList() {
     }
     const headerCount = Object.keys(s.headers || {}).length;
     if (headerCount) meta.append(el("span", { className: "chip", textContent: t("headerCount", { n: headerCount }), style: "cursor:default" }));
-    $("input", row).onchange = e => saveServers({ ...servers(), [name]: { ...s, enabled: e.target.checked } });
+    $("input", row).setAttribute("aria-label", `${name}: ${t(on ? "disable" : "enable")}`);
+    $(".dots", row).setAttribute("aria-label", `${name}: ${t("options")}`);
+    $("input", row).onchange = e => saveServers(current => ({ ...current, [name]: { ...current[name], enabled: e.target.checked } }));
     $(".dots", row).onclick = e => { e.stopPropagation(); toggleMenu(row); };
     $("[data-act=inspect]", row).onclick =() => { showTab("inspector"); $("#inspServer").value = name; inspConnect(); };
     $("[data-act=tools]", row).hidden = !(on && h?.state === "running" && h.toolsTotal);
@@ -1546,12 +1568,15 @@ function renderList() {
     $("[data-act=dup]", row).onclick = () => openEditor(name, true);
     $("[data-act=del]", row).onclick = () => {
       if (!confirm(t("confirmDeleteServer", { name }))) return;
-      const next = { ...servers() };
-      delete next[name];
-      saveServers(next);
+      saveServers(current => {
+        const next = { ...current };
+        delete next[name];
+        return next;
+      });
     };
     list.append(row);
   }
+  if (focus?.control) [...list.children].find(r => r.dataset.name === focus.name)?.querySelector(focus.control)?.focus();
 }
 
 async function startOAuth(name) {
@@ -1590,19 +1615,38 @@ function toggleMenu(row) {
 }
 
 document.addEventListener("click", () => closeMenus());
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenus(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  const open = document.querySelector(".menu:not([hidden])");
+  closeMenus();
+  open?.previousElementSibling?.focus();
+});
 
-async function saveServers(next) {
-  try {
-    state = await api("PUT", "/api/servers", { mcpServers: next });
-    syncJson();
-    render();
-    toast(t("saved"));
-    return true;
-  } catch (e) {
-    toast(e.message, true);
-    return false;
-  }
+let saveQueue = Promise.resolve();
+let saveGeneration = 0;
+
+function jsonDirty() {
+  return !!state && $("#jsonText").value !== JSON.stringify(servers(), null, 2);
+}
+
+function saveServers(next) {
+  const run = async () => {
+    saveGeneration++;
+    try {
+      const dirty = jsonDirty();
+      state = await api("PUT", "/api/servers", { mcpServers: typeof next === "function" ? next(servers()) : next });
+      if (!dirty) syncJson();
+      render();
+      toast(t("saved"));
+      return true;
+    } catch (e) {
+      toast(e.message, true);
+      return false;
+    }
+  };
+  const result = saveQueue.then(run);
+  saveQueue = result.catch(() => {});
+  return result;
 }
 
 function transportOf(entry) {
@@ -1672,7 +1716,7 @@ const updateUrlLock = lockButton($("#urlLock"), $("#editForm").url, () => "url")
 const updateSecretLock = lockButton($("#oauthSecretLock"), $("#editForm").oauthClientSecret, () => "oauth-client-secret");
 const OAUTH_FIELDS = { oauthClientId: "clientId", oauthClientSecret: "clientSecret", oauthScopes: "scopes", oauthAuthorizationUrl: "authorizationUrl", oauthTokenUrl: "tokenUrl" };
 const callbackUrl = () => `http://127.0.0.1:${location.port}/oauth/callback`;
-$("#oauthCopy").onclick = async () => { await navigator.clipboard.writeText(callbackUrl()); toast(t("callbackCopied")); };
+$("#oauthCopy").onclick = () => navigator.clipboard.writeText(callbackUrl()).then(() => toast(t("callbackCopied")), err => toast(err.message, true));
 
 function openEditor(name, duplicate = false) {
   const f = $("#editForm");
@@ -1758,12 +1802,12 @@ async function openTools(name) {
   $("#toolsTitle").textContent = t("toolsOf", { name });
   $("#toolsFilter").value = "";
   $("#toolsError").textContent = "";
-  $("#toolsList").replaceChildren(...tools.map(t => {
-    const row = el("label", { className: "tool", title: t.description });
-    row.dataset.search = `${t.name} ${t.title || ""} ${t.description}`.toLowerCase();
-    const box = el("input", { type: "checkbox", checked: t.enabled, value: t.name });
+  $("#toolsList").replaceChildren(...tools.map(tool => {
+    const row = el("label", { className: "tool", title: tool.description });
+    row.dataset.search = `${tool.name} ${tool.title || ""} ${tool.description}`.toLowerCase();
+    const box = el("input", { type: "checkbox", checked: tool.enabled, value: tool.name });
     box.onchange = renderToolsCount;
-    row.append(box, el("span", {}, el("b", { textContent: t.name }), el("small", { textContent: t.description })));
+    row.append(box, el("span", {}, el("b", { textContent: tool.name }), el("small", { textContent: tool.description })));
     return row;
   }));
   renderToolsCount();
@@ -1944,7 +1988,7 @@ function syncJson() {
 }
 $("#jsonReset").onclick = syncJson;
 $("#jsonSave").onclick = async () => {
-  try { await saveServers(JSON.parse($("#jsonText").value)); }
+  try { if (await saveServers(JSON.parse($("#jsonText").value))) syncJson(); }
   catch (e) { $("#jsonError").textContent = e.message; }
 };
 
@@ -2136,7 +2180,7 @@ function renderInspSide() {
 }
 
 function fieldFor(name, schema = {}, required = false) {
-  const type = Array.isArray(schema.type) ? schema.type.find(t => t !== "null") : schema.type;
+  const type = Array.isArray(schema.type) ? schema.type.find(kind => kind !== "null") : schema.type;
   const label = el("label", { className: "f" });
   const head = el("span", {}, el("b", { textContent: name }), required ? el("span", { className: "req", textContent: " *" }) : null,
     type ? ` · ${type}` : "", schema.description ? ` – ${schema.description}` : "");
@@ -2437,7 +2481,7 @@ function renderCalls() {
         el("span", { className: "st " + (c.ok ? "ok" : "bad"), textContent: c.ok ? "OK" : t("error") })),
       el("div", { className: "body" },
         c.args && c.args !== "{}" ? el("div", {}, el("div", { className: "lbl", textContent: t("arguments") }), el("pre", { textContent: prettyMaybe(c.args) })) : null,
-        el("div", {}, el("div", { className: "lbl", textContent: c.ok ? t("responseStart") : t("error") }), el("pre", { textContent: prettyMaybe(fromBackend(c.result)) || t("empty") }))));
+        el("div", {}, el("div", { className: "lbl", textContent: c.ok ? t("responseStart") : t("error") }), el("pre", { textContent: prettyMaybe(c.ok ? c.result : fromBackend(c.result)) || t("empty") }))));
     details.dataset.key = key;
     return details;
   }));
@@ -2466,7 +2510,7 @@ function renderClients() {
     const idle = !c.streams && Date.now() / 1000 - c.lastSeen > IDLE_AFTER;
     const label = c.profile ? `${c.name} · ${c.profile}` : c.name;
     const log = c.calls ? el("button", { className: "btn", textContent: t("showInLog") }) : null;
-    if (log) log.onclick = () => { logClient = label; showTab("calls"); };
+    if (log) log.onclick = () => { logClient = label; showTab("calls"); if (calls.length) renderCalls(); };
     return el("div", { className: "row" + (idle ? " off" : "") },
       el("span", { className: "dot " + (idle ? "" : "ok"), title: c.streams ? t("clientLive") : idle ? t("clientIdle") : "" }),
       el("div", {},
@@ -2517,7 +2561,7 @@ $("#hubTabs").onclick = e => {
 try { showSnip(localStorage.getItem("hubSnip") || "code"); } catch { showSnip("code"); }
 
 for (const b of document.querySelectorAll("[data-copy]")) {
-  b.onclick = () => navigator.clipboard.writeText($("#" + b.dataset.copy).textContent).then(() => toast(t("copied")));
+  b.onclick = () => navigator.clipboard.writeText($("#" + b.dataset.copy).textContent).then(() => toast(t("copied")), err => toast(err.message, true));
 }
 
 async function poll() {
@@ -2534,12 +2578,13 @@ async function poll() {
     renderHubStatus();
     if (tab === "calls") refreshCalls();
     if (tab === "clients") refreshClients();
+    const generation = saveGeneration;
     const fresh = await api("GET", "/api/state");
     const modal = $("#editor").open || $("#importer").open;
-    if (!modal && JSON.stringify([fresh.config, fresh.profiles]) !== JSON.stringify([state?.config, state?.profiles])) {
-      const jsonDirty = state && $("#jsonText").value !== JSON.stringify(servers(), null, 2);
+    if (!modal && generation === saveGeneration && JSON.stringify([fresh.config, fresh.profiles]) !== JSON.stringify([state?.config, state?.profiles])) {
+      const dirty = jsonDirty();
       state = fresh;
-      if (!jsonDirty) syncJson();
+      if (!dirty) syncJson();
       render();
     }
   } catch {
@@ -2581,6 +2626,7 @@ $("#updateCheck").onclick = async () => {
 };
 
 $("#updateChip").onclick = () => {
+  if (!update?.available) return;
   $("#updateTitle").textContent = t("updateTitle", { v: update.latest });
   $("#updateSub").textContent = t("updateSub", { cur: update.current, method: t(update.method === "git" ? "updateMethodGit" : "updateMethodArchive") });
   $("#updateNotes").textContent = update.notes.trim() || t("updateNoNotes");
@@ -2613,8 +2659,13 @@ $("#updateApply").onclick = async () => {
   fail(t("updateTimeout"));
 };
 
-(async () => {
-  [state, hubStatus, usage] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/hub"), api("GET", "/api/usage")]);
+(async function boot() {
+  try {
+    [state, hubStatus, usage] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/hub"), api("GET", "/api/usage")]);
+  } catch {
+    renderHubStatus(false);
+    return setTimeout(boot, 2000);
+  }
   if (rememberLanguage(state.settings.language)) return;
   syncJson(); fillSettings(); render();
   setInterval(poll, 2000);
