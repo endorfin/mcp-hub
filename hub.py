@@ -21,6 +21,7 @@ SUPPORTED_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
 RESTART_DELAYS = (2, 4, 8, 16, 32)
 STABLE_AFTER = 60
 ON_DEMAND_IDLE = 600
+SERVER_ITEM = "@server"
 
 
 def runtime_key(entry, pass_environment):
@@ -44,8 +45,13 @@ def prefix_of(name):
 
 def summary(upstream):
     tools = upstream.catalog["tools"]
-    return upstream.server_info.get("description") or upstream.instructions.strip().split("\n")[0][:300] \
+    trusted = SERVER_ITEM not in upstream.held
+    return trusted and (upstream.server_info.get("description") or upstream.instructions.strip().split("\n")[0][:300]) \
         or ", ".join(t["name"] for t in tools[:6]) + (" …" if len(tools) > 6 else "")
+
+
+def fingerprint(tool):
+    return {k: v for k, v in tool.items() if k != "_meta"}
 
 
 class JsonRpcError(Exception):
@@ -55,9 +61,11 @@ class JsonRpcError(Exception):
 
 
 class Upstream:
-    def __init__(self, name, entry, key, on_change=None):
+    def __init__(self, name, entry, key, on_change=None, approvals=None):
         self.name = name
         self.on_change = on_change
+        self.approvals = approvals
+        self.held = {}
         self.entry = entry
         self.key = key
         self.prefix = prefix_of(name)
@@ -117,13 +125,19 @@ class Upstream:
                     self.catalog[key] = self.session.list_all(method, key)
                 except (RpcError, AttributeError, TypeError):
                     pass
+        if self.approvals:
+            self.held = self.approvals.held(self.name, self.reviewed())
 
-    def blocked(self, disabled=None):
+    def reviewed(self):
+        text = {"description": self.server_info.get("description"), "instructions": self.instructions}
+        return self.catalog["tools"] + [{"name": SERVER_ITEM, **{k: v for k, v in text.items() if v}}]
+
+    def blocked(self, disabled=None, held=True):
         names = set((self.entry.get("disabledTools") or []) if disabled is None else disabled)
         allowed = self.entry.get("enabledTools")
         if allowed:
             names |= {t["name"] for t in self.catalog["tools"]} - set(allowed)
-        return names
+        return names | set(self.held) if held else names
 
     def tools(self, disabled=None):
         blocked = self.blocked(disabled)
@@ -164,6 +178,41 @@ class Upstream:
     def close(self):
         if self.session:
             self.session.close()
+
+
+class Approvals:
+    def __init__(self, path, review_new=lambda: False):
+        self.path = Path(path)
+        self.review_new = review_new
+        self.lock = threading.Lock()
+        try:
+            self.data = json.loads(self.path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.data = {}
+
+    def held(self, server, items):
+        with self.lock:
+            known = self.data.get(server)
+            if known is None and not self.review_new():
+                if any(i["name"] != SERVER_ITEM for i in items):
+                    self.data[server] = {i["name"]: fingerprint(i) for i in items}
+                    self._save()
+                return {}
+            known = known or {}
+            return {i["name"]: "changed" if i["name"] in known else "new"
+                    for i in items if known.get(i["name"]) != fingerprint(i)}
+
+    def approved(self, server, name):
+        with self.lock:
+            return (self.data.get(server) or {}).get(name)
+
+    def approve(self, server, tools):
+        with self.lock:
+            self.data.setdefault(server, {}).update({t["name"]: fingerprint(t) for t in tools})
+            self._save()
+
+    def _save(self):
+        atomic_write(self.path, json.dumps(self.data, indent=2, ensure_ascii=False))
 
 
 class Usage:
@@ -340,6 +389,8 @@ class Hub:
         self.usage = Usage(Path(state_dir) / "usage.json")
         self.calls = CallLog(Path(state_dir) / "calls.jsonl")
         self.clients = Clients(Path(state_dir) / "clients.json")
+        self.approvals = Approvals(Path(state_dir) / "approved-tools.json",
+                                   lambda: self.load_settings().get("reviewNewServers", False))
         self.lock = threading.Lock()
         self.upstreams = {}
         self.restarts = {}
@@ -442,7 +493,8 @@ class Hub:
                 if name in self.upstreams:
                     self.upstreams[name].entry = entry
                 else:
-                    upstream = Upstream(name, entry, runtime_key(entry, pass_environment), self.sync_in_background)
+                    upstream = Upstream(name, entry, runtime_key(entry, pass_environment), self.sync_in_background,
+                                        self.approvals)
                     self.upstreams[name] = upstream
                     starting.append(upstream)
             stale = [u for u in self.upstreams.values() if u.state == "running" and u.stale]
@@ -546,6 +598,8 @@ class Hub:
                 **{k: len(v) for k, v in u.catalog.items()},
                 "tools": len(u.tools()),
                 "toolsTotal": len(u.catalog["tools"]),
+                "held": len(u.held),
+                "heldTools": len(set(u.held) - {SERVER_ITEM}),
                 **self._restart_status(name),
                 **({"onDemand": True} if name in self.on_demand else {}),
                 **({"oauth": oauth.status(name)} if u.entry.get("url") else {}),
@@ -564,11 +618,31 @@ class Hub:
         upstream = self.upstreams.get(name)
         if not upstream:
             return None
-        blocked = upstream.blocked()
+        blocked = upstream.blocked(held=False)
         return [{"name": t["name"], "title": t.get("title") or (t.get("annotations") or {}).get("title"),
                  "description": (t.get("description") or "").strip().split("\n")[0][:240],
-                 "enabled": t["name"] not in blocked}
+                 "enabled": t["name"] not in blocked,
+                 **({"review": upstream.held[t["name"]]} if t["name"] in upstream.held else {})}
                 for t in upstream.catalog["tools"]]
+
+    def review(self, name):
+        upstream = self.upstreams.get(name)
+        if not upstream:
+            return None
+        current = {t["name"]: t for t in upstream.reviewed()}
+        return [{"name": tool, "status": status, "before": self.approvals.approved(name, tool),
+                 "after": fingerprint(current[tool])}
+                for tool, status in sorted(upstream.held.items()) if tool in current]
+
+    def approve(self, name, tools=None):
+        upstream = self.upstreams.get(name)
+        if not upstream:
+            return False
+        chosen = [t for t in upstream.reviewed() if t["name"] in upstream.held and (tools is None or t["name"] in tools)]
+        self.approvals.approve(name, chosen)
+        upstream.held = self.approvals.held(name, upstream.reviewed())
+        self._notify_if_changed(self._running())
+        return True
 
     def _view(self, running, profile):
         if not profile:
@@ -635,6 +709,8 @@ class Hub:
             return {"resourceTemplates": [t for u in running for t in u.catalog["resourceTemplates"]]}
         if method == "tools/call":
             upstream, name = self._route(running, params.get("name", ""))
+            if name in upstream.held:
+                raise JsonRpcError(-32602, f"Tool waiting for review in the hub: {params.get('name')}")
             if name in upstream.blocked(view[upstream]):
                 raise JsonRpcError(-32602, f"Tool disabled in the hub: {params.get('name')}")
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)

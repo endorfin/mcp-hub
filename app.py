@@ -181,6 +181,11 @@ class Handler(BaseHTTPRequestHandler):
             if tools is None:
                 return self.send({"error": "Server is not running in the hub"}, HTTPStatus.NOT_FOUND)
             return self.send(tools)
+        if self.path.startswith("/api/hub/review"):
+            review = hub.review(self.query("name", ""))
+            if review is None:
+                return self.send({"error": "Server is not running in the hub"}, HTTPStatus.NOT_FOUND)
+            return self.send(review)
         if self.path.startswith("/api/stats"):
             days = self.query("days", "14", int)
             return self.send(hub.calls.stats(max(1, min(days, 90))))
@@ -254,6 +259,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({"error": f"Unknown server: {name}"}, HTTPStatus.NOT_FOUND)
             hub.reconnect(name)
             return self.send({})
+        if self.path == "/api/hub/approve":
+            data = self.body()
+            if data.get("tools") is not None and not isinstance(data["tools"], list):
+                return self.send({"error": "tools must be a list"}, HTTPStatus.BAD_REQUEST)
+            if not hub.approve(data.get("name", ""), data.get("tools")):
+                return self.send({"error": "Server is not running in the hub"}, HTTPStatus.NOT_FOUND)
+            return self.send(hub.status())
         if self.path == "/api/restart":
             threading.Thread(target=restart, daemon=True).start()
             return self.send({"ok": True})

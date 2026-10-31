@@ -18,6 +18,7 @@ PROFILES_FILE = STATE_DIR / "profiles.json"
 DEFAULT_SETTINGS = {
     "configPath": str(STATE_DIR / "servers.json"),
     "passEnvironment": True,
+    "reviewNewServers": False,
     "language": "auto",
     "theme": "auto",
     "palette": "default",

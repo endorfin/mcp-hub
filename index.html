@@ -196,6 +196,8 @@
           <label class="f"><span data-i18n="s.configFile"><b>Konfigurationsdatei</b></span><input name="configPath" form="settingsForm"></label>
           <label class="check"><input type="checkbox" name="passEnvironment" form="settingsForm"> <span data-i18n="s.passEnv">Eigene Umgebungsvariablen des Hubs an lokal gestartete Server weitergeben</span></label>
           <span class="hint check-hint" data-i18n="s.passEnvHint">An: Lokale Server erben alle Umgebungsvariablen des Hubs, etwa PATH für npx und uvx oder Tokens aus der Shell. Aus: Sie bekommen nur Grundvariablen wie PATH und HOME und das, was im Eintrag unter env steht.</span>
+          <label class="check"><input type="checkbox" name="reviewNewServers" form="settingsForm"> <span data-i18n="s.reviewNewServers">Tools neuer Server erst nach Freigabe anbieten</span></label>
+          <span class="hint check-hint" data-i18n="s.reviewNewServersHint">Neue und geänderte Tools bekannter Server hält der Hub immer zurück, bis sie freigegeben sind. An: Das gilt auch für alle Tools eines Servers, den der Hub zum ersten Mal startet. Aus: Dessen Tools gelten beim ersten Start als freigegeben.</span>
           <div class="update-line"><button class="btn primary" form="settingsForm" data-i18n="s.save">Speichern</button><button type="button" class="btn" id="hubRestart" data-i18n="s.hubRestart">Hub neu starten</button></div>
         </div>
       </div>
@@ -412,6 +414,20 @@
       <span class="hint" id="toolsCount" style="margin-right:auto;align-self:center"></span>
       <button type="button" class="btn" id="toolsCancel" data-i18n="s.cancel">Abbrechen</button>
       <button class="btn primary" data-i18n="s.save">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="reviewDialog">
+  <form method="dialog" id="reviewForm">
+    <div class="dhead" id="reviewTitle">Freigabe</div>
+    <div class="dbody">
+      <span class="hint" data-i18n="s.reviewHint">Diese Tools oder Server-Anweisungen bietet der Server neu oder verändert an. Bis zur Freigabe blendet der Hub Tools aus und lehnt Aufrufe ab; statt der Anweisungen nennt er nur die Tool-Namen. Vor allem die Texte prüfen, denn sie landen beim Agenten im Prompt.</span>
+      <div class="tool-list" id="reviewList"></div>
+    </div>
+    <div class="dfoot">
+      <button type="button" class="btn" id="reviewCancel" data-i18n="s.cancel">Abbrechen</button>
+      <button class="btn primary" data-i18n="s.approve">Ausgewählte freigeben</button>
     </div>
   </form>
 </dialog>
@@ -929,12 +945,15 @@ function renderList() {
       if (h.state === "running" && h.restarts) {
         meta.append(el("span", { className: "chip warn", textContent: t("hubRestarted", { n: h.restarts }), title: fromBackend(h.lastError) || "", style: "cursor:default" }));
       }
+      if (h.state === "running" && h.held) {
+        meta.append(el("button", { className: "chip warn", textContent: t("held", { n: h.held }), title: t("heldTitle"), onclick: () => openReview(name) }));
+      }
       if (h.state === "error" && h.gaveUp) {
         meta.append(el("button", { className: "chip", textContent: t("hubRetry"), onclick: () => api("POST", "/api/hub/restart", { name }).then(() => toast(t("hubRetryStarted", { name }))).catch(err => toast(err.message, true)) }));
       }
     }
     const hidden = s.disabledTools || [];
-    const hiddenCount = h?.state === "running" ? h.toolsTotal - h.tools : hidden.length;
+    const hiddenCount = h?.state === "running" ? h.toolsTotal - h.tools - (h.heldTools || 0) : hidden.length;
     if (hiddenCount > 0) {
       const canOpen = on && h?.state === "running";
       meta.append(el("button", {
@@ -1254,7 +1273,8 @@ async function openTools(name) {
     row.dataset.search = `${tool.name} ${tool.title || ""} ${tool.description}`.toLowerCase();
     const box = el("input", { type: "checkbox", checked: tool.enabled, value: tool.name });
     box.onchange = renderToolsCount;
-    row.append(box, el("span", {}, el("b", { textContent: tool.name }), el("small", { textContent: tool.description })));
+    const review = tool.review && el("span", { className: "chip warn", textContent: t(tool.review === "new" ? "reviewNew" : "reviewChanged"), title: t("heldTitle") });
+    row.append(box, el("span", {}, el("b", { textContent: tool.name }), review ? " " : null, review, el("small", { textContent: tool.description })));
     return row;
   }));
   renderToolsCount();
@@ -1280,6 +1300,46 @@ $("#toolsForm").onsubmit = async e => {
   if (disabled.length) entry.disabledTools = disabled; else delete entry.disabledTools;
   delete entry.enabledTools;
   if (await saveServers({ ...servers(), [toolsServer]: entry })) $("#toolsDialog").close();
+};
+
+let reviewServer = null;
+const stable = value => JSON.stringify(value, (_, v) => v && typeof v === "object" && !Array.isArray(v)
+  ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v, 2);
+const shown = value => typeof value === "string" ? value : stable(value);
+
+async function openReview(name) {
+  let items;
+  try { items = await api("GET", `/api/hub/review?name=${encodeURIComponent(name)}`); }
+  catch (e) { return toast(e.message, true); }
+  reviewServer = name;
+  $("#reviewTitle").textContent = t("reviewOf", { name });
+  $("#reviewList").replaceChildren(...items.map((item, i) => {
+    const before = item.before || {};
+    const keys = [...new Set([...Object.keys(before), ...Object.keys(item.after)])]
+      .filter(k => k !== "name" && stable(before[k]) !== stable(item.after[k]));
+    const box = el("input", { type: "checkbox", checked: true, value: item.name, id: `review${i}` });
+    const label = el("label", { htmlFor: box.id }, el("b", { textContent: item.name === "@server" ? t("reviewServerText") : item.name }), " ",
+      el("span", { className: "chip warn", textContent: t(item.status === "new" ? "reviewNew" : "reviewChanged") }));
+    const diff = keys.map(k => el("div", { className: "diff" }, el("small", { textContent: k }),
+      k in before ? el("pre", { className: "del", textContent: shown(before[k]), title: t("reviewBefore") }) : null,
+      k in item.after ? el("pre", { className: "add", textContent: shown(item.after[k]), title: t("reviewAfter") }) : null));
+    return el("div", { className: "tool review-item" }, box, el("div", {}, label, ...diff));
+  }));
+  $("#reviewDialog").showModal();
+}
+
+$("#reviewCancel").onclick = () => $("#reviewDialog").close();
+$("#reviewForm").onsubmit = async e => {
+  e.preventDefault();
+  const tools = [...$("#reviewList").querySelectorAll("input:checked")].map(b => b.value);
+  if (!tools.length) return $("#reviewDialog").close();
+  try {
+    hubStatus = await api("POST", "/api/hub/approve", { name: reviewServer, tools });
+    renderHubStatus();
+    renderList();
+    toast(t("reviewApproved", { n: tools.length }));
+    $("#reviewDialog").close();
+  } catch (err) { toast(err.message, true); }
 };
 
 let importResult = null;

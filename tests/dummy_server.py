@@ -30,10 +30,12 @@ for line in sys.stdin:
     params = message.get("params") or {}
     if method == "initialize":
         time.sleep(float(os.environ.get("DUMMY_DELAY", "0")))
+        instructions = open(os.environ["DUMMY_INSTRUCTIONS"]).read() if os.environ.get("DUMMY_INSTRUCTIONS") else None
         reply(message_id, {"protocolVersion": params.get("protocolVersion"), "capabilities": {"tools": {}},
-                           "serverInfo": {"name": "dummy", "version": "1"}})
+                           "serverInfo": {"name": "dummy", "version": "1"}, "instructions": instructions})
     elif method == "tools/list":
-        reply(message_id, {"tools": TOOLS})
+        listed = json.loads(open(os.environ["DUMMY_TOOLS"]).read()) if os.environ.get("DUMMY_TOOLS") else TOOLS
+        reply(message_id, {"tools": listed})
     elif method == "tools/call":
         name, args = params.get("name"), params.get("arguments") or {}
         if name == "echo":

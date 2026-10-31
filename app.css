@@ -329,6 +329,13 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .tool b { font: 500 12.5px var(--mono); }
 .tool small { display: block; color: var(--muted); font-size: 12.5px; }
 .tool-bar { display: flex; gap: 8px; align-items: center; }
+.review-item { cursor: default; }
+.review-item label { cursor: pointer; }
+.review-item .diff { display: grid; gap: 4px; margin-top: 8px; }
+.review-item .diff small { color: var(--muted); font: 500 11.5px var(--mono); }
+.review-item pre { margin: 0; padding: 6px 10px; border-left: 3px solid; border-radius: 4px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 30vh; overflow: auto; }
+.review-item pre.del { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 9%, transparent); }
+.review-item pre.add { border-color: var(--active); background: color-mix(in srgb, var(--active) 9%, transparent); }
 .tool-bar input { flex: 1; }
 .prof-list { display: grid; border: 1px solid var(--line); border-radius: 9px; }
 .prof { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); }

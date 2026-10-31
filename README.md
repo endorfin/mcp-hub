@@ -28,6 +28,7 @@ MCP Hub turns that around: servers live in one place, secrets stay in the keycha
 - **Connect and import with a click:** add the hub to Claude Code, Claude Desktop, Codex, Cursor, VS Code or Copilot CLI, and move their existing servers over (JSON, Codex TOML, `mcp add` commands).
 - **Compact mode:** clients get `search_tools`, `describe_tool` and `call_tool` instead of every definition, about 300 instead of 60,000 tokens with 200 tools.
 - **Profiles and tags:** switch between setups in one click, give each client its own profile endpoint, and tag servers by topic to filter the list.
+- **Tool approval:** a tool whose description or schema changes, or that a known server adds later, is held back until you approve it, and so are changed server instructions, so a server cannot slip new instructions to your agents unnoticed.
 - **Secrets without plain text:** `${keychain:…}`, `${op://…}` (1Password) and `${env:…}` references, plus OAuth for remote servers with tokens in the keychain.
 - **Inspector, call log and statistics:** call any tool by hand, see every call with client, duration and result.
 - **Runs itself:** crashed servers restart with growing delays, live `list_changed` notifications, updates with one click, autostart at login.
@@ -38,7 +39,7 @@ MCP Hub turns that around: servers live in one place, secrets stay in the keycha
 - [Getting started](#getting-started)
 - [Files](#files)
 - [Server entries](#server-entries): [importing](#importing), [OAuth](#oauth), [secrets](#secrets)
-- [Hub](#hub): [compact mode](#compact-mode), [connecting clients](#connecting-clients), [live updates](#live-updates)
+- [Hub](#hub): [tool approval](#tool-approval), [compact mode](#compact-mode), [connecting clients](#connecting-clients), [live updates](#live-updates)
 - [Autostart](#autostart) · [Updates](#updates)
 - [GUI](#gui): [profiles](#profiles), [statistics](#statistics), [usage and call log](#usage-and-call-log)
 - [API](#api) · [Tests](#tests) · [Troubleshooting](#troubleshooting) · [Contributing](#contributing) · [License](#license)
@@ -82,7 +83,8 @@ Everything lives in `~/.config/mcp-hub/` (on Windows `%APPDATA%\mcp-hub\`; overr
 | File | Contents |
 | --- | --- |
 | `servers.json` | Server definitions in `mcpServers` format; `servers.json.bak` is written before every change |
-| `gui-settings.json` | Path to the server file, `passEnvironment`, `language`, `theme`, `palette`, `checkUpdates` |
+| `gui-settings.json` | Path to the server file, `passEnvironment`, `reviewNewServers`, `language`, `theme`, `palette`, `checkUpdates` |
+| `approved-tools.json` | Approved tool definitions per server, the reference for “Tool approval” |
 | `usage.json` | Usage counter per server (count, last call) |
 | `calls.jsonl` | Call log, the last 5,000 entries |
 | `profiles.json` | Saved profiles and the active profile |
@@ -188,6 +190,15 @@ At `/mcp`, the hub bundles all enabled servers into one MCP endpoint (Streamable
 - **Working directory:** local servers run in the hub folder, so tools that expect a project path need an absolute path.
 - **Security:** every request must be addressed to `127.0.0.1`, `localhost` or `[::1]` with the hub’s port, so a web page whose domain is rebound to 127.0.0.1 gets nothing (DNS rebinding). If a browser sends an `Origin`, it must be exactly the hub’s own address, port included, so other local web apps cannot use the API either. Write requests to the API must be JSON, which forces a browser preflight. New files in the state folder are created readable only by you, and existing files keep their permissions when the hub rewrites them.
 - **Messages:** error messages from the hub and its API are in English, since agents read them too. The GUI translates the common ones when German is selected.
+
+### Tool approval
+
+An agent reads every tool description as part of its prompt. A server that changes a description after you started trusting it (a “rug pull”), or that adds a tool with hidden instructions, would reach your agents unnoticed. The hub therefore remembers each approved tool definition (name, title, description, schemas and annotations; `_meta` is ignored) in `approved-tools.json` and compares it whenever a server lists its tools. The same goes for the server’s own `instructions` and `serverInfo.description`, which compact mode passes on to the agent.
+
+- **Held back:** a tool whose definition differs from the approved one (“changed”) or that a known server offers for the first time (“new”) is hidden from `tools/list` and from `search_tools`, and calls to it fail with `Tool waiting for review in the hub`. The rest of the server keeps working. While changed server instructions are held, compact mode describes the server by its tool names instead.
+- **Review:** the server list shows “N changes await approval”. A click opens the review: for a changed tool every differing field, previously approved in red and offered now in green; for a new one its full definition. Approve all or only some of them; clients get `list_changed` right away. A tool that returns to its approved definition is released by itself.
+- **New servers:** by default, the tools a server offers on its very first start count as approved, since only you add servers to the hub. With *Settings → Server → Offer tools of new servers only after approval* (`reviewNewServers`), they are held as well.
+- **Scope:** tools and server instructions. Prompts and resources are not compared yet.
 
 ### Compact mode
 
@@ -298,7 +309,7 @@ Design rules and components of the interface are documented in [DESIGN.md](DESIG
 - **Log:** every call through the hub with time, client, server, tool, arguments, result preview, duration and error status. Filter by server, client and errors.
 - **Clients:** every session since the last hub start with client name and version, profile endpoint, compact mode, live stream, connection time, last activity and number of calls. “Show in log” opens the log filtered to that client. Clients that never sign off and have no stream are marked idle after 10 minutes.
 - **Inspector:** connects directly to a server (independent of the hub) and lists tools, resources, templates and prompts. Everything can be called with form or JSON input; stderr and notifications appear below.
-- **Settings:** grouped by topic with a list on the left. *Clients* has three cards: the hub endpoint with the compact switch, “Connect clients”, and “Set up by hand” with snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code. *Server* holds the path to the server file, `passEnvironment` and “Restart hub” (for example after a manual `git pull`), *Updates* the update check, *Interface* the language, the appearance (system, light or dark) and the color scheme. Changes under *Interface* apply immediately, without saving.
+- **Settings:** grouped by topic with a list on the left. *Clients* has three cards: the hub endpoint with the compact switch, “Connect clients”, and “Set up by hand” with snippets for Claude Code, Claude Desktop, Codex and Copilot / VS Code. *Server* holds the path to the server file, `passEnvironment`, `reviewNewServers` and “Restart hub” (for example after a manual `git pull`), *Updates* the update check, *Interface* the language, the appearance (system, light or dark) and the color scheme. Changes under *Interface* apply immediately, without saving.
 
 **Language:** English or German, chosen under Settings → Interface. “Automatic (browser)” follows the browser language. The choice is stored in `gui-settings.json`; it also decides the language of the OAuth return page.
 
@@ -347,8 +358,10 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `GET` | `/api/state` | Configuration and settings |
 | `PUT` | `/api/servers` | Save `{"mcpServers": {…}}` and sync the hub |
 | `PUT` | `/api/settings` | Save settings |
-| `GET` | `/api/hub` | Status per server (state, error, number of tools/prompts/resources, OAuth status) |
-| `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state |
+| `GET` | `/api/hub` | Status per server (state, error, number of tools/prompts/resources, `held` changes, of which `heldTools` are tools, OAuth status) |
+| `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state and, while held, `review` (`new` or `changed`) |
+| `GET` | `/api/hub/review?name=` | Held changes of a server with `status`, the approved definition `before` and the offered one `after`; the server instructions appear as `@server` |
+| `POST` | `/api/hub/approve` | `{"name", "tools"?}`: approve these held changes (tool names or `@server`), or all of them without `tools` |
 | `GET` | `/api/live` | Clients with an open notification stream |
 | `POST` | `/api/hub/restart` | `{"name"}`: restart a server in the hub right away and reset its restart counter |
 | `GET` | `/api/integrations` | Known clients with configuration file, `installed`, `connected`, `compact` and their own servers (`importable`) |
@@ -391,7 +404,7 @@ python3 -m unittest discover -s tests -v
 ## Troubleshooting
 
 - **Server shows “error”:** hover over the status chip; the tooltip shows the error message including the last stderr line. For more detail, use the inspector, which starts the same entry directly.
-- **Tool missing in the client:** is the server enabled and green in the hub? Then reconnect the client.
+- **Tool missing in the client:** is the server enabled and green in the hub, and is none of its tools waiting for approval? Then reconnect the client.
 - **Orphaned processes:** processes left over after a client quits usually come from clients that only end the top-level process. The hub itself ends whole process groups. Check with `ps -axo pid,ppid,command | grep <server>`.
 - **Port in use:** `lsof -iTCP:4747 -sTCP:LISTEN`. Set a different port with `PORT=…`, but then update the client URLs too.
 
