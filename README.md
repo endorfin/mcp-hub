@@ -27,7 +27,7 @@ MCP Hub turns that around: servers live in one place, secrets stay in the keycha
 - **One endpoint for every client:** stdio, Streamable HTTP and SSE servers bundled at `http://127.0.0.1:4747/mcp`, tool names prefixed `server__tool`.
 - **Connect and import with a click:** add the hub to Claude Code, Claude Desktop, Codex, Cursor, VS Code or Copilot CLI, and move their existing servers over (JSON, Codex TOML, `mcp add` commands).
 - **Compact mode:** clients get `search_tools`, `describe_tool` and `call_tool` instead of every definition, about 300 instead of 60,000 tokens with 200 tools.
-- **Profiles and tags:** switch between setups in one click, give each client its own profile endpoint, and tag servers by topic to filter the list.
+- **Profiles and tags:** switch between setups in one click, give each client its own profile endpoint, limit an endpoint to read-only or non-destructive tools, and tag servers by topic to filter the list.
 - **Tool approval:** a tool whose description or schema changes, or that a known server adds later, is held back until you approve it, and so are changed server instructions, so a server cannot slip new instructions to your agents unnoticed.
 - **Secrets without plain text:** `${keychain:…}`, `${op://…}` (1Password) and `${env:…}` references, plus OAuth for remote servers with tokens in the keychain.
 - **Inspector, call log and statistics:** call any tool by hand, see every call with client, duration and result.
@@ -113,7 +113,7 @@ An entry with `url` and no `type` is treated as Streamable HTTP. Optional fields
 - `description`: what the server is for, shown in the GUI only. Without it, the GUI shows the server’s own description or its first tools.
 - `tags`: list of free-form labels such as `["monitoring", "frontend"]`, shown next to the name and used by the tag filter above the server list; GUI only.
 - `enabled: false`: the server stays in the list, but the hub does not start it.
-- `disabledTools`: list of tool names (without prefix) that the hub hides and refuses to call. Easiest to manage via ⋯ → “Choose tools…”: the dialog lists all tools with a short description, can be filtered, and “All on” / “All off” only affect the filtered tools (e.g. filter “incident”, then “All off”). The list then shows a chip in orange text, e.g. “6 tools disabled”; its tooltip names the tools and a click opens the dialog. A change does not restart the server.
+- `disabledTools`: list of tool names (without prefix) that the hub hides and refuses to call. Easiest to manage via ⋯ → “Choose tools…”: the dialog lists all tools with a short description, can be filtered, and the “Select” menu (all on, all off, read only, write only) only affects the filtered tools (e.g. filter “incident”, then “All off”). The list then shows a chip in orange text, e.g. “6 tools disabled”; its tooltip names the tools and a click opens the dialog. A change does not restart the server.
 - `enabledTools`: allow list of tool names; only these are offered (applied before `disabledTools`). The “Choose tools…” dialog converts it into `disabledTools` when you save.
 - `cwd` (stdio): working directory for the server; `~` is expanded. Without it, local servers run in the hub folder.
 - `env` (stdio) or `headers` (HTTP/SSE).
@@ -339,6 +339,8 @@ The profile selected at the top applies to the whole hub, i.e. to all clients on
 claude mcp add --scope user --transport http mcp-hub-frontend http://127.0.0.1:4747/p/Frontend/mcp
 ```
 
+**Access per profile endpoint:** in “Manage profiles…”, the selection next to each profile limits its endpoint to *Read-only* or *No destructive* tools (default: *All tools*). The hub takes the tier from each tool’s own annotations, as the MCP specification defines them: `readOnlyHint: true` reads, `destructiveHint: false` writes without deleting or overwriting, everything else counts as destructive, including tools without annotations. Tools above the limit are missing from that endpoint’s list and search, and calls to them fail with `Profile “…” only allows read-only tools`. The tool picker shows each tool’s tier as an icon on the right: an eye for reading, a pencil for writing, a trash can for destructive and a question mark for tools without annotations. A reviewer subagent, for example, gets a profile endpoint that may read GitHub but not delete branches. The annotations are the server’s own statement, so this guards against agent mistakes, not against a server that lies about its tools.
+
 If the profile contains a server that is switched off in the hub, the hub starts it on demand as soon as a client asks at that profile endpoint, and stops it again after 10 minutes without use (`MCP_HUB_ON_DEMAND_IDLE` in seconds). The normal endpoint never sees such a server; the server list marks it as “running for a profile endpoint”. That way rarely used servers stay off in the hub and still serve the profiles that need them. Servers the profile does not know appear with their current setting. The log shows the profile after the client, e.g. `claude-code · Frontend`.
 
 ### Statistics
@@ -359,7 +361,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `PUT` | `/api/servers` | Save `{"mcpServers": {…}}` and sync the hub |
 | `PUT` | `/api/settings` | Save settings |
 | `GET` | `/api/hub` | Status per server (state, error, number of tools/prompts/resources, `held` changes, of which `heldTools` are tools, OAuth status) |
-| `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state and, while held, `review` (`new` or `changed`) |
+| `GET` | `/api/hub/tools?name=` | All tools of a server with their `enabled` state, `tier` (`read`, `write`, `destructive`, `unknown`) and, while held, `review` (`new` or `changed`) |
 | `GET` | `/api/hub/review?name=` | Held changes of a server with `status`, the approved definition `before` and the offered one `after`; the server instructions appear as `@server` |
 | `POST` | `/api/hub/approve` | `{"name", "tools"?}`: approve these held changes (tool names or `@server`), or all of them without `tools` |
 | `GET` | `/api/live` | Clients with an open notification stream |
@@ -381,7 +383,7 @@ The hub identifies the client from `clientInfo` during `initialize` and assigns 
 | `POST` | `/api/oauth/start` | `{"name"}`: start sign-in, returns the sign-in page `{"url"}` |
 | `POST` | `/api/oauth/logout` | `{"name"}`: delete the token |
 | `GET` | `/oauth/callback` | Return from the authorization server |
-| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear", "name", "newName"}`; `clear` enables everything |
+| `POST` | `/api/profiles` | `{"action": "save" \| "apply" \| "rename" \| "delete" \| "clear" \| "access", "name", "newName", "access"}`; `clear` enables everything, `access` sets `all`, `write` or `read` for the profile endpoint |
 | `POST` | `/api/import/parse` | `{"text"}`: detect and convert a configuration, returns `format`, `servers`, `warnings`, `skipped`, `existing` |
 | `POST` | `/api/secrets` | Store `{"name", "value"}` in the keychain, returns `{"ref"}` |
 | `POST` | `/api/inspect/connect` | Open an inspector session (`{"name": …}`) |

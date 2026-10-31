@@ -391,7 +391,7 @@
 <dialog id="profilesDialog">
   <div class="dhead" data-i18n="s.profiles">Profile</div>
   <div class="dbody">
-    <span class="hint" data-i18n="s.profilesHint">Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, startet der Hub dafür bei Bedarf und beendet sie nach 10 Minuten ohne Nutzung wieder.</span>
+    <span class="hint" data-i18n="s.profilesHint">Jedes Profil hat einen eigenen Endpunkt. Ein Client, der dort angebunden ist, sieht immer die Server und Tools dieses Profils – unabhängig davon, welches Profil oben aktiv ist. Server, die im Hub ausgeschaltet sind, startet der Hub dafür bei Bedarf und beendet sie nach 10 Minuten ohne Nutzung wieder. Die Auswahl rechts beschränkt den Endpunkt auf lesende Tools oder auf alle ohne destruktive; Tools ohne Angabe gelten dabei als destruktiv.</span>
     <div class="prof-list" id="profileList"></div>
   </div>
   <div class="dfoot"><button type="button" class="btn" id="profilesClose" data-i18n="s.close">Schließen</button></div>
@@ -404,8 +404,16 @@
       <span class="hint" data-i18n="s.toolsHint">Abgewählte Tools blendet der Hub aus und lehnt Aufrufe ab. Der Server selbst wird nicht neu gestartet. Verbundene Clients bekommen die neue Liste automatisch.</span>
       <div class="tool-bar">
         <input type="search" id="toolsFilter" placeholder="Tools filtern…" aria-label="Tools filtern" data-i18n-placeholder="s.filterTools" data-i18n-aria="s.filterToolsAria">
-        <button type="button" class="btn" id="toolsAll" data-i18n="s.allOn">Alle an</button>
-        <button type="button" class="btn" id="toolsNone" data-i18n="s.allOff">Alle aus</button>
+        <div class="actions" id="toolsSel">
+          <button type="button" class="btn" id="toolsSelBtn" aria-haspopup="menu" aria-expanded="false"><span data-i18n="s.select">Auswählen</span> <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
+          <div class="menu" role="menu" id="toolsSelMenu" hidden>
+            <button type="button" role="menuitem" data-sel="all" data-i18n="s.allOn">Alle an</button>
+            <button type="button" role="menuitem" data-sel="none" data-i18n="s.allOff">Alle aus</button>
+            <hr>
+            <button type="button" role="menuitem" data-sel="read" data-i18n="s.onlyRead">Nur lesen</button>
+            <button type="button" role="menuitem" data-sel="write" data-i18n="s.onlyWrite">Nur schreiben</button>
+          </div>
+        </div>
       </div>
       <div class="tool-list" id="toolsList"></div>
       <p class="error" id="toolsError"></p>
@@ -759,8 +767,12 @@ function renderProfileList() {
         el("div", {}, el("b", { textContent: name }), name === active ? el("span", { className: "chip ok", textContent: t("active"), style: "margin-left:8px;cursor:default" }) : null),
         el("small", { textContent: t("profileSummary", { on, total: saved.length }) + (off ? ` · ${t("toolsDisabled", { n: off })}` : "") }),
         el("button", { type: "button", className: "prof-url", title: t("copyUrl"), onclick: copyUrl }, el("code", { textContent: url }))));
-    const actions = el("div", { className: "actions" });
-    actions.innerHTML = `
+    const access = el("select", { className: "prof-access", ariaLabel: t("accessAria", { name }),
+      onchange: e => profileAction("access", name, t("accessSaved", { name }), { access: e.target.value }) },
+      ...["all", "write", "read"].map(level => el("option", { value: level, textContent: t(`access_${level}`) })));
+    access.value = profiles[name].access || "all";
+    const actions = el("div", { className: "actions" }, access);
+    actions.insertAdjacentHTML("beforeend", `
       <button type="button" class="btn ghost dots" aria-label="${t("profileMenu")}" aria-haspopup="menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
       </button>
@@ -770,7 +782,7 @@ function renderProfileList() {
         <button type="button" role="menuitem" data-act="rename">${t("rename")}</button>
         <hr>
         <button type="button" role="menuitem" class="danger" data-act="delete">${t("delete")}</button>
-      </div>`;
+      </div>`);
     row.append(actions);
     $("[data-act=apply]", row).hidden = name === active;
     $(".dots", row).onclick = e => {
@@ -1254,6 +1266,12 @@ $("#addMenuBtn").onclick = e => {
 };
 
 let toolsServer = null;
+const TIER_ICONS = Object.fromEntries(Object.entries({
+  read: `<path d="M1.5 8S3.9 3.5 8 3.5 14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>`,
+  write: `<path d="M10.5 2.5l3 3L5.5 13.5h-3v-3z"/><path d="M8.5 4.5l3 3"/>`,
+  destructive: `<path d="M2.5 4.5h11M6 4.5V2.5h4v2M4 4.5l.7 9h6.6l.7-9"/>`,
+  unknown: `<path d="M6 6a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.2v.5"/><circle cx="8" cy="12" r=".5"/>`,
+}).map(([tier, paths]) => [tier, `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`]));
 
 function renderToolsCount() {
   const boxes = [...$("#toolsList").querySelectorAll("input")];
@@ -1270,11 +1288,14 @@ async function openTools(name) {
   $("#toolsError").textContent = "";
   $("#toolsList").replaceChildren(...tools.map(tool => {
     const row = el("label", { className: "tool", title: tool.description });
+    row.dataset.tier = tool.tier;
     row.dataset.search = `${tool.name} ${tool.title || ""} ${tool.description}`.toLowerCase();
     const box = el("input", { type: "checkbox", checked: tool.enabled, value: tool.name });
     box.onchange = renderToolsCount;
     const review = tool.review && el("span", { className: "chip warn", textContent: t(tool.review === "new" ? "reviewNew" : "reviewChanged"), title: t("heldTitle") });
-    row.append(box, el("span", {}, el("b", { textContent: tool.name }), review ? " " : null, review, el("small", { textContent: tool.description })));
+    const level = el("span", { className: `tier-icon ${tool.tier}`, title: t(`tierTitle_${tool.tier}`), role: "img", ariaLabel: t(`tier_${tool.tier}`) });
+    level.innerHTML = TIER_ICONS[tool.tier];
+    row.append(box, el("span", {}, el("b", { textContent: tool.name }), review ? " " : null, review, el("small", { textContent: tool.description })), level);
     return row;
   }));
   renderToolsCount();
@@ -1286,12 +1307,33 @@ $("#toolsFilter").oninput = e => {
   const q = e.target.value.trim().toLowerCase();
   for (const row of $("#toolsList").children) row.hidden = q && !row.dataset.search.includes(q);
 };
-const setVisibleTools = on => {
-  for (const row of $("#toolsList").children) if (!row.hidden) $("input", row).checked = on;
+const TOOL_SELECTION = {
+  all: () => true,
+  none: () => false,
+  read: tier => tier === "read",
+  write: tier => tier === "write",
+};
+$("#toolsSelBtn").onclick = e => {
+  e.stopPropagation();
+  const menu = $("#toolsSelMenu");
+  closeMenus(menu);
+  menu.hidden = !menu.hidden;
+  e.currentTarget.setAttribute("aria-expanded", String(!menu.hidden));
+  if (!menu.hidden) menu.firstElementChild.focus();
+};
+$("#toolsSelMenu").onclick = e => {
+  const keep = TOOL_SELECTION[e.target.closest("[data-sel]")?.dataset.sel];
+  if (!keep) return;
+  for (const row of $("#toolsList").children) if (!row.hidden) $("input", row).checked = keep(row.dataset.tier);
   renderToolsCount();
 };
-$("#toolsAll").onclick = () => setVisibleTools(true);
-$("#toolsNone").onclick = () => setVisibleTools(false);
+$("#toolsSel").onkeydown = e => {
+  if (e.key !== "Escape" || $("#toolsSelMenu").hidden) return;
+  e.preventDefault();
+  e.stopPropagation();
+  closeMenus();
+  $("#toolsSelBtn").focus();
+};
 $("#toolsCancel").onclick = () => $("#toolsDialog").close();
 $("#toolsForm").onsubmit = async e => {
   e.preventDefault();

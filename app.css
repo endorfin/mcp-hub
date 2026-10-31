@@ -329,6 +329,10 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .tool b { font: 500 12.5px var(--mono); }
 .tool small { display: block; color: var(--muted); font-size: 12.5px; }
 .tool-bar { display: flex; gap: 8px; align-items: center; }
+#toolsList .tool { grid-template-columns: auto 1fr 16px; }
+.tier-icon { display: flex; margin-top: 1px; color: var(--muted); }
+.tier-icon.destructive { color: var(--warn); }
+.tier-icon.unknown { opacity: .55; }
 .review-item { cursor: default; }
 .review-item label { cursor: pointer; }
 .review-item .diff { display: grid; gap: 4px; margin-top: 8px; }
@@ -342,6 +346,8 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .prof:first-child { border-top: 0; }
 .prof-main { display: grid; gap: 3px; min-width: 0; }
 .prof-main small { color: var(--muted); font-size: 12.5px; }
+.prof .actions { display: flex; gap: 6px; align-items: center; }
+.prof-access { width: auto; padding: 4px 8px; font-size: 13px; }
 #profilesDialog, #profilesDialog .dbody { overflow: visible; }
 .prof-url { display: flex; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: copy; justify-self: start; max-width: 100%; }
 .prof-url code { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }

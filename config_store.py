@@ -115,12 +115,12 @@ def save_settings(data):
         write_json(SETTINGS_FILE, {k: data.get(k, v) for k, v in load_settings().items()})
 
 
-def update_profiles(action, name, new_name=None, on_config_change=lambda: None):
+def update_profiles(action, name, new_name=None, on_config_change=lambda: None, access=None):
     with lock:
-        return _update_profiles(action, name, new_name, on_config_change)
+        return _update_profiles(action, name, new_name, on_config_change, access)
 
 
-def _update_profiles(action, name, new_name, on_config_change):
+def _update_profiles(action, name, new_name, on_config_change, access):
     data = load_profiles()
     profiles = data["profiles"]
     if action == "clear":
@@ -134,7 +134,7 @@ def _update_profiles(action, name, new_name, on_config_change):
     elif not name or not name.strip() or "/" in name:
         return "Profile name is missing or contains “/”"
     elif action == "save":
-        profiles[name] = {"servers": profile_snapshot(load_config()["mcpServers"])}
+        profiles[name] = {**profiles.get(name, {}), "servers": profile_snapshot(load_config()["mcpServers"])}
         data["active"] = name
     elif action == "apply":
         if name not in profiles:
@@ -163,6 +163,15 @@ def _update_profiles(action, name, new_name, on_config_change):
         profiles[new_name] = profiles.pop(name)
         if data["active"] == name:
             data["active"] = new_name
+    elif action == "access":
+        if name not in profiles:
+            return f"Unknown profile: {name}"
+        if access not in ("all", "write", "read"):
+            return "access must be all, write or read"
+        if access == "all":
+            profiles[name].pop("access", None)
+        else:
+            profiles[name]["access"] = access
     elif action == "delete":
         profiles.pop(name, None)
         if data["active"] == name:

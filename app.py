@@ -282,8 +282,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"ok": True, "version": version})
         if self.path == "/api/profiles":
             data = self.body()
-            if error := update_profiles(data.get("action"), data.get("name"), data.get("newName"), sync_hub_in_background):
+            if error := update_profiles(data.get("action"), data.get("name"), data.get("newName"), sync_hub_in_background,
+                                        data.get("access")):
                 return self.send({"error": error}, HTTPStatus.BAD_REQUEST)
+            if data.get("action") == "access":
+                sync_hub_in_background()
             return self.send(self.state())
         if self.path in ("/api/oauth/start", "/api/oauth/logout"):
             name = self.body().get("name", "")

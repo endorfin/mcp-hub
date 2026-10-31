@@ -22,6 +22,7 @@ RESTART_DELAYS = (2, 4, 8, 16, 32)
 STABLE_AFTER = 60
 ON_DEMAND_IDLE = 600
 SERVER_ITEM = "@server"
+ACCESS = {"read": {"read"}, "write": {"read", "write"}}
 
 
 def runtime_key(entry, pass_environment):
@@ -48,6 +49,15 @@ def summary(upstream):
     trusted = SERVER_ITEM not in upstream.held
     return trusted and (upstream.server_info.get("description") or upstream.instructions.strip().split("\n")[0][:300]) \
         or ", ".join(t["name"] for t in tools[:6]) + (" …" if len(tools) > 6 else "")
+
+
+def tier(tool):
+    annotations = tool.get("annotations") or {}
+    if annotations.get("readOnlyHint"):
+        return "read"
+    if annotations.get("destructiveHint") is False:
+        return "write"
+    return "destructive" if {"readOnlyHint", "destructiveHint"} & set(annotations) else "unknown"
 
 
 def fingerprint(tool):
@@ -621,7 +631,7 @@ class Hub:
         blocked = upstream.blocked(held=False)
         return [{"name": t["name"], "title": t.get("title") or (t.get("annotations") or {}).get("title"),
                  "description": (t.get("description") or "").strip().split("\n")[0][:240],
-                 "enabled": t["name"] not in blocked,
+                 "enabled": t["name"] not in blocked, "tier": tier(t),
                  **({"review": upstream.held[t["name"]]} if t["name"] in upstream.held else {})}
                 for t in upstream.catalog["tools"]]
 
@@ -658,7 +668,14 @@ class Hub:
                     view[upstream] = set(upstream.entry.get("disabledTools") or [])
             elif wanted["enabled"]:
                 view[upstream] = set(wanted["disabledTools"])
+        allowed = ACCESS.get(saved.get("access"))
+        if allowed:
+            for upstream in view:
+                view[upstream] |= {t["name"] for t in upstream.catalog["tools"] if tier(t) not in allowed}
         return view
+
+    def _access(self, profile):
+        return (self.load_profiles()["profiles"].get(profile) or {}).get("access") if profile else None
 
     def _route(self, running, prefixed):
         for upstream in sorted(running, key=lambda u: -len(u.prefix)):
@@ -711,6 +728,11 @@ class Hub:
             upstream, name = self._route(running, params.get("name", ""))
             if name in upstream.held:
                 raise JsonRpcError(-32602, f"Tool waiting for review in the hub: {params.get('name')}")
+            access = self._access(profile)
+            tool = next((t for t in upstream.catalog["tools"] if t["name"] == name), None)
+            if access in ACCESS and tool and tier(tool) not in ACCESS[access]:
+                kind = "read-only" if access == "read" else "non-destructive"
+                raise JsonRpcError(-32602, f"Profile “{profile}” only allows {kind} tools: {params.get('name')}")
             if name in upstream.blocked(view[upstream]):
                 raise JsonRpcError(-32602, f"Tool disabled in the hub: {params.get('name')}")
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)
