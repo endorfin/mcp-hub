@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/github/license/endorfin/mcp-hub)](LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![macOS | Linux | Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/endorfin/mcp-hub)
 
 **Set up your MCP servers once, use them in every client.** A local hub that manages all your servers in one place, tests them, and serves them bundled behind a single endpoint to Claude Code, Claude Desktop, Codex, Copilot, Cursor and VS Code.
 
