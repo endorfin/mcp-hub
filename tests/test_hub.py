@@ -38,6 +38,24 @@ class KeychainRequirementTest(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("MCP_HUB_REQUIRE_KEYCHAIN"), "only enforced in CI")
     def test_keychain_is_usable(self):
         self.assertTrue(KEYCHAIN, "MCP_HUB_REQUIRE_KEYCHAIN is set, but no keychain is usable")
+
+
+@unittest.skipUnless(KEYCHAIN, "no usable keychain (macOS keychain or Secret Service)")
+class LongKeychainValueTest(unittest.TestCase):
+    NAME = "selftest/long"
+
+    def tearDown(self):
+        secrets_store.delete_keychain(self.NAME)
+
+    def test_value_longer_than_one_line_of_security_input(self):
+        value = "".join(chr(33 + i % 94) for i in range(9000))
+        secrets_store.store_keychain(self.NAME, value)
+        self.assertEqual(secrets_store.read_keychain(self.NAME), value)
+
+    def test_shorter_value_replaces_all_parts(self):
+        secrets_store.store_keychain(self.NAME, "x" * 5000)
+        secrets_store.store_keychain(self.NAME, "y" * secrets_store.MACOS_CHUNK)
+        self.assertEqual(secrets_store.read_keychain(self.NAME), "y" * secrets_store.MACOS_CHUNK)
 DUMMY = [sys.executable, str(ROOT / "tests" / "dummy_server.py")]
 KEYCHAIN_NAME = "selftest/hub-tests"
 

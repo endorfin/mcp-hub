@@ -8,6 +8,9 @@ import threading
 PATTERN = re.compile(r"\$\{(op://[^}]+|keychain:[^}]+|env:[^}]+)\}")
 SERVICE_PREFIX = "mcp-hub/"
 ACCOUNT = "mcp-hub"
+# security -i cuts input lines at about 4 KB, so longer values are split. Every part but the last
+# is exactly MACOS_CHUNK long, which tells the reader to fetch the next one; changing it orphans stored values.
+MACOS_CHUNK = 1024
 
 _cache = {}
 _missing = set()
@@ -44,6 +47,10 @@ def _wincred(action, *args):
         raise SecretError(str(e))
 
 
+def _macos_service(name, part):
+    return SERVICE_PREFIX + name + (f"#{part}" if part else "")
+
+
 def _keychain_read(name):
     _require_keychain()
     if WINDOWS:
@@ -52,7 +59,19 @@ def _keychain_read(name):
             raise SecretError(f"No keychain entry “{name}”")
         return value
     if MACOS:
-        return _run(["security", "find-generic-password", "-a", ACCOUNT, "-s", SERVICE_PREFIX + name, "-w"]).rstrip("\n")
+        value, part = "", 0
+        while True:
+            try:
+                chunk = _run(["security", "find-generic-password", "-a", ACCOUNT, "-s", _macos_service(name, part),
+                              "-w"]).rstrip("\n")
+            except SecretError:
+                if part == 0:
+                    raise
+                return value
+            value += chunk
+            if len(chunk) < MACOS_CHUNK:
+                return value
+            part += 1
     return _run(["secret-tool", "lookup", "service", SERVICE_PREFIX + name, "account", ACCOUNT])
 
 
@@ -62,8 +81,16 @@ def _keychain_write(name, value):
         _wincred("write", SERVICE_PREFIX + name, ACCOUNT, value)
     elif MACOS:
         # Pass the value via stdin, not as an argument, or it shows up in the process list.
-        quoted = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
-        _run(["security", "-i"], f"add-generic-password -U -a {ACCOUNT} -s {SERVICE_PREFIX}{name} -w {quoted}\n")
+        chunks = [value[i:i + MACOS_CHUNK] for i in range(0, len(value), MACOS_CHUNK)] or [""]
+        _keychain_delete(name)
+        commands = []
+        for part, chunk in enumerate(chunks):
+            quoted = '"' + chunk.replace("\\", "\\\\").replace('"', '\\"') + '"'
+            commands.append(f"add-generic-password -U -a {ACCOUNT} -s {_macos_service(name, part)} -w {quoted}\n")
+        try:
+            _run(["security", "-i"], "".join(commands))
+        except SecretError:
+            raise SecretError("security could not save the value in the keychain") from None
     else:
         _run(["secret-tool", "store", "--label", f"MCP Hub: {name}", "service", SERVICE_PREFIX + name, "account", ACCOUNT],
              value)
@@ -75,8 +102,10 @@ def _keychain_delete(name):
     if WINDOWS:
         _wincred("delete", SERVICE_PREFIX + name)
     elif MACOS:
-        subprocess.run(["security", "delete-generic-password", "-a", ACCOUNT, "-s", SERVICE_PREFIX + name],
-                       capture_output=True)
+        part = 0
+        while subprocess.run(["security", "delete-generic-password", "-a", ACCOUNT, "-s", _macos_service(name, part)],
+                             capture_output=True).returncode == 0:
+            part += 1
     else:
         subprocess.run(["secret-tool", "clear", "service", SERVICE_PREFIX + name, "account", ACCOUNT],
                        capture_output=True)
