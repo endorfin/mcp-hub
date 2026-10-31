@@ -291,30 +291,38 @@ class CallLog:
             if day in per_day:
                 per_day[day]["ok" if entry.get("ok") else "errors"] += 1
             for group, key in ((servers, entry["server"]), (tools, (entry["server"], entry["target"]))):
-                bucket = group.setdefault(key, {"calls": 0, "errors": 0, "ms": [], "last": 0})
+                bucket = group.setdefault(key, {"calls": 0, "errors": 0, "ms": [], "sizes": [], "last": 0})
                 bucket["calls"] += 1
                 bucket["errors"] += 0 if entry.get("ok") else 1
                 bucket["ms"].append(entry.get("ms", 0))
+                if "size" in entry:
+                    bucket["sizes"].append(entry["size"])
                 bucket["last"] = max(bucket["last"], entry["t"])
 
         def summary(bucket):
             ms = sorted(bucket["ms"])
             return {"calls": bucket["calls"], "errors": bucket["errors"], "last": bucket["last"],
                     "median": round(statistics.median(ms)) if ms else 0,
-                    "p95": ms[min(len(ms) - 1, int(len(ms) * 0.95))] if ms else 0}
+                    "p95": ms[min(len(ms) - 1, int(len(ms) * 0.95))] if ms else 0,
+                    "size": round(statistics.median(bucket["sizes"])) if bucket["sizes"] else None,
+                    "volume": sum(bucket["sizes"])}
 
         durations = [entry.get("ms", 0) for entry in entries]
+        sizes = [entry["size"] for entry in entries if "size" in entry]
+        tools_summary = [{"server": key[0], "tool": key[1], **summary(b)} for key, b in tools.items()]
         return {
             "since": entries[0]["t"] if entries else None,
             "kept": self.entries.maxlen,
             "total": len(entries),
             "errors": sum(1 for entry in entries if not entry.get("ok")),
             "median": round(statistics.median(durations)) if durations else 0,
+            "volume": sum(sizes),
+            "medianSize": round(statistics.median(sizes)) if sizes else None,
             "clients": len({entry.get("client") for entry in entries}),
             "days": list(per_day.values()),
             "servers": sorted(({"server": name, **summary(b)} for name, b in servers.items()), key=lambda s: -s["calls"]),
-            "slowest": sorted(({"server": key[0], "tool": key[1], **summary(b)} for key, b in tools.items()),
-                              key=lambda t: -t["p95"])[:5],
+            "slowest": sorted(tools_summary, key=lambda t: -t["p95"])[:5],
+            "largest": sorted((t for t in tools_summary if t["size"] is not None), key=lambda t: -t["size"])[:5],
         }
 
 
@@ -789,6 +797,7 @@ class Hub:
             result = upstream.request(method, params)
             entry["ok"] = not result.get("isError")
             entry["result"] = preview(first_text(result), 600)
+            entry["size"] = len(json.dumps(result, ensure_ascii=False).encode())
             return result
         except RpcError as e:
             entry["ok"] = False

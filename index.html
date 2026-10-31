@@ -95,6 +95,8 @@
         <div>
           <h3 data-i18n="s.slowest">Langsamste Tools <span class="hint">nach p95</span></h3>
           <table class="stat-table" id="statsSlowest"></table>
+          <h3 data-i18n="s.largest">Größte Antworten <span class="hint">nach Median</span></h3>
+          <table class="stat-table" id="statsLargest"></table>
         </div>
       </div>
       </div>
@@ -1954,6 +1956,8 @@ function fillSelect(sel, values, allLabel, label = v => v) {
 let stats = null;
 const fmt = new Intl.NumberFormat(LOCALE);
 const ms = v => v >= 1000 ? `${fmt.format(Math.round(v / 100) / 10)} s` : `${fmt.format(v)} ms`;
+const size = v => v == null ? "–" : v >= 1e6 ? `${fmt.format(Math.round(v / 1e5) / 10)} MB` : v >= 1000 ? `${fmt.format(Math.round(v / 100) / 10)} kB` : `${fmt.format(v)} B`;
+const tokensTitle = v => v == null ? "" : t("approxTokens", { n: fmt.format(Math.round(v / 4)) });
 
 async function refreshStats() {
   const fresh = await api("GET", "/api/stats?days=14").catch(() => null);
@@ -1974,6 +1978,7 @@ function renderStats() {
     kpi(t("errorRate"), `${fmt.format(Math.round(rate * 10) / 10)} %`, t("errorsN", { n: fmt.format(s.errors), count: s.errors })),
     kpi(t("typicalDuration"), ms(s.median), t("median")),
     kpi(t("clients"), fmt.format(s.clients), t("withCalls")),
+    kpi(t("responseVolume"), size(s.volume), s.medianSize == null ? null : t("perCall", { size: size(s.medianSize) })),
   );
 
   const max = Math.max(1, ...s.days.map(d => d.ok + d.errors));
@@ -1995,23 +2000,29 @@ function renderStats() {
 
   const head = (...cols) => el("tr", {}, ...cols.map(c => el("th", { textContent: c })));
   const top = Math.max(1, ...s.servers.map(x => x.calls));
-  $("#statsServers").replaceChildren(head(t("server"), t("calls"), t("errors"), t("median"), "p95", t("last")), ...s.servers.map(x => {
+  $("#statsServers").replaceChildren(head(t("server"), t("calls"), t("errors"), t("median"), "p95", t("size"), t("last")), ...s.servers.map(x => {
     const row = el("tr", { className: "pick", title: t("filterLog", { name: x.server }) },
       el("td", { className: "name", textContent: x.server }),
       el("td", {}, el("span", { className: "share" }, el("i", { style: `width:${Math.max(2, (x.calls / top) * 60)}px` }), fmt.format(x.calls))),
       el("td", { textContent: x.errors ? `${fmt.format(x.errors)} (${fmt.format(Math.round((x.errors / x.calls) * 100))} %)` : "–" }),
       el("td", { textContent: ms(x.median) }),
       el("td", { textContent: ms(x.p95) }),
+      el("td", { textContent: size(x.size), title: tokensTitle(x.size) }),
       el("td", { textContent: ago(x.last) }));
     row.onclick = () => { $("#callServer").value = x.server; renderCalls(); };
     return row;
   }));
-  if (!s.servers.length) $("#statsServers").append(el("tr", {}, el("td", { colSpan: 6, className: "hint", textContent: t("noCallsYetDot") })));
+  if (!s.servers.length) $("#statsServers").append(el("tr", {}, el("td", { colSpan: 7, className: "hint", textContent: t("noCallsYetDot") })));
   $("#statsSlowest").replaceChildren(head(t("tool"), t("calls"), t("median"), "p95"), ...s.slowest.map(x => el("tr", {},
     el("td", { className: "name", textContent: `${x.server}__${x.tool}`, title: `${x.server}__${x.tool}` }),
     el("td", { textContent: fmt.format(x.calls) }),
     el("td", { textContent: ms(x.median) }),
     el("td", { textContent: ms(x.p95) }))));
+  $("#statsLargest").replaceChildren(head(t("tool"), t("calls"), t("median"), t("total")), ...s.largest.map(x => el("tr", {},
+    el("td", { className: "name", textContent: `${x.server}__${x.tool}`, title: `${x.server}__${x.tool}` }),
+    el("td", { textContent: fmt.format(x.calls) }),
+    el("td", { textContent: size(x.size), title: tokensTitle(x.size) }),
+    el("td", { textContent: size(x.volume) }))));
 }
 
 $("#stats").ontoggle = e => { try { localStorage.setItem("statsOpen", e.target.open ? "1" : "0"); } catch {} };
@@ -2045,6 +2056,7 @@ function renderCalls() {
         el("span", { className: "when", textContent: (today ? "" : d.toLocaleDateString(LOCALE, { day: "2-digit", month: "2-digit" }) + " ") + d.toLocaleTimeString(LOCALE), title: d.toLocaleString(LOCALE) }),
         el("span", { className: "who", textContent: clientName(c.client), title: c.client }),
         el("span", { className: "what" }, el("b", { textContent: c.server }), ` · ${c.kind === "tool" ? "" : c.kind + " "}${c.target}`),
+        el("span", { className: "size", textContent: c.size == null ? "" : size(c.size), title: tokensTitle(c.size) }),
         el("span", { className: "ms", textContent: c.ms >= 1000 ? `${(c.ms / 1000).toFixed(1)} s` : `${c.ms} ms` }),
         el("span", { className: "st " + (c.ok ? "ok" : "bad"), textContent: c.ok ? "OK" : t("error") })),
       el("div", { className: "body" },

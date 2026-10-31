@@ -365,7 +365,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .stats > summary::after { content: ""; width: 7px; height: 7px; margin-left: auto; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
 .stats:not([open]) > summary::after { transform: rotate(-45deg); }
 .stats h3 { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0; }
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .kpi { display: grid; gap: 2px; padding: 12px 14px; border-radius: 8px; background: var(--field); }
 .kpi span { font-size: 12.5px; color: var(--muted); }
 .kpi b { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
@@ -390,6 +390,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .col:hover .tip { display: block; }
 .chart-days { display: grid; grid-template-columns: repeat(var(--days), minmax(0, 1fr)); margin-top: -12px; margin-bottom: 4px; font-size: 11px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
 .stat-tables { display: grid; grid-template-columns: 3fr 2fr; gap: 24px; }
+.stat-table + h3 { margin-top: 20px; }
 .stat-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 6px; }
 .stat-table th { text-align: right; font-weight: 400; font-size: 12px; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .stat-table td { text-align: right; padding: 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -422,20 +423,20 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .imp-warn li::marker { color: var(--warn); }
 .call { border-top: 1px solid var(--line); }
 .call:first-child { border-top: 0; }
-.call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
+.call summary { display: grid; grid-template-columns: 92px 150px 1fr auto auto auto; gap: 12px; align-items: center; padding: 9px 16px; cursor: pointer; list-style: none; font-size: 13px; }
 .call summary::-webkit-details-marker { display: none; }
 .call summary:hover { background: var(--chip); }
 .call .when { color: var(--muted); font-variant-numeric: tabular-nums; }
 .call .who { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .call .what { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .call .what b { font-weight: 600; }
-.call .ms { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; min-width: 56px; }
+.call .ms, .call .size { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; min-width: 56px; }
 .call .st { font-size: 12px; font-weight: 600; min-width: 44px; text-align: right; }
 .call .st.ok { color: var(--ok); } .call .st.bad { color: var(--bad); }
 .call .body { padding: 0 16px 14px; display: grid; gap: 8px; }
 .call .body pre { margin: 0; background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 40vh; overflow: auto; }
 .call .body .lbl { font-size: 11.5px; color: var(--muted); }
-@media (max-width: 760px) { .call summary { grid-template-columns: 70px 1fr auto; } .call .who, .call .ms { display: none; } }
+@media (max-width: 760px) { .call summary { grid-template-columns: 70px 1fr auto; } .call .who, .call .ms, .call .size { display: none; } }
 .hubhead { display: flex; gap: 14px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
 .compact-row { display: grid; gap: 4px; }
 .compact-row .hint { margin-left: 24px; }
