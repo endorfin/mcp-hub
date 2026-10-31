@@ -435,7 +435,7 @@
   <form method="dialog" id="reviewForm">
     <div class="dhead" id="reviewTitle">Freigabe</div>
     <div class="dbody">
-      <span class="hint" data-i18n="s.reviewHint">Diese Tools oder Server-Anweisungen bietet der Server neu oder verändert an. Bis zur Freigabe blendet der Hub Tools aus und lehnt Aufrufe ab; statt der Anweisungen nennt er nur die Tool-Namen. Vor allem die Texte prüfen, denn sie landen beim Agenten im Prompt.</span>
+      <span class="hint" data-i18n="s.reviewHint">Diese Tools, Prompts, Ressourcen-Vorlagen oder Server-Anweisungen bietet der Server neu oder verändert an. Bis zur Freigabe blendet der Hub sie aus und lehnt Aufrufe ab; statt der Anweisungen nennt er nur die Tool-Namen. Vor allem die Texte prüfen, denn sie landen beim Agenten im Prompt.</span>
       <div class="tool-list" id="reviewList"></div>
     </div>
     <div class="dfoot">
@@ -1358,6 +1358,9 @@ $("#toolsForm").onsubmit = async e => {
 };
 
 let reviewServer = null;
+const reviewLabel = key => key === "@server" ? t("reviewServerText")
+  : key.startsWith("@prompt/") ? t("reviewPrompt", { name: key.slice(8) })
+  : key.startsWith("@template/") ? t("reviewTemplate", { uri: key.slice(10) }) : key;
 const findingText = f => `${t(`rule_${f.rule}`)} (${f.field}): ${f.excerpt}`;
 const stable = value => JSON.stringify(value, (_, v) => v && typeof v === "object" && !Array.isArray(v)
   ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v, 2);
@@ -1374,7 +1377,7 @@ async function openReview(name) {
     const keys = [...new Set([...Object.keys(before), ...Object.keys(item.after)])]
       .filter(k => k !== "name" && stable(before[k]) !== stable(item.after[k]));
     const box = el("input", { type: "checkbox", checked: !item.findings.length, value: item.name, id: `review${i}` });
-    const label = el("label", { htmlFor: box.id }, el("b", { textContent: item.name === "@server" ? t("reviewServerText") : item.name }), " ",
+    const label = el("label", { htmlFor: box.id }, el("b", { textContent: reviewLabel(item.name) }), " ",
       el("span", { className: "chip warn", textContent: t(item.status === "new" ? "reviewNew" : "reviewChanged") }));
     const findings = item.findings.length ? el("ul", { className: "findings" }, ...item.findings.map(f =>
       el("li", {}, el("b", { textContent: t(`rule_${f.rule}`) }), el("small", { textContent: f.field }), el("code", { textContent: f.excerpt })))) : null;

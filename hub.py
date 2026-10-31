@@ -24,6 +24,8 @@ RESTART_DELAYS = (2, 4, 8, 16, 32)
 STABLE_AFTER = 60
 ON_DEMAND_IDLE = 600
 SERVER_ITEM = "@server"
+PROMPT_ITEM = "@prompt/"
+TEMPLATE_ITEM = "@template/"
 ACCESS = {"read": {"read"}, "write": {"read", "write"}}
 
 
@@ -142,13 +144,24 @@ class Upstream:
                 except (RpcError, AttributeError, TypeError):
                     pass
         items = self.reviewed()
-        self.findings = {i["name"]: found for i in items if (found := scanner.scan(i))}
+        self.findings = {key: found for key, item in items.items() if (found := scanner.scan(item))}
         if self.approvals:
             self.held = self.approvals.held(self.name, items, set(self.findings))
 
     def reviewed(self):
         text = {"description": self.server_info.get("description"), "instructions": self.instructions}
-        return self.catalog["tools"] + [{"name": SERVER_ITEM, **{k: v for k, v in text.items() if v}}]
+        return {
+            **{t["name"]: t for t in self.catalog["tools"]},
+            **{PROMPT_ITEM + p["name"]: p for p in self.catalog["prompts"]},
+            **{TEMPLATE_ITEM + t["uriTemplate"]: t for t in self.catalog["resourceTemplates"]},
+            SERVER_ITEM: {"name": SERVER_ITEM, **{k: v for k, v in text.items() if v}},
+        }
+
+    def prompts(self):
+        return [p for p in self.catalog["prompts"] if PROMPT_ITEM + p["name"] not in self.held]
+
+    def templates(self):
+        return [t for t in self.catalog["resourceTemplates"] if TEMPLATE_ITEM + t["uriTemplate"] not in self.held]
 
     def blocked(self, disabled=None, held=True):
         names = set((self.entry.get("disabledTools") or []) if disabled is None else disabled)
@@ -212,21 +225,21 @@ class Approvals:
         with self.lock:
             known = self.data.get(server)
             if known is None and not self.review_new():
-                if not any(i["name"] != SERVER_ITEM for i in items):
+                if set(items) <= {SERVER_ITEM}:
                     return {}
-                known = self.data[server] = {i["name"]: fingerprint(i) for i in items if i["name"] not in flagged}
+                known = self.data[server] = {key: fingerprint(item) for key, item in items.items() if key not in flagged}
                 self._save()
             known = known or {}
-            return {i["name"]: "changed" if i["name"] in known else "new"
-                    for i in items if known.get(i["name"]) != fingerprint(i)}
+            return {key: "changed" if key in known else "new"
+                    for key, item in items.items() if known.get(key) != fingerprint(item)}
 
     def approved(self, server, name):
         with self.lock:
             return (self.data.get(server) or {}).get(name)
 
-    def approve(self, server, tools):
+    def approve(self, server, items):
         with self.lock:
-            self.data.setdefault(server, {}).update({t["name"]: fingerprint(t) for t in tools})
+            self.data.setdefault(server, {}).update({key: fingerprint(item) for key, item in items.items()})
             self._save()
 
     def _save(self):
@@ -609,8 +622,8 @@ class Hub:
 
     def _notify(self, running):
         signature = json.dumps([
-            [(u.name, sorted(t["name"] for t in u.tools()), sorted(p["name"] for p in u.catalog["prompts"]),
-              sorted(r["uri"] for r in u.catalog["resources"]), len(u.catalog["resourceTemplates"]))
+            [(u.name, sorted(t["name"] for t in u.tools()), sorted(p["name"] for p in u.prompts()),
+              sorted(r["uri"] for r in u.catalog["resources"]), sorted(t["uriTemplate"] for t in u.templates()))
              for u in sorted(running, key=lambda u: u.name)],
             self.load_profiles().get("profiles"),
         ], sort_keys=True)
@@ -636,10 +649,12 @@ class Hub:
                 "error": u.error,
                 "summary": summary(u),
                 **{k: len(v) for k, v in u.catalog.items()},
+                "prompts": len(u.prompts()),
+                "resourceTemplates": len(u.templates()),
                 "tools": len(u.tools()),
                 "toolsTotal": len(u.catalog["tools"]),
                 "held": len(u.held),
-                "heldTools": len(set(u.held) - {SERVER_ITEM}),
+                "heldTools": sum(1 for key in u.held if not key.startswith("@")),
                 "flagged": len(set(u.held) & set(u.findings)),
                 **self._restart_status(name),
                 **({"onDemand": True} if name in self.on_demand else {}),
@@ -671,16 +686,17 @@ class Hub:
         upstream = self.upstreams.get(name)
         if not upstream:
             return None
-        current = {t["name"]: t for t in upstream.reviewed()}
-        return [{"name": tool, "status": status, "before": self.approvals.approved(name, tool),
-                 "after": fingerprint(current[tool]), "findings": upstream.findings.get(tool, [])}
-                for tool, status in sorted(upstream.held.items()) if tool in current]
+        current = upstream.reviewed()
+        return [{"name": key, "status": status, "before": self.approvals.approved(name, key),
+                 "after": fingerprint(current[key]), "findings": upstream.findings.get(key, [])}
+                for key, status in sorted(upstream.held.items()) if key in current]
 
     def approve(self, name, tools=None):
         upstream = self.upstreams.get(name)
         if not upstream:
             return False
-        chosen = [t for t in upstream.reviewed() if t["name"] in upstream.held and (tools is None or t["name"] in tools)]
+        chosen = {key: item for key, item in upstream.reviewed().items()
+                  if key in upstream.held and (tools is None or key in tools)}
         self.approvals.approve(name, chosen)
         upstream.held = self.approvals.held(name, upstream.reviewed(), set(upstream.findings))
         self._notify_if_changed(self._running())
@@ -751,11 +767,11 @@ class Hub:
         if method == "tools/list":
             return {"tools": [labelled(u, t) for u, disabled in view.items() for t in u.tools(disabled)]}
         if method == "prompts/list":
-            return {"prompts": [labelled(u, p) for u in running for p in u.catalog["prompts"]]}
+            return {"prompts": [labelled(u, p) for u in running for p in u.prompts()]}
         if method == "resources/list":
             return {"resources": [r for u in running for r in u.catalog["resources"]]}
         if method == "resources/templates/list":
-            return {"resourceTemplates": [t for u in running for t in u.catalog["resourceTemplates"]]}
+            return {"resourceTemplates": [t for u in running for t in u.templates()]}
         if method == "tools/call":
             upstream, name = self._route(running, params.get("name", ""))
             if name in upstream.held:
@@ -770,6 +786,8 @@ class Hub:
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)
         if method == "prompts/get":
             upstream, name = self._route(running, params.get("name", ""))
+            if PROMPT_ITEM + name in upstream.held:
+                raise JsonRpcError(-32602, f"Prompt waiting for review in the hub: {params.get('name')}")
             return self._forward(upstream, "prompts/get", {**params, "name": name}, name, client)
         if method == "resources/read":
             uri = params.get("uri", "")
@@ -779,6 +797,8 @@ class Hub:
             for upstream in running:
                 for template in upstream.catalog["resourceTemplates"]:
                     if uri.startswith(template["uriTemplate"].split("{")[0]):
+                        if TEMPLATE_ITEM + template["uriTemplate"] in upstream.held:
+                            raise JsonRpcError(-32602, f"Resource template waiting for review in the hub: {template['uriTemplate']}")
                         return self._forward(upstream, "resources/read", params, uri, client)
             raise JsonRpcError(-32002, f"Resource not found: {uri}")
         raise JsonRpcError(-32601, f"Method not supported: {method}")

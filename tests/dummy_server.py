@@ -18,6 +18,10 @@ def reply(message_id, result=None, error=None):
     sys.stdout.flush()
 
 
+def from_file(variable):
+    return json.loads(open(os.environ[variable]).read()) if os.environ.get(variable) else []
+
+
 def text(value):
     return {"content": [{"type": "text", "text": value}]}
 
@@ -31,7 +35,9 @@ for line in sys.stdin:
     if method == "initialize":
         time.sleep(float(os.environ.get("DUMMY_DELAY", "0")))
         instructions = open(os.environ["DUMMY_INSTRUCTIONS"]).read() if os.environ.get("DUMMY_INSTRUCTIONS") else None
-        reply(message_id, {"protocolVersion": params.get("protocolVersion"), "capabilities": {"tools": {}},
+        capabilities = {"tools": {}, **({"prompts": {}} if os.environ.get("DUMMY_PROMPTS") else {}),
+                        **({"resources": {}} if os.environ.get("DUMMY_TEMPLATES") else {})}
+        reply(message_id, {"protocolVersion": params.get("protocolVersion"), "capabilities": capabilities,
                            "serverInfo": {"name": "dummy", "version": "1"}, "instructions": instructions})
     elif method == "tools/list":
         listed = json.loads(open(os.environ["DUMMY_TOOLS"]).read()) if os.environ.get("DUMMY_TOOLS") else TOOLS
@@ -48,6 +54,16 @@ for line in sys.stdin:
             os._exit(1)
         else:
             reply(message_id, error={"code": -32000, "message": "failed on purpose"})
+    elif method == "prompts/list":
+        reply(message_id, {"prompts": from_file("DUMMY_PROMPTS")})
+    elif method == "prompts/get":
+        reply(message_id, {"messages": [{"role": "user", "content": {"type": "text", "text": f"prompt {params.get('name')}"}}]})
+    elif method == "resources/list":
+        reply(message_id, {"resources": []})
+    elif method == "resources/templates/list":
+        reply(message_id, {"resourceTemplates": from_file("DUMMY_TEMPLATES")})
+    elif method == "resources/read":
+        reply(message_id, {"contents": [{"uri": params.get("uri"), "text": "resource"}]})
     elif method == "ping":
         reply(message_id, {})
     else:
