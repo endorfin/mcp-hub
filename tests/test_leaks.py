@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -49,6 +50,16 @@ class PatternTest(unittest.TestCase):
         value, kinds = leaks.redact_value({"content": [{"type": "text", "text": f"x {GITHUB}"}], "n": 3})
         self.assertEqual((value["content"][0]["text"], value["n"], kinds), ("x [redacted:github-token]", 3, ["github-token"]))
 
+    def test_keys_are_walked(self):
+        value, kinds = leaks.redact_value({GITHUB: 1})
+        self.assertEqual((value, kinds), ({"[redacted:github-token]": 1}, ["github-token"]))
+
+    def test_adversarial_input_stays_linear(self):
+        for unit in ("a.", "a-", "sk-", "sk-aaaa", "eyJaaaaaaaa-", "glpat-", "xoxb-", "ab+", "a://b:"):
+            started = time.perf_counter()
+            leaks.redact(unit * (200_000 // len(unit)))
+            self.assertLess(time.perf_counter() - started, 2, unit)
+
 
 class EntrySecretsTest(unittest.TestCase):
     def test_headers_secret_env_and_references_count_paths_do_not(self):
@@ -56,8 +67,9 @@ class EntrySecretsTest(unittest.TestCase):
             entry = {"headers": {"Authorization": "Bearer abcdefgh12345"},
                      "env": {"API_TOKEN": "tok-1234567890", "PATH": "/usr/local/bin:/usr/bin", "OTHER": "${env:LEAK_TEST_REF}",
                              "SHORT_KEY": "abc"}}
-            self.assertEqual(leaks.entry_secrets(entry, {"Authorization": "Bearer oauth-token-xyz"}),
-                             {"abcdefgh12345", "tok-1234567890", "from-the-environment", "oauth-token-xyz"})
+            self.assertEqual(leaks.entry_secrets(entry), {"abcdefgh12345", "tok-1234567890", "from-the-environment"})
+            self.assertEqual(leaks.entry_secrets(entry, resolve=False), {"abcdefgh12345", "tok-1234567890"})
+        self.assertEqual(leaks.header_secrets({"Authorization": "Bearer oauth-token-xyz", "X": "short"}), {"oauth-token-xyz"})
 
 
 class HubLeakTest(unittest.TestCase):
@@ -93,6 +105,35 @@ class HubLeakTest(unittest.TestCase):
         [last] = self.hub.calls.recent(1)
         self.assertEqual({(f["kind"], f["where"]) for f in last["leaks"]}, {("github-token", "args"), ("github-token", "result")})
         self.assertNotIn(GITHUB, json.dumps(last))
+
+    def test_error_texts_are_masked_and_hidden_in_redact_mode(self):
+        self.assertIn(GITHUB, self.call("fail", message=f"bad token {GITHUB}"))
+        self.entry["redactSecrets"] = True
+        self.assertEqual(self.call("fail", message=f"bad token {GITHUB}"), "bad token [redacted:github-token] (Code -32000)")
+        [last] = self.hub.calls.recent(1)
+        self.assertEqual((last["result"], last["redacted"]), ("bad token [redacted:github-token] (Code -32000)", True))
+        self.assertIn({"kind": "github-token", "where": "result"}, last["leaks"])
+
+    def test_resource_uris_are_masked_in_the_log(self):
+        upstream = self.hub.upstreams["alpha"]
+        upstream.catalog["resources"] = [{"uri": f"https://x:{SECRET}@example.com/r"}]
+        self.hub.handle("resources/read", {"uri": f"https://x:{SECRET}@example.com/r"})
+        self.assertNotIn(SECRET, json.dumps(self.hub.calls.recent(1)))
+
+    def test_status_errors_are_masked(self):
+        self.hub.upstreams["alpha"].error = f"crashed – token {SECRET}"
+        self.assertNotIn(SECRET, json.dumps(self.hub.status()))
+
+    def test_secrets_of_servers_that_are_not_running_are_known(self):
+        off = {"enabled": False, "url": "https://x", "headers": {"X-Key": "offline-key-123"}}
+        hub = hub_module.Hub(lambda: {"mcpServers": {"off": off}}, lambda: {"passEnvironment": True}, self.home.name)
+        self.assertIn("offline-key-123", hub._known_secrets())
+
+    def test_stored_entries_are_masked_once_the_secret_is_known(self):
+        log = hub_module.CallLog(Path(self.home.name, "old.jsonl"))
+        log.record({"t": 1, "server": "a", "target": "x", "args": "", "result": f"value {SECRET}"})
+        log.mask({SECRET})
+        self.assertNotIn(SECRET, Path(self.home.name, "old.jsonl").read_text())
 
 
 class RuntimeKeyTest(unittest.TestCase):

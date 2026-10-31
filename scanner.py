@@ -20,33 +20,32 @@ PATTERNS = [
 ]
 
 
-def _hidden(text):
-    return [ch for ch in text if unicodedata.category(ch) == "Cf" or 0xE0000 <= ord(ch) <= 0xE007F]
+def _is_hidden(ch):
+    return unicodedata.category(ch) == "Cf" or 0xE0000 <= ord(ch) <= 0xE007F
 
 
 def _visible(text):
-    return "".join(f"<U+{ord(ch):04X}>" if unicodedata.category(ch) == "Cf" or 0xE0000 <= ord(ch) <= 0xE007F else ch
-                   for ch in text)
+    return "".join(f"<U+{ord(ch):04X}>" if _is_hidden(ch) else ch for ch in text)
 
 
-def _strings(value, path=""):
-    if isinstance(value, str):
-        yield path, value
-    elif isinstance(value, dict):
-        for key, item in value.items():
-            if key not in ("name", "type", "_meta", "icons"):
-                yield from _strings(item, f"{path}.{key}" if path else key)
-    elif isinstance(value, list):
-        for index, item in enumerate(value):
-            yield from _strings(item, f"{path}[{index}]")
+def _strings(item):
+    stack = [(key, value) for key, value in reversed(list(item.items())) if key != "icons"]
+    while stack:
+        path, value = stack.pop()
+        if isinstance(value, str):
+            yield path, value
+        elif isinstance(value, dict):
+            for key, child in reversed(list(value.items())):
+                stack += [(f"{path}.{key}", child), (f"{path}.{key}", str(key))]
+        elif isinstance(value, list):
+            stack += [(f"{path}[{index}]", child) for index, child in reversed(list(enumerate(value)))]
 
 
 def scan(item):
     findings = []
     for field, text in _strings(item):
-        hidden = _hidden(text)
-        if hidden:
-            first = text.index(hidden[0])
+        first = next((index for index, ch in enumerate(text) if _is_hidden(ch)), None)
+        if first is not None:
             findings.append({"rule": "hidden-characters", "field": field,
                              "excerpt": _visible(text[max(0, first - 40):first + 40])})
         for rule, pattern in PATTERNS:

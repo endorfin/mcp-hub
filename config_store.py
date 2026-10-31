@@ -117,9 +117,12 @@ def save_settings(data):
         write_json(SETTINGS_FILE, {k: data.get(k, v) for k, v in load_settings().items()})
 
 
-def update_profiles(action, name, new_name=None, on_config_change=lambda: None, access=None):
+def update_profiles(action, name, new_name=None, on_config_change=lambda: None, *, access=None):
     with lock:
-        return _update_profiles(action, name, new_name, on_config_change, access)
+        error = _update_profiles(action, name, new_name, on_config_change, access)
+    if action == "access" and not error:
+        on_config_change()
+    return error
 
 
 def _update_profiles(action, name, new_name, on_config_change, access):

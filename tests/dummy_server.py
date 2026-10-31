@@ -36,7 +36,7 @@ for line in sys.stdin:
         time.sleep(float(os.environ.get("DUMMY_DELAY", "0")))
         instructions = open(os.environ["DUMMY_INSTRUCTIONS"]).read() if os.environ.get("DUMMY_INSTRUCTIONS") else None
         capabilities = {"tools": {}, **({"prompts": {}} if os.environ.get("DUMMY_PROMPTS") else {}),
-                        **({"resources": {}} if os.environ.get("DUMMY_TEMPLATES") else {})}
+                        **({"resources": {}} if os.environ.get("DUMMY_TEMPLATES") or os.environ.get("DUMMY_RESOURCES") else {})}
         reply(message_id, {"protocolVersion": params.get("protocolVersion"), "capabilities": capabilities,
                            "serverInfo": {"name": "dummy", "version": "1"}, "instructions": instructions})
     elif method == "tools/list":
@@ -53,13 +53,13 @@ for line in sys.stdin:
         elif name == "fail" and args.get("exit"):
             os._exit(1)
         else:
-            reply(message_id, error={"code": -32000, "message": "failed on purpose"})
+            reply(message_id, error={"code": -32000, "message": args.get("message", "failed on purpose")})
     elif method == "prompts/list":
         reply(message_id, {"prompts": from_file("DUMMY_PROMPTS")})
     elif method == "prompts/get":
         reply(message_id, {"messages": [{"role": "user", "content": {"type": "text", "text": f"prompt {params.get('name')}"}}]})
     elif method == "resources/list":
-        reply(message_id, {"resources": []})
+        reply(message_id, {"resources": from_file("DUMMY_RESOURCES")})
     elif method == "resources/templates/list":
         reply(message_id, {"resourceTemplates": from_file("DUMMY_TEMPLATES")})
     elif method == "resources/read":

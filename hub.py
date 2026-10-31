@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import queue
@@ -26,6 +27,9 @@ ON_DEMAND_IDLE = 600
 SERVER_ITEM = "@server"
 PROMPT_ITEM = "@prompt/"
 TEMPLATE_ITEM = "@template/"
+RESOURCE_ITEM = "@resource/"
+META_MIGRATED = "@meta"
+IDENTITY = {"tools": "name", "prompts": "name", "resources": "uri", "resourceTemplates": "uriTemplate"}
 ACCESS = {"read": {"read"}, "write": {"read", "write"}}
 
 
@@ -65,8 +69,24 @@ def tier(tool):
     return "destructive" if {"readOnlyHint", "destructiveHint"} & set(annotations) else "unknown"
 
 
-def fingerprint(tool):
-    return {k: v for k, v in tool.items() if k != "_meta"}
+def digest(item):
+    return hashlib.sha256(json.dumps(item, sort_keys=True).encode()).hexdigest()
+
+
+def unique(items, field):
+    seen, result = set(), []
+    for item in items:
+        name = item.get(field) if isinstance(item, dict) else None
+        if isinstance(name, str) and not name.startswith("@") and name not in seen:
+            seen.add(name)
+            result.append(item)
+    return result
+
+
+def template_match(template, uri):
+    parts = re.split(r"(\{[^}]*\})", template)
+    pattern = "".join(".*" if part.startswith("{") else re.escape(part) for part in parts)
+    return re.fullmatch(pattern, uri, re.S) and sum(len(part) for part in parts if not part.startswith("{"))
 
 
 class JsonRpcError(Exception):
@@ -108,7 +128,7 @@ class Upstream:
             self.capabilities = info.get("capabilities", {})
             self.server_info = info.get("serverInfo") or {}
             self.instructions = info.get("instructions") or ""
-            self.secrets = leaks.entry_secrets(self.entry, getattr(self.session, "headers", None))
+            self.secrets = leaks.entry_secrets(self.entry)
             self.refresh()
             self.state = "running"
             self.error = None
@@ -137,28 +157,43 @@ class Upstream:
         self.stale = False
         lists = [("tools", "tools/list", "tools"), ("resources", "resources/list", "resources"),
                  ("resources", "resources/templates/list", "resourceTemplates"), ("prompts", "prompts/list", "prompts")]
+        catalog = dict(self.catalog)
         for capability, method, key in lists:
             if capability in self.capabilities:
                 try:
-                    self.catalog[key] = self.session.list_all(method, key)
+                    catalog[key] = unique(self.session.list_all(method, key), IDENTITY[key])
                 except (RpcError, AttributeError, TypeError):
                     pass
-        items = self.reviewed()
-        self.findings = {key: found for key, item in items.items() if (found := scanner.scan(item))}
-        if self.approvals:
-            self.held = self.approvals.held(self.name, items, set(self.findings))
+        items = self.reviewed(catalog, {})
+        try:
+            resources = {RESOURCE_ITEM + r["uri"]: r for r in catalog["resources"]}
+            findings = {key: found for key, item in {**items, **resources}.items() if (found := scanner.scan(item))}
+            items = self.reviewed(catalog, findings)
+            held = self.approvals.held(self.name, items, set(findings)) if self.approvals else {}
+        except Exception:
+            traceback.print_exc()
+            findings, held = {}, dict.fromkeys(items, "new")
+        self.held = {**self.held, **held}
+        self.catalog, self.findings = catalog, findings
+        self.held = held
 
-    def reviewed(self):
+    def reviewed(self, catalog=None, findings=None):
+        catalog = catalog or self.catalog
+        findings = self.findings if findings is None else findings
         text = {"description": self.server_info.get("description"), "instructions": self.instructions}
         return {
-            **{t["name"]: t for t in self.catalog["tools"]},
-            **{PROMPT_ITEM + p["name"]: p for p in self.catalog["prompts"]},
-            **{TEMPLATE_ITEM + t["uriTemplate"]: t for t in self.catalog["resourceTemplates"]},
+            **{t["name"]: t for t in catalog["tools"]},
+            **{PROMPT_ITEM + p["name"]: p for p in catalog["prompts"]},
+            **{TEMPLATE_ITEM + t["uriTemplate"]: t for t in catalog["resourceTemplates"]},
+            **{RESOURCE_ITEM + r["uri"]: r for r in catalog["resources"] if RESOURCE_ITEM + r["uri"] in findings},
             SERVER_ITEM: {"name": SERVER_ITEM, **{k: v for k, v in text.items() if v}},
         }
 
     def prompts(self):
         return [p for p in self.catalog["prompts"] if PROMPT_ITEM + p["name"] not in self.held]
+
+    def resources(self):
+        return [r for r in self.catalog["resources"] if RESOURCE_ITEM + r["uri"] not in self.held]
 
     def templates(self):
         return [t for t in self.catalog["resourceTemplates"] if TEMPLATE_ITEM + t["uriTemplate"] not in self.held]
@@ -227,11 +262,16 @@ class Approvals:
             if known is None and not self.review_new():
                 if set(items) <= {SERVER_ITEM}:
                     return {}
-                known = self.data[server] = {key: fingerprint(item) for key, item in items.items() if key not in flagged}
+                known = self.data[server] = {META_MIGRATED: True, **{k: v for k, v in items.items() if k not in flagged}}
                 self._save()
             known = known or {}
-            return {key: "changed" if key in known else "new"
-                    for key, item in items.items() if known.get(key) != fingerprint(item)}
+            if known and not known.get(META_MIGRATED):
+                for key, item in items.items():
+                    if known.get(key) == {k: v for k, v in item.items() if k != "_meta"}:
+                        known[key] = item
+                known[META_MIGRATED] = True
+                self._save()
+            return {key: "changed" if key in known else "new" for key, item in items.items() if known.get(key) != item}
 
     def approved(self, server, name):
         with self.lock:
@@ -239,11 +279,11 @@ class Approvals:
 
     def approve(self, server, items):
         with self.lock:
-            self.data.setdefault(server, {}).update({key: fingerprint(item) for key, item in items.items()})
+            self.data.setdefault(server, {META_MIGRATED: True}).update(items)
             self._save()
 
     def _save(self):
-        atomic_write(self.path, json.dumps(self.data, indent=2, ensure_ascii=False))
+        atomic_write(self.path, json.dumps(self.data, indent=2))
 
 
 class Usage:
@@ -281,19 +321,24 @@ class CallLog:
                     pass
         except FileNotFoundError:
             pass
-        if self._mask_stored():
-            atomic_write(self.path, "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in self.entries))
+        self.masked = set()
+        self.mask()
 
-    def _mask_stored(self):
-        changed = False
-        for entry in self.entries:
-            for field in ("args", "result"):
-                if isinstance(entry.get(field), str):
-                    masked, kinds = leaks.redact(entry[field])
-                    if kinds:
-                        entry[field] = masked
-                        changed = True
-        return changed
+    def mask(self, known=()):
+        with self.lock:
+            new = set(known) - self.masked
+            self.masked |= new
+            changed = False
+            for entry in self.entries:
+                for field in ("target", "args", "result"):
+                    value = entry.get(field)
+                    if isinstance(value, str) and (not known or any(secret in value for secret in new)):
+                        masked, kinds = leaks.redact(value, new)
+                        if kinds:
+                            entry[field] = masked
+                            changed = True
+            if changed:
+                atomic_write(self.path, "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in self.entries))
 
     def record(self, entry):
         with self.lock:
@@ -442,6 +487,7 @@ class Hub:
         self.usage = Usage(Path(state_dir) / "usage.json")
         self.calls = CallLog(Path(state_dir) / "calls.jsonl")
         self.clients = Clients(Path(state_dir) / "clients.json")
+        self.config_secrets = {}
         self.approvals = Approvals(Path(state_dir) / "approved-tools.json",
                                    lambda: self.load_settings().get("reviewNewServers", False))
         self.lock = threading.Lock()
@@ -580,6 +626,7 @@ class Hub:
 
     def _start(self, upstream, pass_environment):
         upstream.start(pass_environment)
+        self.calls.mask(self._known_secrets())
         with self.lock:
             if self.upstreams.get(upstream.name) is not upstream:
                 upstream.close()
@@ -623,7 +670,7 @@ class Hub:
     def _notify(self, running):
         signature = json.dumps([
             [(u.name, sorted(t["name"] for t in u.tools()), sorted(p["name"] for p in u.prompts()),
-              sorted(r["uri"] for r in u.catalog["resources"]), sorted(t["uriTemplate"] for t in u.templates()))
+              sorted(r["uri"] for r in u.resources()), sorted(t["uriTemplate"] for t in u.templates()))
              for u in sorted(running, key=lambda u: u.name)],
             self.load_profiles().get("profiles"),
         ], sort_keys=True)
@@ -643,32 +690,35 @@ class Hub:
             self.upstreams.clear()
 
     def status(self):
+        known = self._known_secrets()
         return {
             name: {
                 "state": u.state,
-                "error": u.error,
+                "error": u.error and leaks.redact(u.error, known)[0],
                 "summary": summary(u),
                 **{k: len(v) for k, v in u.catalog.items()},
                 "prompts": len(u.prompts()),
+                "resources": len(u.resources()),
                 "resourceTemplates": len(u.templates()),
                 "tools": len(u.tools()),
                 "toolsTotal": len(u.catalog["tools"]),
                 "held": len(u.held),
                 "heldTools": sum(1 for key in u.held if not key.startswith("@")),
                 "flagged": len(set(u.held) & set(u.findings)),
-                **self._restart_status(name),
+                **self._restart_status(name, known),
                 **({"onDemand": True} if name in self.on_demand else {}),
                 **({"oauth": oauth.status(name)} if u.entry.get("url") else {}),
             }
             for name, u in list(self.upstreams.items())
         }
 
-    def _restart_status(self, name):
+    def _restart_status(self, name, known):
         info = self.restarts.get(name)
         if not info:
             return {}
+        last = info.get("lastError")
         return {"restarts": info["count"], "retryAt": info["retryAt"], "gaveUp": info["gaveUp"],
-                "lastError": info.get("lastError")}
+                "lastError": last and leaks.redact(last, known)[0]}
 
     def tools(self, name):
         upstream = self.upstreams.get(name)
@@ -687,20 +737,20 @@ class Hub:
         if not upstream:
             return None
         current = upstream.reviewed()
-        return [{"name": key, "status": status, "before": self.approvals.approved(name, key),
-                 "after": fingerprint(current[key]), "findings": upstream.findings.get(key, [])}
+        return [{"name": key, "status": status, "before": self.approvals.approved(name, key), "after": current[key],
+                 "hash": digest(current[key]), "findings": upstream.findings.get(key, [])}
                 for key, status in sorted(upstream.held.items()) if key in current]
 
-    def approve(self, name, tools=None):
+    def approve(self, name, hashes=None):
         upstream = self.upstreams.get(name)
         if not upstream:
-            return False
+            return None
         chosen = {key: item for key, item in upstream.reviewed().items()
-                  if key in upstream.held and (tools is None or key in tools)}
+                  if key in upstream.held and (hashes is None or hashes.get(key) == digest(item))}
         self.approvals.approve(name, chosen)
         upstream.held = self.approvals.held(name, upstream.reviewed(), set(upstream.findings))
         self._notify_if_changed(self._running())
-        return True
+        return sorted(chosen)
 
     def _view(self, running, profile):
         if not profile:
@@ -769,23 +819,27 @@ class Hub:
         if method == "prompts/list":
             return {"prompts": [labelled(u, p) for u in running for p in u.prompts()]}
         if method == "resources/list":
-            return {"resources": [r for u in running for r in u.catalog["resources"]]}
+            return {"resources": [r for u in running for r in u.resources()]}
         if method == "resources/templates/list":
             return {"resourceTemplates": [t for u in running for t in u.templates()]}
         if method == "tools/call":
             upstream, name = self._route(running, params.get("name", ""))
+            tool = next((t for t in upstream.catalog["tools"] if t["name"] == name), None)
+            if tool is None:
+                raise JsonRpcError(-32602, f"Unknown tool: {params.get('name')}")
             if name in upstream.held:
                 raise JsonRpcError(-32602, f"Tool waiting for review in the hub: {params.get('name')}")
-            access = self._access(profile)
-            tool = next((t for t in upstream.catalog["tools"] if t["name"] == name), None)
-            if access in ACCESS and tool and tier(tool) not in ACCESS[access]:
-                kind = "read-only" if access == "read" else "non-destructive"
-                raise JsonRpcError(-32602, f"Profile “{profile}” only allows {kind} tools: {params.get('name')}")
             if name in upstream.blocked(view[upstream]):
+                access = self._access(profile)
+                if access in ACCESS and tier(tool) not in ACCESS[access]:
+                    kind = "read-only" if access == "read" else "non-destructive"
+                    raise JsonRpcError(-32602, f"Profile “{profile}” only allows {kind} tools: {params.get('name')}")
                 raise JsonRpcError(-32602, f"Tool disabled in the hub: {params.get('name')}")
             return self._forward(upstream, "tools/call", {**params, "name": name}, name, client)
         if method == "prompts/get":
             upstream, name = self._route(running, params.get("name", ""))
+            if not any(p["name"] == name for p in upstream.catalog["prompts"]):
+                raise JsonRpcError(-32602, f"Unknown prompt: {params.get('name')}")
             if PROMPT_ITEM + name in upstream.held:
                 raise JsonRpcError(-32602, f"Prompt waiting for review in the hub: {params.get('name')}")
             return self._forward(upstream, "prompts/get", {**params, "name": name}, name, client)
@@ -793,13 +847,17 @@ class Hub:
             uri = params.get("uri", "")
             for upstream in running:
                 if any(r["uri"] == uri for r in upstream.catalog["resources"]):
+                    if RESOURCE_ITEM + uri in upstream.held:
+                        raise JsonRpcError(-32602, f"Resource waiting for review in the hub: {uri}")
                     return self._forward(upstream, "resources/read", params, uri, client)
-            for upstream in running:
-                for template in upstream.catalog["resourceTemplates"]:
-                    if uri.startswith(template["uriTemplate"].split("{")[0]):
-                        if TEMPLATE_ITEM + template["uriTemplate"] in upstream.held:
-                            raise JsonRpcError(-32602, f"Resource template waiting for review in the hub: {template['uriTemplate']}")
-                        return self._forward(upstream, "resources/read", params, uri, client)
+            matches = [(specific, upstream, template["uriTemplate"]) for upstream in running
+                       for template in upstream.catalog["resourceTemplates"]
+                       if (specific := template_match(template["uriTemplate"], uri)) is not None]
+            if matches:
+                _, upstream, template = max(matches, key=lambda match: match[0])
+                if TEMPLATE_ITEM + template in upstream.held:
+                    raise JsonRpcError(-32602, f"Resource template waiting for review in the hub: {template}")
+                return self._forward(upstream, "resources/read", params, uri, client)
             raise JsonRpcError(-32002, f"Resource not found: {uri}")
         raise JsonRpcError(-32601, f"Method not supported: {method}")
 
@@ -823,36 +881,52 @@ class Hub:
             return compact.text(f"{e} – use {compact.SEARCH} to find the right tool name.", error=True)
 
     def _known_secrets(self):
-        return set().union(*(u.secrets for u in list(self.upstreams.values())))
+        known = set()
+        for name, entry in self.load_config()["mcpServers"].items():
+            cached = self.config_secrets.get(name)
+            if not cached or cached[0] != entry:
+                cached = self.config_secrets[name] = (entry, leaks.entry_secrets(entry, resolve=False))
+            known |= cached[1]
+        for upstream in list(self.upstreams.values()):
+            known |= upstream.secrets | leaks.header_secrets(getattr(upstream.session, "headers", None))
+        return known
 
     def _forward(self, upstream, method, params, target, client):
         self.usage.record(upstream.name)
         known = self._known_secrets()
+        redact = upstream.entry.get("redactSecrets")
         args, found = leaks.redact_value(params.get("arguments", {}), known)
+        target, in_target = leaks.redact(target, known)
         entry = {
             "t": time.time(), "client": client, "server": upstream.name,
             "kind": {"tools/call": "tool", "prompts/get": "prompt"}.get(method, "resource"),
             "target": target,
             "args": preview(args, 4000) if method != "resources/read" else "",
         }
-        found = [{"kind": kind, "where": "args"} for kind in found]
+        found = [{"kind": kind, "where": "args"} for kind in sorted({*found, *in_target})]
         started = time.monotonic()
         try:
             result = upstream.request(method, params)
             redacted, kinds = leaks.redact_value(result, known)
             found += [{"kind": kind, "where": "result"} for kind in kinds]
-            if kinds and upstream.entry.get("redactSecrets"):
+            if kinds and redact:
                 result, entry["redacted"] = redacted, True
             entry["ok"] = not result.get("isError")
             entry["result"] = preview(first_text(redacted), 600)
             entry["size"] = len(json.dumps(result, ensure_ascii=False).encode())
             return result
         except RpcError as e:
+            message, kinds = leaks.redact(str(e), known)
+            found += [{"kind": kind, "where": "result"} for kind in kinds]
             entry["ok"] = False
-            entry["result"] = leaks.redact(str(e), known)[0]
+            entry["result"] = message
+            if kinds and redact:
+                entry["redacted"] = True
+            else:
+                message = str(e)
             if method == "tools/call":
-                return {"content": [{"type": "text", "text": str(e)}], "isError": True}
-            raise JsonRpcError(-32603, str(e))
+                return {"content": [{"type": "text", "text": message}], "isError": True}
+            raise JsonRpcError(-32603, message)
         finally:
             entry["ms"] = round((time.monotonic() - started) * 1000)
             if found:

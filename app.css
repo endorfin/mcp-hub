@@ -352,7 +352,6 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .prof-main { display: grid; gap: 3px; min-width: 0; }
 .prof-main small { color: var(--muted); font-size: 12.5px; }
 .prof .actions { display: flex; gap: 6px; align-items: center; }
-.prof-access { width: auto; padding: 4px 8px; font-size: 13px; }
 #profilesDialog, #profilesDialog .dbody { overflow: visible; }
 .prof-url { display: flex; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: copy; justify-self: start; max-width: 100%; }
 .prof-url code { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }

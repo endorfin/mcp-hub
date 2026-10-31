@@ -23,6 +23,7 @@ DEFAULT_ENV_KEYS = ("HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER", "LANG", 
 WINDOWS_ENV_KEYS = ("APPDATA", "COMSPEC", "LOCALAPPDATA", "PATHEXT", "PROGRAMDATA", "PROGRAMFILES", "SYSTEMDRIVE",
                     "SYSTEMROOT", "TEMP", "TMP", "USERNAME", "USERPROFILE", "WINDIR")
 USER_AGENT = f"mcp-hub/{VERSION}"
+MAX_PAGES = 100
 
 
 class RpcError(Exception):
@@ -142,12 +143,13 @@ class BaseSession:
 
     def list_all(self, method, key):
         items, cursor = [], None
-        while True:
+        for _ in range(MAX_PAGES):
             result = self.request(method, {"cursor": cursor} if cursor else {})
             items += result.get(key, [])
             cursor = result.get("nextCursor")
             if not cursor:
-                return items
+                break
+        return items
 
 
 class StdioSession(BaseSession):

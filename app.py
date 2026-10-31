@@ -261,11 +261,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({})
         if self.path == "/api/hub/approve":
             data = self.body()
-            if data.get("tools") is not None and not isinstance(data["tools"], list):
-                return self.send({"error": "tools must be a list"}, HTTPStatus.BAD_REQUEST)
-            if not hub.approve(data.get("name", ""), data.get("tools")):
+            if not isinstance(data.get("items"), dict):
+                return self.send({"error": "items must map each entry to the hash shown in the review"},
+                                 HTTPStatus.BAD_REQUEST)
+            approved = hub.approve(data.get("name", ""), data["items"])
+            if approved is None:
                 return self.send({"error": "Server is not running in the hub"}, HTTPStatus.NOT_FOUND)
-            return self.send(hub.status())
+            return self.send({"approved": approved, "hub": hub.status()})
         if self.path == "/api/restart":
             threading.Thread(target=restart, daemon=True).start()
             return self.send({"ok": True})
@@ -283,10 +285,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/profiles":
             data = self.body()
             if error := update_profiles(data.get("action"), data.get("name"), data.get("newName"), sync_hub_in_background,
-                                        data.get("access")):
+                                        access=data.get("access")):
                 return self.send({"error": error}, HTTPStatus.BAD_REQUEST)
-            if data.get("action") == "access":
-                sync_hub_in_background()
             return self.send(self.state())
         if self.path in ("/api/oauth/start", "/api/oauth/logout"):
             name = self.body().get("name", "")
