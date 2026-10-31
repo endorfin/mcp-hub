@@ -178,21 +178,23 @@ class StdioSession(BaseSession):
         try:
             self.proc.stdin.write((json.dumps(message) + "\n").encode())
             self.proc.stdin.flush()
-        except (BrokenPipeError, OSError):
+        except (OSError, ValueError):
             raise RpcError("Server process is no longer running")
 
     def _read_stderr(self):
-        for line in self.proc.stderr:
-            self._record("stderr", line.decode(errors="replace").rstrip())
+        with self.proc.stderr:
+            for line in self.proc.stderr:
+                self._record("stderr", line.decode(errors="replace").rstrip())
 
     def _read_stdout(self):
-        for line in self.proc.stdout:
-            try:
-                message = json.loads(line)
-            except json.JSONDecodeError:
-                self._record("stdout", line.decode(errors="replace").rstrip())
-                continue
-            self._dispatch(message)
+        with self.proc.stdout:
+            for line in self.proc.stdout:
+                try:
+                    message = json.loads(line)
+                except json.JSONDecodeError:
+                    self._record("stdout", line.decode(errors="replace").rstrip())
+                    continue
+                self._dispatch(message)
         self._record("exit", f"Process exited (code {self.proc.wait()})")
         self._release_pending()
 
@@ -216,6 +218,10 @@ class StdioSession(BaseSession):
                     os.killpg(self.proc.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
+        try:
+            self.proc.stdin.close()
+        except OSError:
+            pass
 
 
 def read_events(response):
