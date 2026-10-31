@@ -75,6 +75,8 @@ def validate_servers(servers):
             return f"{name}: enabledTools must be a list"
         if not isinstance(entry.get("disabledTools", []), list):
             return f"{name}: disabledTools must be a list"
+        if not isinstance(entry.get("redactSecrets", False), bool):
+            return f"{name}: redactSecrets must be true or false"
         tags = entry.get("tags", [])
         if not isinstance(tags, list) or not all(isinstance(tag, str) and tag.strip() for tag in tags):
             return f"{name}: tags must be a list of non-empty strings"

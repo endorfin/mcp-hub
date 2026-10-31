@@ -76,6 +76,7 @@
       <select id="callServer" aria-label="Server"><option value="" data-i18n="allServers">Alle Server</option></select>
       <select id="callClient" aria-label="Client"><option value="" data-i18n="allClients">Alle Clients</option></select>
       <label class="check"><input type="checkbox" id="callErrors"> <span data-i18n="s.errorsOnly">Nur Fehler</span></label>
+      <label class="check"><input type="checkbox" id="callLeaks"> <span data-i18n="s.leaksOnly">Nur mit Geheimnissen</span></label>
       <span class="hint" id="callCount" style="margin-left:auto"></span>
     </div>
     <details class="card stats" id="stats" open>
@@ -348,6 +349,8 @@
         </details>
       </div>
       <span class="hint" data-i18n="s.secretsHint">Geheime Werte mit dem Schloss in den Schlüsselbund verschieben (macOS-Schlüsselbund, Secret Service unter Linux, Anmeldeinformationsverwaltung unter Windows). Im Eintrag steht dann nur noch <code>${keychain:…}</code>; <code>${op://Tresor/Eintrag/Feld}</code> für 1Password und <code>${env:NAME}</code> für Umgebungsvariablen gehen ebenso.</span>
+      <label class="check"><input type="checkbox" name="redactSecrets"> <span data-i18n="s.redactSecrets">Geheimnisse in Antworten schwärzen, bevor der Agent sie sieht</span></label>
+      <span class="hint check-hint" data-i18n="s.redactSecretsHint">Der Hub erkennt die Geheimnisse aus den Server-Einträgen und bekannte Formate wie GitHub-, AWS- oder API-Schlüssel. Im Protokoll stehen sie nie im Klartext. Aus: Die Antwort geht unverändert durch und der Aufruf wird markiert. An: Der Agent bekommt stattdessen [redacted:…].</span>
       <label class="check"><input type="checkbox" name="enabled"> <span data-i18n="s.enabled">Aktiviert</span></label>
       <p class="error" id="editError"></p>
     </div>
@@ -1176,6 +1179,7 @@ function openEditor(name, duplicate = false) {
   f.url.value = s.url || "";
   updateUrlLock();
   f.enabled.checked = s.enabled !== false;
+  f.redactSecrets.checked = !!s.redactSecrets;
   $("#envRows").replaceChildren();
   Object.entries(s.env || {}).forEach(([k, v]) => envRow(k, v));
   $("#headerRows").replaceChildren();
@@ -1198,6 +1202,7 @@ $("#editForm").onsubmit = async e => {
   const prev = editing ? servers()[editing] : {};
   const kind = f.transport.value;
   const entry = { ...prev, enabled: f.enabled.checked };
+  if (f.redactSecrets.checked) entry.redactSecrets = true; else delete entry.redactSecrets;
   for (const key of ["type", "url", "headers", "command", "args", "env", "cwd", "oauth"]) delete entry[key];
   if (kind === "stdio") {
     let command = f.command.value.trim();
@@ -1979,6 +1984,7 @@ function renderStats() {
     kpi(t("typicalDuration"), ms(s.median), t("median")),
     kpi(t("clients"), fmt.format(s.clients), t("withCalls")),
     kpi(t("responseVolume"), size(s.volume), s.medianSize == null ? null : t("perCall", { size: size(s.medianSize) })),
+    s.leaks ? kpi(t("leakKpi"), fmt.format(s.leaks), t("leakKpiNote")) : null,
   );
 
   const max = Math.max(1, ...s.days.map(d => d.ok + d.errors));
@@ -2041,8 +2047,8 @@ function renderCalls() {
   fillSelect($("#callServer"), [...new Set(calls.map(c => c.server))].sort(), t("allServers"));
   fillSelect($("#callClient"), [...new Set([...calls.map(c => c.client), ...(logClient ? [logClient] : [])])].sort(), t("allClients"), clientName);
   if (logClient) { $("#callClient").value = logClient; logClient = null; }
-  const server = $("#callServer").value, client = $("#callClient").value, errors = $("#callErrors").checked;
-  const shown = calls.filter(c => (!server || c.server === server) && (!client || c.client === client) && (!errors || !c.ok));
+  const server = $("#callServer").value, client = $("#callClient").value, errors = $("#callErrors").checked, withLeaks = $("#callLeaks").checked;
+  const shown = calls.filter(c => (!server || c.server === server) && (!client || c.client === client) && (!errors || !c.ok) && (!withLeaks || c.leaks));
   $("#callCount").textContent = t("callCount", { n: shown.length, total: calls.length });
   const open = new Set([...document.querySelectorAll(".call[open]")].map(d => d.dataset.key));
   const box = $("#calls");
@@ -2055,18 +2061,21 @@ function renderCalls() {
       el("summary", {},
         el("span", { className: "when", textContent: (today ? "" : d.toLocaleDateString(LOCALE, { day: "2-digit", month: "2-digit" }) + " ") + d.toLocaleTimeString(LOCALE), title: d.toLocaleString(LOCALE) }),
         el("span", { className: "who", textContent: clientName(c.client), title: c.client }),
-        el("span", { className: "what" }, el("b", { textContent: c.server }), ` · ${c.kind === "tool" ? "" : c.kind + " "}${c.target}`),
+        el("span", { className: "what" }, el("b", { textContent: c.server }), ` · ${c.kind === "tool" ? "" : c.kind + " "}${c.target}`,
+          c.leaks ? el("span", { className: "chip bad leak", textContent: t(c.redacted ? "leakRedacted" : "leakChip"), title: c.leaks.map(leakText).join("\n") }) : null),
         el("span", { className: "size", textContent: c.size == null ? "" : size(c.size), title: tokensTitle(c.size) }),
         el("span", { className: "ms", textContent: c.ms >= 1000 ? `${(c.ms / 1000).toFixed(1)} s` : `${c.ms} ms` }),
         el("span", { className: "st " + (c.ok ? "ok" : "bad"), textContent: c.ok ? "OK" : t("error") })),
       el("div", { className: "body" },
+        c.leaks ? el("div", {}, el("div", { className: "lbl", textContent: t("leaksFound") }), el("p", { className: "leak-note", textContent: c.leaks.map(leakText).join(" · ") + (c.redacted ? ` – ${t("leakWasRedacted")}` : "") })) : null,
         c.args && c.args !== "{}" ? el("div", {}, el("div", { className: "lbl", textContent: t("arguments") }), el("pre", { textContent: prettyMaybe(c.args) })) : null,
         el("div", {}, el("div", { className: "lbl", textContent: c.ok ? t("responseStart") : t("error") }), el("pre", { textContent: prettyMaybe(c.ok ? c.result : fromBackend(c.result)) || t("empty") }))));
     details.dataset.key = key;
     return details;
   }));
 }
-for (const id of ["#callServer", "#callClient", "#callErrors"]) $(id).onchange = renderCalls;
+for (const id of ["#callServer", "#callClient", "#callErrors", "#callLeaks"]) $(id).onchange = renderCalls;
+function leakText(f) { return `${t(`leak_${f.kind}`)} ${t(f.where === "args" ? "inArgs" : "inResult")}`; }
 
 let clients = [];
 let logClient = null;

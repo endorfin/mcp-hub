@@ -365,7 +365,7 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .stats > summary::after { content: ""; width: 7px; height: 7px; margin-left: auto; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
 .stats:not([open]) > summary::after { transform: rotate(-45deg); }
 .stats h3 { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0; }
-.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
 .kpi { display: grid; gap: 2px; padding: 12px 14px; border-radius: 8px; background: var(--field); }
 .kpi span { font-size: 12.5px; color: var(--muted); }
 .kpi b { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
@@ -430,6 +430,8 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .call .who { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .call .what { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .call .what b { font-weight: 600; }
+.call .leak { margin-left: 8px; cursor: default; font-weight: 400; }
+.leak-note { margin: 0; color: var(--bad); font-size: 13px; }
 .call .ms, .call .size { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; min-width: 56px; }
 .call .st { font-size: 12px; font-weight: 600; min-width: 44px; text-align: right; }
 .call .st.ok { color: var(--ok); } .call .st.bad { color: var(--bad); }

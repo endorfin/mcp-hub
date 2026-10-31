@@ -12,6 +12,7 @@ from pathlib import Path
 
 import compact
 from fsutil import append_private, atomic_write
+import leaks
 import oauth
 import scanner
 from sessions import PROTOCOL_VERSION, AuthRequired, RpcError, SessionExpired, open_session
@@ -27,7 +28,8 @@ ACCESS = {"read": {"read"}, "write": {"read", "write"}}
 
 
 def runtime_key(entry, pass_environment):
-    relevant = {k: v for k, v in (entry or {}).items() if k not in ("description", "tags", "disabledTools", "enabledTools")}
+    relevant = {k: v for k, v in (entry or {}).items()
+                if k not in ("description", "tags", "disabledTools", "enabledTools", "redactSecrets")}
     return json.dumps([relevant, pass_environment], sort_keys=True)
 
 
@@ -78,6 +80,7 @@ class Upstream:
         self.approvals = approvals
         self.held = {}
         self.findings = {}
+        self.secrets = set()
         self.entry = entry
         self.key = key
         self.prefix = prefix_of(name)
@@ -103,6 +106,7 @@ class Upstream:
             self.capabilities = info.get("capabilities", {})
             self.server_info = info.get("serverInfo") or {}
             self.instructions = info.get("instructions") or ""
+            self.secrets = leaks.entry_secrets(self.entry, getattr(self.session, "headers", None))
             self.refresh()
             self.state = "running"
             self.error = None
@@ -264,6 +268,19 @@ class CallLog:
                     pass
         except FileNotFoundError:
             pass
+        if self._mask_stored():
+            atomic_write(self.path, "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in self.entries))
+
+    def _mask_stored(self):
+        changed = False
+        for entry in self.entries:
+            for field in ("args", "result"):
+                if isinstance(entry.get(field), str):
+                    masked, kinds = leaks.redact(entry[field])
+                    if kinds:
+                        entry[field] = masked
+                        changed = True
+        return changed
 
     def record(self, entry):
         with self.lock:
@@ -315,6 +332,7 @@ class CallLog:
             "kept": self.entries.maxlen,
             "total": len(entries),
             "errors": sum(1 for entry in entries if not entry.get("ok")),
+            "leaks": sum(1 for entry in entries if entry.get("leaks")),
             "median": round(statistics.median(durations)) if durations else 0,
             "volume": sum(sizes),
             "medianSize": round(statistics.median(sizes)) if sizes else None,
@@ -784,27 +802,39 @@ class Hub:
         except JsonRpcError as e:
             return compact.text(f"{e} – use {compact.SEARCH} to find the right tool name.", error=True)
 
+    def _known_secrets(self):
+        return set().union(*(u.secrets for u in list(self.upstreams.values())))
+
     def _forward(self, upstream, method, params, target, client):
         self.usage.record(upstream.name)
+        known = self._known_secrets()
+        args, found = leaks.redact_value(params.get("arguments", {}), known)
         entry = {
             "t": time.time(), "client": client, "server": upstream.name,
             "kind": {"tools/call": "tool", "prompts/get": "prompt"}.get(method, "resource"),
             "target": target,
-            "args": preview(params.get("arguments", {}), 4000) if method != "resources/read" else "",
+            "args": preview(args, 4000) if method != "resources/read" else "",
         }
+        found = [{"kind": kind, "where": "args"} for kind in found]
         started = time.monotonic()
         try:
             result = upstream.request(method, params)
+            redacted, kinds = leaks.redact_value(result, known)
+            found += [{"kind": kind, "where": "result"} for kind in kinds]
+            if kinds and upstream.entry.get("redactSecrets"):
+                result, entry["redacted"] = redacted, True
             entry["ok"] = not result.get("isError")
-            entry["result"] = preview(first_text(result), 600)
+            entry["result"] = preview(first_text(redacted), 600)
             entry["size"] = len(json.dumps(result, ensure_ascii=False).encode())
             return result
         except RpcError as e:
             entry["ok"] = False
-            entry["result"] = str(e)
+            entry["result"] = leaks.redact(str(e), known)[0]
             if method == "tools/call":
                 return {"content": [{"type": "text", "text": str(e)}], "isError": True}
             raise JsonRpcError(-32603, str(e))
         finally:
             entry["ms"] = round((time.monotonic() - started) * 1000)
+            if found:
+                entry["leaks"] = found
             self.calls.record(entry)
