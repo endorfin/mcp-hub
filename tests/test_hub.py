@@ -54,8 +54,8 @@ class LongKeychainValueTest(unittest.TestCase):
 
     def test_shorter_value_replaces_all_parts(self):
         secrets_store.store_keychain(self.NAME, "x" * 5000)
-        secrets_store.store_keychain(self.NAME, "y" * secrets_store.MACOS_CHUNK)
-        self.assertEqual(secrets_store.read_keychain(self.NAME), "y" * secrets_store.MACOS_CHUNK)
+        secrets_store.store_keychain(self.NAME, "y" * secrets_store.CHUNK)
+        self.assertEqual(secrets_store.read_keychain(self.NAME), "y" * secrets_store.CHUNK)
 DUMMY = [sys.executable, str(ROOT / "tests" / "dummy_server.py")]
 KEYCHAIN_NAME = "selftest/hub-tests"
 

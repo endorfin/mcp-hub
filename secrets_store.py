@@ -8,9 +8,10 @@ import threading
 PATTERN = re.compile(r"\$\{(op://[^}]+|keychain:[^}]+|env:[^}]+)\}")
 SERVICE_PREFIX = "mcp-hub/"
 ACCOUNT = "mcp-hub"
-# security -i cuts input lines at about 4 KB, so longer values are split. Every part but the last
-# is exactly MACOS_CHUNK long, which tells the reader to fetch the next one; changing it orphans stored values.
-MACOS_CHUNK = 1024
+# security -i cuts input lines at about 4 KB and secret-tool reads at most 8 KB, so longer values are split.
+# Every part but the last is exactly CHUNK long, which tells the reader to fetch the next one;
+# changing it orphans stored values.
+CHUNK = 1024
 
 _cache = {}
 _missing = set()
@@ -47,8 +48,22 @@ def _wincred(action, *args):
         raise SecretError(str(e))
 
 
-def _macos_service(name, part):
+def _service(name, part):
     return SERVICE_PREFIX + name + (f"#{part}" if part else "")
+
+
+def _read_part(name, part):
+    if MACOS:
+        return _run(["security", "find-generic-password", "-a", ACCOUNT, "-s", _service(name, part), "-w"]).rstrip("\n")
+    return _run(["secret-tool", "lookup", "service", _service(name, part), "account", ACCOUNT])
+
+
+def _delete_part(name, part):
+    if MACOS:
+        args = ["security", "delete-generic-password", "-a", ACCOUNT, "-s", _service(name, part)]
+    else:
+        args = ["secret-tool", "clear", "service", _service(name, part), "account", ACCOUNT]
+    return subprocess.run(args, capture_output=True).returncode == 0
 
 
 def _keychain_read(name):
@@ -58,57 +73,50 @@ def _keychain_read(name):
         if value is None:
             raise SecretError(f"No keychain entry “{name}”")
         return value
-    if MACOS:
-        value, part = "", 0
-        while True:
-            try:
-                chunk = _run(["security", "find-generic-password", "-a", ACCOUNT, "-s", _macos_service(name, part),
-                              "-w"]).rstrip("\n")
-            except SecretError:
-                if part == 0:
-                    raise
-                return value
-            value += chunk
-            if len(chunk) < MACOS_CHUNK:
-                return value
-            part += 1
-    return _run(["secret-tool", "lookup", "service", SERVICE_PREFIX + name, "account", ACCOUNT])
+    value, part = "", 0
+    while True:
+        try:
+            chunk = _read_part(name, part)
+        except SecretError:
+            if part == 0:
+                raise
+            return value
+        value += chunk
+        if len(chunk) < CHUNK:
+            return value
+        part += 1
 
 
 def _keychain_write(name, value):
     _require_keychain()
     if WINDOWS:
-        _wincred("write", SERVICE_PREFIX + name, ACCOUNT, value)
-    elif MACOS:
+        return _wincred("write", SERVICE_PREFIX + name, ACCOUNT, value)
+    chunks = [value[i:i + CHUNK] for i in range(0, len(value), CHUNK)] or [""]
+    _keychain_delete(name)
+    if MACOS:
         # Pass the value via stdin, not as an argument, or it shows up in the process list.
-        chunks = [value[i:i + MACOS_CHUNK] for i in range(0, len(value), MACOS_CHUNK)] or [""]
-        _keychain_delete(name)
         commands = []
         for part, chunk in enumerate(chunks):
             quoted = '"' + chunk.replace("\\", "\\\\").replace('"', '\\"') + '"'
-            commands.append(f"add-generic-password -U -a {ACCOUNT} -s {_macos_service(name, part)} -w {quoted}\n")
+            commands.append(f"add-generic-password -U -a {ACCOUNT} -s {_service(name, part)} -w {quoted}\n")
         try:
             _run(["security", "-i"], "".join(commands))
         except SecretError:
             raise SecretError("security could not save the value in the keychain") from None
-    else:
-        _run(["secret-tool", "store", "--label", f"MCP Hub: {name}", "service", SERVICE_PREFIX + name, "account", ACCOUNT],
-             value)
+        return
+    for part, chunk in enumerate(chunks):
+        _run(["secret-tool", "store", "--label", f"MCP Hub: {name}", "service", _service(name, part), "account", ACCOUNT],
+             chunk)
 
 
 def _keychain_delete(name):
     if not keychain_available():
         return
     if WINDOWS:
-        _wincred("delete", SERVICE_PREFIX + name)
-    elif MACOS:
-        part = 0
-        while subprocess.run(["security", "delete-generic-password", "-a", ACCOUNT, "-s", _macos_service(name, part)],
-                             capture_output=True).returncode == 0:
-            part += 1
-    else:
-        subprocess.run(["secret-tool", "clear", "service", SERVICE_PREFIX + name, "account", ACCOUNT],
-                       capture_output=True)
+        return _wincred("delete", SERVICE_PREFIX + name)
+    part = 0
+    while _delete_part(name, part):
+        part += 1
 
 
 def _run(args, stdin=None):
