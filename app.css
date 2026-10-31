@@ -336,6 +336,11 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .review-item { cursor: default; }
 .review-item label { cursor: pointer; }
 .review-item .diff { display: grid; gap: 4px; margin-top: 8px; }
+.findings { margin: 8px 0 0; padding: 8px 10px; list-style: none; display: grid; gap: 6px; border-radius: 6px; background: color-mix(in srgb, var(--bad) 9%, transparent); }
+.findings li { display: grid; gap: 2px; }
+.findings b { color: var(--bad); font-size: 12.5px; font-weight: 600; }
+.findings small { color: var(--muted); font: 11.5px var(--mono); }
+.findings code { background: none; padding: 0; white-space: pre-wrap; word-break: break-word; }
 .review-item .diff small { color: var(--muted); font: 500 11.5px var(--mono); }
 .review-item pre { margin: 0; padding: 6px 10px; border-left: 3px solid; border-radius: 4px; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 30vh; overflow: auto; }
 .review-item pre.del { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 9%, transparent); }

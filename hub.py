@@ -13,6 +13,7 @@ from pathlib import Path
 import compact
 from fsutil import append_private, atomic_write
 import oauth
+import scanner
 from sessions import PROTOCOL_VERSION, AuthRequired, RpcError, SessionExpired, open_session
 from version import VERSION
 
@@ -76,6 +77,7 @@ class Upstream:
         self.on_change = on_change
         self.approvals = approvals
         self.held = {}
+        self.findings = {}
         self.entry = entry
         self.key = key
         self.prefix = prefix_of(name)
@@ -135,8 +137,10 @@ class Upstream:
                     self.catalog[key] = self.session.list_all(method, key)
                 except (RpcError, AttributeError, TypeError):
                     pass
+        items = self.reviewed()
+        self.findings = {i["name"]: found for i in items if (found := scanner.scan(i))}
         if self.approvals:
-            self.held = self.approvals.held(self.name, self.reviewed())
+            self.held = self.approvals.held(self.name, items, set(self.findings))
 
     def reviewed(self):
         text = {"description": self.server_info.get("description"), "instructions": self.instructions}
@@ -200,14 +204,14 @@ class Approvals:
         except (FileNotFoundError, json.JSONDecodeError):
             self.data = {}
 
-    def held(self, server, items):
+    def held(self, server, items, flagged=()):
         with self.lock:
             known = self.data.get(server)
             if known is None and not self.review_new():
-                if any(i["name"] != SERVER_ITEM for i in items):
-                    self.data[server] = {i["name"]: fingerprint(i) for i in items}
-                    self._save()
-                return {}
+                if not any(i["name"] != SERVER_ITEM for i in items):
+                    return {}
+                known = self.data[server] = {i["name"]: fingerprint(i) for i in items if i["name"] not in flagged}
+                self._save()
             known = known or {}
             return {i["name"]: "changed" if i["name"] in known else "new"
                     for i in items if known.get(i["name"]) != fingerprint(i)}
@@ -610,6 +614,7 @@ class Hub:
                 "toolsTotal": len(u.catalog["tools"]),
                 "held": len(u.held),
                 "heldTools": len(set(u.held) - {SERVER_ITEM}),
+                "flagged": len(set(u.held) & set(u.findings)),
                 **self._restart_status(name),
                 **({"onDemand": True} if name in self.on_demand else {}),
                 **({"oauth": oauth.status(name)} if u.entry.get("url") else {}),
@@ -632,7 +637,8 @@ class Hub:
         return [{"name": t["name"], "title": t.get("title") or (t.get("annotations") or {}).get("title"),
                  "description": (t.get("description") or "").strip().split("\n")[0][:240],
                  "enabled": t["name"] not in blocked, "tier": tier(t),
-                 **({"review": upstream.held[t["name"]]} if t["name"] in upstream.held else {})}
+                 **({"review": upstream.held[t["name"]]} if t["name"] in upstream.held else {}),
+                 **({"findings": upstream.findings[t["name"]]} if t["name"] in upstream.findings else {})}
                 for t in upstream.catalog["tools"]]
 
     def review(self, name):
@@ -641,7 +647,7 @@ class Hub:
             return None
         current = {t["name"]: t for t in upstream.reviewed()}
         return [{"name": tool, "status": status, "before": self.approvals.approved(name, tool),
-                 "after": fingerprint(current[tool])}
+                 "after": fingerprint(current[tool]), "findings": upstream.findings.get(tool, [])}
                 for tool, status in sorted(upstream.held.items()) if tool in current]
 
     def approve(self, name, tools=None):
@@ -650,7 +656,7 @@ class Hub:
             return False
         chosen = [t for t in upstream.reviewed() if t["name"] in upstream.held and (tools is None or t["name"] in tools)]
         self.approvals.approve(name, chosen)
-        upstream.held = self.approvals.held(name, upstream.reviewed())
+        upstream.held = self.approvals.held(name, upstream.reviewed(), set(upstream.findings))
         self._notify_if_changed(self._running())
         return True
 

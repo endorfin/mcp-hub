@@ -958,7 +958,11 @@ function renderList() {
         meta.append(el("span", { className: "chip warn", textContent: t("hubRestarted", { n: h.restarts }), title: fromBackend(h.lastError) || "", style: "cursor:default" }));
       }
       if (h.state === "running" && h.held) {
-        meta.append(el("button", { className: "chip warn", textContent: t("held", { n: h.held }), title: t("heldTitle"), onclick: () => openReview(name) }));
+        meta.append(el("button", {
+          className: "chip " + (h.flagged ? "bad" : "warn"),
+          textContent: t("held", { n: h.held }) + (h.flagged ? ` · ${t("flagged", { n: h.flagged })}` : ""),
+          title: t(h.flagged ? "flaggedTitle" : "heldTitle"), onclick: () => openReview(name),
+        }));
       }
       if (h.state === "error" && h.gaveUp) {
         meta.append(el("button", { className: "chip", textContent: t("hubRetry"), onclick: () => api("POST", "/api/hub/restart", { name }).then(() => toast(t("hubRetryStarted", { name }))).catch(err => toast(err.message, true)) }));
@@ -1295,7 +1299,9 @@ async function openTools(name) {
     const review = tool.review && el("span", { className: "chip warn", textContent: t(tool.review === "new" ? "reviewNew" : "reviewChanged"), title: t("heldTitle") });
     const level = el("span", { className: `tier-icon ${tool.tier}`, title: t(`tierTitle_${tool.tier}`), role: "img", ariaLabel: t(`tier_${tool.tier}`) });
     level.innerHTML = TIER_ICONS[tool.tier];
-    row.append(box, el("span", {}, el("b", { textContent: tool.name }), review ? " " : null, review, el("small", { textContent: tool.description })), level);
+    const flagged = tool.findings && el("span", { className: "chip bad", textContent: t("flaggedChip"), title: tool.findings.map(findingText).join("\n") });
+    row.append(box, el("span", {}, el("b", { textContent: tool.name }), review ? " " : null, review, flagged ? " " : null, flagged,
+      el("small", { textContent: tool.description })), level);
     return row;
   }));
   renderToolsCount();
@@ -1345,6 +1351,7 @@ $("#toolsForm").onsubmit = async e => {
 };
 
 let reviewServer = null;
+const findingText = f => `${t(`rule_${f.rule}`)} (${f.field}): ${f.excerpt}`;
 const stable = value => JSON.stringify(value, (_, v) => v && typeof v === "object" && !Array.isArray(v)
   ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v, 2);
 const shown = value => typeof value === "string" ? value : stable(value);
@@ -1359,13 +1366,15 @@ async function openReview(name) {
     const before = item.before || {};
     const keys = [...new Set([...Object.keys(before), ...Object.keys(item.after)])]
       .filter(k => k !== "name" && stable(before[k]) !== stable(item.after[k]));
-    const box = el("input", { type: "checkbox", checked: true, value: item.name, id: `review${i}` });
+    const box = el("input", { type: "checkbox", checked: !item.findings.length, value: item.name, id: `review${i}` });
     const label = el("label", { htmlFor: box.id }, el("b", { textContent: item.name === "@server" ? t("reviewServerText") : item.name }), " ",
       el("span", { className: "chip warn", textContent: t(item.status === "new" ? "reviewNew" : "reviewChanged") }));
+    const findings = item.findings.length ? el("ul", { className: "findings" }, ...item.findings.map(f =>
+      el("li", {}, el("b", { textContent: t(`rule_${f.rule}`) }), el("small", { textContent: f.field }), el("code", { textContent: f.excerpt })))) : null;
     const diff = keys.map(k => el("div", { className: "diff" }, el("small", { textContent: k }),
       k in before ? el("pre", { className: "del", textContent: shown(before[k]), title: t("reviewBefore") }) : null,
       k in item.after ? el("pre", { className: "add", textContent: shown(item.after[k]), title: t("reviewAfter") }) : null));
-    return el("div", { className: "tool review-item" }, box, el("div", {}, label, ...diff));
+    return el("div", { className: "tool review-item" }, box, el("div", {}, label, findings, ...diff));
   }));
   $("#reviewDialog").showModal();
 }
