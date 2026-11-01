@@ -1991,14 +1991,14 @@ function renderStats() {
     : t("noCallsYet");
   const rate = s.total ? (s.errors / s.total) * 100 : 0;
   const kpi = (label, value, note) => el("div", { className: "kpi" }, el("span", { textContent: label }), el("b", { textContent: value }), note ? el("small", { textContent: note }) : null);
-  $("#statsKpis").replaceChildren(
+  $("#statsKpis").replaceChildren(...[
     kpi(t("calls"), fmt.format(s.total), t("inDays", { n: fmt.format(s.days.reduce((n, d) => n + d.ok + d.errors, 0)) })),
     kpi(t("errorRate"), `${fmt.format(Math.round(rate * 10) / 10)} %`, t("errorsN", { n: fmt.format(s.errors), count: s.errors })),
     kpi(t("typicalDuration"), ms(s.median), t("median")),
     kpi(t("clients"), fmt.format(s.clients), t("withCalls")),
     kpi(t("responseVolume"), size(s.volume), s.medianSize == null ? null : t("perCall", { size: size(s.medianSize) })),
     s.leaks ? kpi(t("leakKpi"), fmt.format(s.leaks), t("leakKpiNote")) : null,
-  );
+  ].filter(Boolean));
 
   const max = Math.max(1, ...s.days.map(d => d.ok + d.errors));
   const chart = $("#statsChart");
