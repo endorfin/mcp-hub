@@ -15,7 +15,7 @@
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
     <nav class="line-tabs" id="tabs">
       <button data-tab="servers" class="active" data-i18n="s.tabServers">Server</button>
-      <button data-tab="calls" data-i18n="s.tabLog">Protokoll</button>
+      <button data-tab="log" data-i18n="s.tabLog">Protokoll</button>
       <button data-tab="clients">Clients</button>
       <button data-tab="inspector">Inspector</button>
       <button data-tab="settings" data-i18n="s.tabSettings">Einstellungen</button>
@@ -71,7 +71,7 @@
     </div>
   </section>
 
-  <section data-panel="calls" hidden>
+  <section data-panel="log" hidden>
     <div class="toolbar">
       <select id="callServer" aria-label="Server"><option value="" data-i18n="allServers">Alle Server</option></select>
       <select id="callClient" aria-label="Client"><option value="" data-i18n="allClients">Alle Clients</option></select>
@@ -1603,11 +1603,14 @@ try { showSettingsSection(localStorage.getItem("settingsSection") || "clients");
 
 let tab = "servers";
 function showTab(name) {
+  if (!document.querySelector(`#tabs [data-tab="${name}"]`)) name = "servers";
   tab = name;
+  const hash = name === "servers" ? "" : "#" + name;
+  if (location.hash !== hash) history.pushState(null, "", hash || location.pathname + location.search);
   for (const x of $("#tabs").children) x.classList.toggle("active", x.dataset.tab === name);
   for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== name;
   if (name === "inspector") fillInspServers();
-  if (name === "calls") refreshCalls();
+  if (name === "log") refreshCalls();
   if (name === "clients") refreshClients();
   if (name === "settings") refreshIntegrations();
 }
@@ -1615,6 +1618,7 @@ $("#tabs").onclick = e => {
   const b = e.target.closest("button");
   if (b) showTab(b.dataset.tab);
 };
+addEventListener("popstate", () => showTab(location.hash.slice(1)));
 $("#filter").oninput = renderList;
 const DEFAULT_SORT_DIR = { recent: "desc", name: "asc", config: "asc" };
 const SORT_DIR_LABELS = {
@@ -2112,7 +2116,7 @@ function renderClients() {
     const idle = !c.streams && Date.now() / 1000 - c.lastSeen > IDLE_AFTER;
     const label = c.profile ? `${c.name} · ${c.profile}` : c.name;
     const log = c.calls ? el("button", { className: "btn", textContent: t("showInLog") }) : null;
-    if (log) log.onclick = () => { logClient = label; showTab("calls"); if (calls.length) renderCalls(); };
+    if (log) log.onclick = () => { logClient = label; showTab("log"); if (calls.length) renderCalls(); };
     return el("div", { className: "row" + (idle ? " off" : "") },
       el("span", { className: "dot " + (idle ? "" : "ok"), title: c.streams ? t("clientLive") : idle ? t("clientIdle") : "" }),
       el("div", {},
@@ -2178,7 +2182,7 @@ async function poll() {
       if (state && !document.querySelector(".menu:not([hidden])")) renderList();
     }
     renderHubStatus();
-    if (tab === "calls") refreshCalls();
+    if (tab === "log") refreshCalls();
     if (tab === "clients") refreshClients();
     const generation = saveGeneration;
     const fresh = await api("GET", "/api/state");
@@ -2333,6 +2337,7 @@ $("#updateApply").onclick = async () => {
   applyTheme(state.settings.theme, state.settings.palette);
   if (rememberLanguage(state.settings.language)) return;
   fillSettings(); render();
+  showTab(location.hash.slice(1));
   setInterval(poll, 2000);
   refreshUpdate();
   setInterval(refreshUpdate, 30 * 60000);
